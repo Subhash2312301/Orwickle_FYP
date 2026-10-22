@@ -17,9 +17,11 @@ PostgreSQL schema for Orwickle, hosted on Supabase. It covers all 11 features of
 | `migrations/009_reports_and_deals.sql` | reports, deals (+ completed-deal count trigger) | 10 |
 | `migrations/010_evidence_review_and_audit.sql` | evidence_submissions, review_decisions, audit_logs | 11 |
 | `migrations/011_security.sql` | Enables RLS on every table, blocks Supabase's public API | — |
+| `migrations/012_storage_bucket.sql` | Private `private-files` Storage bucket (10 MB, PDF/images) | 6, 9, 11 |
 | `seeds/001_categories.sql` | Project categories | — |
+| `migrate.js` | Migration runner, tracks applied files in `schema_migrations` | — |
 
-27 tables in total.
+27 tables in total (plus `schema_migrations`).
 
 ## Rules enforced by the database itself
 
@@ -34,15 +36,21 @@ PostgreSQL schema for Orwickle, hosted on Supabase. It covers all 11 features of
 
 Business rules that depend on the logged-in user (for example "only the recipient may accept this offer", "access request must be approved before an offer") are checked by the Node.js backend.
 
-## Applying the schema to Supabase (only once per Supabase project)
+## Applying the schema
 
-1. Open the Supabase project → **SQL Editor** → **New query**.
-2. Paste and run each file in `migrations/` **in number order** (001 → 011), then `seeds/001_categories.sql`.
-3. Check **Table Editor**: 27 tables should appear, each with RLS enabled.
+The schema is already applied to the team's Supabase project (Sydney region, PostgreSQL 17).
 
-Later schema changes go into new numbered files (`012_...sql`), never into edits of files that have already been run.
+```
+cd database
+copy .env.example .env     # then put the real DATABASE_URL in .env
+npm install
+npm run migrate:status     # shows applied / pending files
+npm run migrate            # applies only the pending files
+```
 
-The database lives in the cloud, so this is done once. Switching laptops does not require running it again.
+- Each file runs once, inside a transaction. If it fails, nothing from that file is applied.
+- Schema changes go into new numbered files (`013_...sql`). Never edit a file that has already been applied.
+- After pulling a teammate's new migration, run `npm run migrate` once. Running it again does nothing.
 
 ## Running the project on another laptop
 
@@ -68,11 +76,11 @@ The database is on Supabase, so it does not move. Every laptop connects to the s
 ### 3. Connect to the same database
 
 - Add the teammate to the Supabase organization (**Organization settings → Team → Invite**), so they can open the dashboard with their own login.
-- Copy the backend's `.env` file to the other laptop **privately** (never through GitHub). The repository keeps only `.env.example` with empty values. The `.env` will hold:
+- Copy `database/.env` (and later the backend's `.env`) to the other laptop **privately** (never through GitHub). The repository keeps only `.env.example` files. The `.env` files hold:
   - `DATABASE_URL`: Supabase → Project Settings → Database → Connection string
   - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: for private Storage
   - `JWT_SECRET`: must be **identical** on every laptop, otherwise tokens issued on one will fail on the other
-- Do **not** run the migrations again. The tables already exist.
+- Run `npm run migrate:status` in `database/` to confirm the connection. Everything should show as applied.
 
 ### 4. Point the mobile app at that laptop's backend
 
@@ -85,4 +93,4 @@ The Flutter app's API base URL changes per machine:
 ### 5. Daily workflow for two developers
 
 - `git pull` before starting, work on a separate branch per feature, then push and merge.
-- If someone adds a new migration file, run it once in the Supabase SQL Editor and tell the other person.
+- If someone adds a new migration file, they run `npm run migrate` once and tell the other person.
