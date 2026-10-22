@@ -1,0 +1,15 @@
+{
+  "name": "orwickle-database",
+  "private": true,
+  "description": "Orwickle PostgreSQL schema and migration runner",
+  "scripts": {
+    "migrate": "node --env-file=.env migrate.js",
+    "migrate:status": "node --env-file=.env migrate.js --status"
+  },
+  "engines": {
+    "node": ">=20.6"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
