@@ -1,0 +1,33 @@
+# Secrets — share .env privately, commit only .env.example
+.env
+.env.*
+!.env.example
+
+# Node.js (backend, admin dashboard)
+node_modules/
+npm-debug.log*
+dist/
+coverage/
+
+# Flutter / Dart (mobile app)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.iml
+.idea/
+android/local.properties
+android/.gradle/
+ios/Pods/
+ios/.symlinks/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Office temp/lock files
+~$*
