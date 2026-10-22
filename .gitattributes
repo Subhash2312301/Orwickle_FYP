@@ -1,0 +1,10 @@
+# Same line endings on every laptop
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.docx binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
