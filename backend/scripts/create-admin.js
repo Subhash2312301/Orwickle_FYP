@@ -1,11 +1,12 @@
 // Creates an administrator account (admins cannot sign up through the app).
-// Usage: npm run create-admin -- --email admin@example.com --name "Faryal Zia"
-// Prints a strong one-time password; change it after the first login.
+// Usage: npm run create-admin -- --email admin@example.com --name "Faryal Zia" [--password "..."]
+// Without --password a strong one-time password is generated and printed; change it after the first login.
 
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
 const { pool, withTransaction } = require('../src/db/pool');
 const authConfig = require('../src/config/auth');
+const { isCommonPassword } = require('../src/modules/auth/passwordPolicy');
 
 function arg(name) {
   const i = process.argv.indexOf(`--${name}`);
@@ -22,7 +23,11 @@ async function main() {
     throw new Error('Usage: npm run create-admin -- --email admin@example.com --name "Full Name"');
   }
 
-  const password = strongPassword();
+  const chosen = arg('password');
+  const password = chosen || strongPassword();
+  if (chosen && isCommonPassword(chosen)) {
+    console.warn('Warning: this password would be refused for normal users as too common. Change it soon.');
+  }
   const hash = await bcrypt.hash(password, authConfig.bcryptRounds);
 
   await withTransaction(async client => {
@@ -39,8 +44,10 @@ async function main() {
   });
 
   console.log(`Admin created: ${email}`);
-  console.log(`One-time password: ${password}`);
-  console.log('Store it safely and change it after the first login.');
+  if (!chosen) {
+    console.log(`One-time password: ${password}`);
+    console.log('Store it safely and change it after the first login.');
+  }
 }
 
 main()
