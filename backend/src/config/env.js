@@ -18,7 +18,7 @@ const smtp = {
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: Number(process.env.SMTP_PORT) || 465,
   user: process.env.SMTP_USER || '',
-  pass: process.env.SMTP_PASS || '',
+  pass: (process.env.SMTP_PASS || '').replace(/\s/g, ''),   // Google shows app passwords as "abcd efgh ..."
 };
 smtp.configured = Boolean(smtp.user && smtp.pass);
 

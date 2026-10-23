@@ -1,4 +1,4 @@
-// Business rules for registration, OTP verification, login sessions and password reset.
+// Business rules for registration, OTP verification, login sessions and passwords.
 
 const bcrypt = require('bcryptjs');
 const { pool, withTransaction } = require('../../db/pool');
@@ -6,8 +6,10 @@ const authConfig = require('../../config/auth');
 const HttpError = require('../../utils/httpError');
 const { sendMail } = require('../../services/mailer');
 const { otpEmail } = require('../../services/emailTemplates');
+const { audit } = require('../../services/audit');
 const { generateOtp, hashOtp, otpMatches } = require('./otp');
 const { signAccessToken, newRefreshToken, hashToken } = require('./tokens');
+const { personalInfoProblem } = require('./passwordPolicy');
 
 const ROLE_PROFILE_TABLE = {
   owner: 'owner_profiles',
@@ -22,13 +24,20 @@ const GENERIC_OTP_SENT = 'If an account exists for this email, a code has been s
 
 // ---------- helpers ----------
 
+const USER_COLUMNS = `u.id, u.email, u.role, u.status, u.password_hash, u.email_verified_at,
+                      u.failed_login_count, u.locked_until, p.full_name`;
+
 async function findUserByEmail(db, email) {
   const { rows } = await db.query(
-    `SELECT u.id, u.email, u.role, u.status, u.password_hash, u.email_verified_at, p.full_name
-       FROM users u
-       JOIN profiles p ON p.user_id = u.id
-      WHERE u.email = $1`,
+    `SELECT ${USER_COLUMNS} FROM users u JOIN profiles p ON p.user_id = u.id WHERE u.email = $1`,
     [email]);
+  return rows[0] || null;
+}
+
+async function findUserById(db, id) {
+  const { rows } = await db.query(
+    `SELECT ${USER_COLUMNS} FROM users u JOIN profiles p ON p.user_id = u.id WHERE u.id = $1`,
+    [id]);
   return rows[0] || null;
 }
 
@@ -40,6 +49,20 @@ function publicUser(user) {
     fullName: user.full_name,
     emailVerified: Boolean(user.email_verified_at),
   };
+}
+
+const fieldError = (field, message) =>
+  new HttpError(400, 'VALIDATION_ERROR', 'Please correct the highlighted fields', { [field]: message });
+
+function checkPersonalInfo(field, password, user) {
+  const problem = personalInfoProblem(password, { email: user.email, fullName: user.full_name });
+  if (problem) throw fieldError(field, problem);
+}
+
+async function checkNotCurrentPassword(field, password, user) {
+  if (await bcrypt.compare(password, user.password_hash)) {
+    throw fieldError(field, 'New password must be different from your current password');
+  }
 }
 
 // Creates a new OTP (replacing any unused one) inside the caller's transaction and returns the code.
@@ -139,9 +162,14 @@ async function revokeAllSessions(db, userId) {
 const sessionExpired = () =>
   new HttpError(401, 'SESSION_EXPIRED', 'Your session has expired, please log in again');
 
+const accountLocked = lockedUntil => new HttpError(429, 'ACCOUNT_LOCKED',
+  'Too many wrong passwords. Your account is locked for 15 minutes. You can reset your password to unlock it now.',
+  { retryAfterSeconds: Math.max(1, Math.ceil((lockedUntil.getTime() - Date.now()) / 1000)) });
+
 // ---------- use cases ----------
 
-async function register({ fullName, email, password, role }) {
+async function register({ fullName, email, password, role }, { ip }) {
+  checkPersonalInfo('password', password, { email, full_name: fullName });
   const passwordHash = await bcrypt.hash(password, authConfig.bcryptRounds);
 
   const { user, code } = await withTransaction(async client => {
@@ -155,7 +183,7 @@ async function register({ fullName, email, password, role }) {
     let created;
     try {
       ({ rows: [created] } = await client.query(
-        `INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3)
+        `INSERT INTO users (email, password_hash, role, terms_accepted_at) VALUES ($1, $2, $3, now())
          RETURNING id, email, role, status, email_verified_at`,
         [email, passwordHash, role]));
     } catch (err) {
@@ -164,6 +192,7 @@ async function register({ fullName, email, password, role }) {
     }
     await client.query('INSERT INTO profiles (user_id, full_name) VALUES ($1, $2)', [created.id, fullName]);
     await client.query(`INSERT INTO ${ROLE_PROFILE_TABLE[role]} (user_id) VALUES ($1)`, [created.id]);
+    await audit(client, { actorId: created.id, action: 'auth.registered', entityId: created.id, ip, details: { role } });
 
     const newUser = { ...created, full_name: fullName };
     return { user: newUser, code: await issueOtp(client, newUser, 'email_verify') };
@@ -173,7 +202,7 @@ async function register({ fullName, email, password, role }) {
   return { message: 'Account created. Enter the code sent to your email.', email: user.email };
 }
 
-async function verifyEmail({ email, otp }, { userAgent }) {
+async function verifyEmail({ email, otp }, { userAgent, ip }) {
   const user = await findUserByEmail(pool, email);
   if (!user) throw new HttpError(400, 'OTP_EXPIRED', 'This code has expired. Please request a new one.');
   if (user.email_verified_at) {
@@ -185,6 +214,7 @@ async function verifyEmail({ email, otp }, { userAgent }) {
     const { rows: [verified] } = await client.query(
       'UPDATE users SET email_verified_at = now(), last_login_at = now() WHERE id = $1 RETURNING email_verified_at',
       [user.id]);
+    await audit(client, { actorId: user.id, action: 'auth.email_verified', entityId: user.id, ip });
     return createSession(client, { ...user, ...verified }, userAgent);
   });
 }
@@ -207,10 +237,13 @@ async function sendOtpAgain({ email, purpose }) {
   return { message: GENERIC_OTP_SENT };
 }
 
-async function login({ email, password }, { userAgent }) {
+async function login({ email, password }, { userAgent, ip }) {
   const user = await findUserByEmail(pool, email);
+  if (user?.locked_until > new Date()) throw accountLocked(user.locked_until);
+
   const passwordOk = await bcrypt.compare(password, user?.password_hash ?? DUMMY_PASSWORD_HASH);
   if (!user || !passwordOk) {
+    if (user) await recordFailedLogin(user, ip);
     throw new HttpError(401, 'INVALID_CREDENTIALS', 'Incorrect email or password');
   }
   if (user.status !== 'active') {
@@ -221,14 +254,35 @@ async function login({ email, password }, { userAgent }) {
   }
 
   return withTransaction(async client => {
-    await client.query('UPDATE users SET last_login_at = now() WHERE id = $1', [user.id]);
+    await client.query(
+      'UPDATE users SET last_login_at = now(), failed_login_count = 0, locked_until = NULL WHERE id = $1',
+      [user.id]);
+    await audit(client, { actorId: user.id, action: 'auth.login', entityId: user.id, ip });
     return createSession(client, user, userAgent);
   });
 }
 
+// Counts a wrong password; the 5th in a row locks the account for 15 minutes.
+async function recordFailedLogin(user, ip) {
+  const { rows: [after] } = await pool.query(
+    `UPDATE users
+        SET failed_login_count = CASE WHEN failed_login_count + 1 >= $2 THEN 0 ELSE failed_login_count + 1 END,
+            locked_until = CASE WHEN failed_login_count + 1 >= $2
+                                THEN now() + make_interval(secs => $3) ELSE locked_until END
+      WHERE id = $1
+      RETURNING locked_until`,
+    [user.id, authConfig.maxFailedLogins, authConfig.accountLockMs / 1000]);
+  await audit(pool, { actorId: user.id, action: 'auth.login_failed', entityId: user.id, ip });
+
+  if (after.locked_until > new Date()) {
+    await audit(pool, { actorId: user.id, action: 'auth.account_locked', entityId: user.id, ip });
+    throw accountLocked(after.locked_until);
+  }
+}
+
 // Swaps a refresh token for a new pair. Each refresh token works once; presenting a used
 // one again means it was copied, so every session of that user is ended.
-async function refresh({ refreshToken }, { userAgent }) {
+async function refresh({ refreshToken }, { userAgent, ip }) {
   const { rows } = await pool.query(
     `SELECT t.id, t.used_at, t.expires_at, t.last_used_at,
             u.id AS user_id, u.email, u.role, u.status, u.email_verified_at, p.full_name
@@ -242,6 +296,7 @@ async function refresh({ refreshToken }, { userAgent }) {
 
   if (session.used_at) {
     await revokeAllSessions(pool, session.user_id);
+    await audit(pool, { actorId: session.user_id, action: 'auth.token_reuse_detected', entityId: session.user_id, ip });
     throw sessionExpired();
   }
   const idleMs = Date.now() - session.last_used_at.getTime();
@@ -263,40 +318,63 @@ async function refresh({ refreshToken }, { userAgent }) {
   });
 }
 
-async function logout({ refreshToken }) {
-  await pool.query(
+async function logout({ refreshToken }, { ip }) {
+  const { rows } = await pool.query(
     `UPDATE auth_tokens SET used_at = now()
-      WHERE token_hash = $1 AND type = 'refresh' AND used_at IS NULL`,
+      WHERE token_hash = $1 AND type = 'refresh' AND used_at IS NULL
+      RETURNING user_id`,
     [hashToken(refreshToken)]);
+  if (rows[0]) await audit(pool, { actorId: rows[0].user_id, action: 'auth.logout', entityId: rows[0].user_id, ip });
 }
 
 async function forgotPassword({ email }) {
   return sendOtpAgain({ email, purpose: 'password_reset' });
 }
 
-async function resetPassword({ email, otp, newPassword }) {
+async function resetPassword({ email, otp, newPassword }, { ip }) {
   const user = await findUserByEmail(pool, email);
   if (!user || !user.email_verified_at || user.status !== 'active') {
     throw new HttpError(400, 'OTP_EXPIRED', 'This code has expired. Please request a new one.');
   }
+  checkPersonalInfo('newPassword', newPassword, user);
+  await checkNotCurrentPassword('newPassword', newPassword, user);
   const passwordHash = await bcrypt.hash(newPassword, authConfig.bcryptRounds);
 
   await withTransaction(async client => {
     await consumeOtp(client, user, 'password_reset', otp);
-    await client.query('UPDATE users SET password_hash = $2 WHERE id = $1', [user.id, passwordHash]);
+    // proving ownership of the email also lifts a lockout
+    await client.query(
+      'UPDATE users SET password_hash = $2, failed_login_count = 0, locked_until = NULL WHERE id = $1',
+      [user.id, passwordHash]);
     await revokeAllSessions(client, user.id);
+    await audit(client, { actorId: user.id, action: 'auth.password_reset', entityId: user.id, ip });
   });
   return { message: 'Password changed. Please log in with your new password.' };
 }
 
+// Logged-in password change: ends every other session and returns a fresh one for this device.
+async function changePassword(userId, { currentPassword, newPassword }, { userAgent, ip }) {
+  const user = await findUserById(pool, userId);
+  if (!user || user.status !== 'active') throw sessionExpired();
+  if (!await bcrypt.compare(currentPassword, user.password_hash)) {
+    throw fieldError('currentPassword', 'Current password is incorrect');
+  }
+  checkPersonalInfo('newPassword', newPassword, user);
+  await checkNotCurrentPassword('newPassword', newPassword, user);
+  const passwordHash = await bcrypt.hash(newPassword, authConfig.bcryptRounds);
+
+  return withTransaction(async client => {
+    await client.query('UPDATE users SET password_hash = $2 WHERE id = $1', [user.id, passwordHash]);
+    await revokeAllSessions(client, user.id);
+    await audit(client, { actorId: user.id, action: 'auth.password_changed', entityId: user.id, ip });
+    return createSession(client, user, userAgent);
+  });
+}
+
 async function getMe(userId) {
-  const { rows } = await pool.query(
-    `SELECT u.id, u.email, u.role, u.status, u.email_verified_at, p.full_name
-       FROM users u JOIN profiles p ON p.user_id = u.id
-      WHERE u.id = $1`,
-    [userId]);
-  if (!rows[0] || rows[0].status !== 'active') throw sessionExpired();
-  return { user: publicUser(rows[0]) };
+  const user = await findUserById(pool, userId);
+  if (!user || user.status !== 'active') throw sessionExpired();
+  return { user: publicUser(user) };
 }
 
 module.exports = {
@@ -308,5 +386,6 @@ module.exports = {
   logout,
   forgotPassword,
   resetPassword,
+  changePassword,
   getMe,
 };

@@ -122,6 +122,15 @@ void main() {
     session.dispose();
   });
 
+  testWidgets('changing the password keeps this device logged in with the new session', (tester) async {
+    await session.login(email: 'subhash@example.com', password: 'Orbit#Lane42');
+    await session.changePassword(currentPassword: 'Orbit#Lane42', newPassword: 'Maple!River77');
+    expect(session.isLoggedIn, isTrue);
+    expect(storage.token, 'refresh-99');
+    expect(await session.accessToken(), 'access-99');
+    session.dispose();
+  });
+
   testWidgets('being offline does not log the user out', (tester) async {
     await session.login(email: 'subhash@example.com', password: 'Secret123');
     api.refreshError = const ApiException(code: 'NETWORK_ERROR', message: 'offline');

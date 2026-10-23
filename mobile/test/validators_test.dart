@@ -14,8 +14,20 @@ void main() {
     expect(Validators.newPassword('lowercase1'), 'Password must contain an uppercase letter');
     expect(Validators.newPassword('UPPERCASE1'), 'Password must contain a lowercase letter');
     expect(Validators.newPassword('NoNumbers'), 'Password must contain a number');
+    expect(Validators.newPassword('Orbitlane42'), r'Password must contain a special character (e.g. ! @ # $)');
     expect(Validators.newPassword('A${'a' * 71}1'), 'Password must be at most 72 characters');
-    expect(Validators.newPassword('Secret123'), isNull);
+    expect(Validators.newPassword('Orbit#Lane42'), isNull);
+  });
+
+  test('common and personal passwords are refused', () {
+    const tooCommon = 'This password is too common. Choose something harder to guess.';
+    for (final weak in ['Password1!', 'P@ssw0rd1!', 'Pakistan@123', 'Qwerty123!', 'Welcome#2026']) {
+      expect(Validators.newPassword(weak), tooCommon, reason: weak);
+    }
+    expect(Validators.newPassword('Subhash#2026', name: 'Subhash Rai'), 'Password must not contain your name or email');
+    expect(Validators.newPassword('Orbit#al2026', name: 'Al Noor'), isNull, reason: 'parts under 3 letters are ignored');
+    expect(Validators.newPassword('Xavi#subhash1', email: 'subhash@example.com'),
+        'Password must not contain your name or email');
   });
 
   test('confirm password', () {

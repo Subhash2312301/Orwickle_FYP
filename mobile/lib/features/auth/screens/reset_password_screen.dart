@@ -89,7 +89,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               PasswordField(
                 controller: _password,
                 label: 'New password',
-                validator: Validators.newPassword,
+                validator: (v) => Validators.newPassword(v, email: widget.email),
                 errorText: _serverErrors['newPassword'],
                 autofillHints: const [AutofillHints.newPassword],
                 onChanged: (_) => setState(() {}),

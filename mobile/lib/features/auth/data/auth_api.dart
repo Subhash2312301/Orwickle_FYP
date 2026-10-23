@@ -12,12 +12,14 @@ class AuthApi {
     required String email,
     required String password,
     required UserRole role,
+    required bool acceptTerms,
   }) =>
       _api.post('/auth/register', body: {
         'fullName': fullName,
         'email': email,
         'password': password,
         'role': role.name,
+        'acceptTerms': acceptTerms,
       });
 
   Future<AuthSession> verifyEmail({required String email, required String otp}) async =>
@@ -39,4 +41,9 @@ class AuthApi {
 
   Future<void> resetPassword({required String email, required String otp, required String newPassword}) =>
       _api.post('/auth/reset-password', body: {'email': email, 'otp': otp, 'newPassword': newPassword});
+
+  /// Logged in only. Ends every other session and returns a new one for this device.
+  Future<AuthSession> changePassword({required String currentPassword, required String newPassword}) async =>
+      AuthSession.fromJson(await _api.post('/auth/change-password',
+          auth: true, body: {'currentPassword': currentPassword, 'newPassword': newPassword}));
 }

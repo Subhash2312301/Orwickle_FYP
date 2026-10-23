@@ -27,7 +27,7 @@ Runs against the real Supabase database with `@test.orwickle.dev` accounts that 
 
 | Method & path | Body | Result |
 |---|---|---|
-| `POST /api/auth/register` | `fullName, email, password, role` (owner / investor / buyer) | 201, OTP emailed |
+| `POST /api/auth/register` | `fullName, email, password, role` (owner / investor / buyer), `acceptTerms: true` | 201, OTP emailed |
 | `POST /api/auth/verify-email` | `email, otp` | session (user is logged in) |
 | `POST /api/auth/resend-otp` | `email, purpose` (email_verify / password_reset) | 200, or 429 `OTP_COOLDOWN` |
 | `POST /api/auth/login` | `email, password` | session, or 403 `EMAIL_NOT_VERIFIED` |
@@ -35,6 +35,7 @@ Runs against the real Supabase database with `@test.orwickle.dev` accounts that 
 | `POST /api/auth/logout` | `refreshToken` | 204 |
 | `POST /api/auth/forgot-password` | `email` | 200 (same answer for unknown emails) |
 | `POST /api/auth/reset-password` | `email, otp, newPassword` | 200, all sessions ended |
+| `POST /api/auth/change-password` | `currentPassword, newPassword` + Bearer token | new session; other sessions ended |
 | `GET /api/auth/me` | header `Authorization: Bearer <accessToken>` | current user |
 
 A session is `{ accessToken, refreshToken, expiresIn: 900, user }`.
@@ -42,8 +43,24 @@ A session is `{ accessToken, refreshToken, expiresIn: 900, user }`.
 Rules (see `src/config/auth.js`):
 - Access token lasts 15 minutes. A refresh token works once and is rejected after 15 minutes without use (inactivity) or 7 days in total. Reusing an old refresh token ends every session of that user.
 - OTP: 6 digits, valid 10 minutes, 5 wrong attempts, one new code per minute. Only a hash is stored.
-- Password: 8–72 characters with an uppercase letter, a lowercase letter and a number.
+- Password: 8–72 characters with an uppercase letter, a lowercase letter, a number and a special character;
+  not a common word or pattern (`Pakistan@123`, `P@ssw0rd1!`), not containing the user's name or email,
+  and not the same as the current password when resetting or changing it.
+- Account lock: 5 wrong passwords in a row lock the account for 15 minutes (429 `ACCOUNT_LOCKED`);
+  a password reset unlocks it.
 - Rate limits per IP: 10 logins and 15 OTP-related requests per 15 minutes.
+- Audit log: registration, verification, login, failed login, lock, logout, password change/reset and
+  refresh-token reuse are written to `audit_logs`.
+
+## Admin accounts
+
+Admins cannot sign up in the app. Create one with:
+
+```
+npm run create-admin -- --email admin@example.com --name "Full Name"
+```
+
+It prints a one-time password; change it after the first login.
 
 ## Structure
 

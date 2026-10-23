@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/data/auth_models.dart';
+import '../../features/auth/screens/change_password_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
@@ -53,5 +54,6 @@ GoRouter buildRouter(SessionController session) => GoRouter(
         ),
         GoRoute(path: Routes.systemCheck, builder: (context, state) => const SystemCheckScreen()),
         GoRoute(path: Routes.home, builder: (context, state) => const HomeScreen()),
+        GoRoute(path: Routes.changePassword, builder: (context, state) => const ChangePasswordScreen()),
       ],
     );

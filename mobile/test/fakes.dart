@@ -60,4 +60,8 @@ class FakeAuthApi extends AuthApi {
 
   @override
   Future<void> logout(String refreshToken) async => loggedOut.add(refreshToken);
+
+  @override
+  Future<AuthSession> changePassword({required String currentPassword, required String newPassword}) async =>
+      sessionNo(99);
 }

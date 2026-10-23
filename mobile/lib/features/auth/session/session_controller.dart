@@ -75,6 +75,13 @@ class SessionController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> verifyEmail({required String email, required String otp}) async =>
       _start(await _api.verifyEmail(email: email, otp: otp));
 
+  /// The backend ends every other session; this device continues with the new one it returns.
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    final session = await _api.changePassword(currentPassword: currentPassword, newPassword: newPassword);
+    await _apply(session);
+    notifyListeners();
+  }
+
   Future<void> logout({LogoutReason reason = LogoutReason.userAction}) async {
     final token = _refreshToken;
     _setUnauthenticated(reason);

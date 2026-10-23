@@ -1,6 +1,7 @@
 // Request body rules for the auth endpoints. The Flutter forms apply the same rules.
 
 const { z } = require('zod');
+const { isCommonPassword } = require('./passwordPolicy');
 
 const required = label => ({ error: `${label} is required` });
 
@@ -15,7 +16,9 @@ const password = z.string(required('Password'))
   .max(72, 'Password must be at most 72 characters')
   .regex(/[A-Z]/, 'Password must contain an uppercase letter')
   .regex(/[a-z]/, 'Password must contain a lowercase letter')
-  .regex(/[0-9]/, 'Password must contain a number');
+  .regex(/[0-9]/, 'Password must contain a number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain a special character (e.g. ! @ # $)')
+  .refine(value => !isCommonPassword(value), 'This password is too common. Choose something harder to guess.');
 
 const otp = z.string(required('Code'))
   .trim()
@@ -31,6 +34,7 @@ const registerSchema = z.object({
   email,
   password,
   role: z.enum(['owner', 'investor', 'buyer'], { error: 'Choose Project Owner, Investor or Buyer' }),
+  acceptTerms: z.literal(true, { error: 'You must accept the terms to continue' }),
 });
 
 const verifyEmailSchema = z.object({ email, otp });
@@ -52,6 +56,11 @@ const forgotPasswordSchema = z.object({ email });
 
 const resetPasswordSchema = z.object({ email, otp, newPassword: password });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string(required('Current password')).min(1, 'Current password is required').max(72),
+  newPassword: password,
+});
+
 module.exports = {
   registerSchema,
   verifyEmailSchema,
@@ -60,4 +69,5 @@ module.exports = {
   refreshSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changePasswordSchema,
 };

@@ -70,5 +70,6 @@ void main() {
     expect(find.text('Email is required'), findsOneWidget);
     expect(find.text('Password must be at least 8 characters'), findsOneWidget);
     expect(find.text('Passwords do not match'), findsOneWidget);
+    expect(find.text('You must accept the terms to continue'), findsOneWidget);
   });
 }
