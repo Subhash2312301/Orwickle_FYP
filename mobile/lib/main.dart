@@ -5,6 +5,7 @@ import 'core/network/api_client.dart';
 import 'core/storage/token_storage.dart';
 import 'features/auth/data/auth_api.dart';
 import 'features/auth/session/session_controller.dart';
+import 'features/profile/data/profile_api.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,5 +16,10 @@ void main() {
   apiClient.accessTokenProvider = session.accessToken;
   session.restore();   // splash screen shows until this finishes
 
-  runApp(OrwickleApp(apiClient: apiClient, authApi: authApi, session: session));
+  runApp(OrwickleApp(
+    apiClient: apiClient,
+    authApi: authApi,
+    profileApi: ProfileApi(apiClient),
+    session: session,
+  ));
 }

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/router/routes.dart';
 import '../auth/session/session_controller.dart';
 
-/// Placeholder home for logged-in users. Profile setup (Step 3) and listings (Phase 3) come next.
+/// Placeholder home for logged-in users. Listings (Phase 3) come next.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -45,15 +45,16 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Center(child: Chip(avatar: const Icon(Icons.verified_user, size: 18), label: Text(user.roleLabel))),
           const SizedBox(height: 24),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: const Text('Complete your profile'),
-              subtitle: const Text('Coming in the next step'),
-              trailing: const Icon(Icons.chevron_right),
-              enabled: false,
+          if (user.role != 'admin')
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Edit profile'),
+                subtitle: const Text('Your details, skills and interests'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.profileEdit),
+              ),
             ),
-          ),
           const SizedBox(height: 8),
           Card(
             child: ListTile(

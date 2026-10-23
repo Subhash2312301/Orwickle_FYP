@@ -20,6 +20,7 @@ class AppUser {
     required this.role,
     required this.fullName,
     required this.emailVerified,
+    this.profileCompleted = false,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -28,6 +29,7 @@ class AppUser {
         role: json['role'] as String,
         fullName: json['fullName'] as String,
         emailVerified: json['emailVerified'] as bool? ?? false,
+        profileCompleted: json['profileCompleted'] as bool? ?? false,
       );
 
   final String id;
@@ -35,6 +37,18 @@ class AppUser {
   final String role;        // owner / investor / buyer / admin
   final String fullName;
   final bool emailVerified;
+
+  /// False until the first complete profile is saved; the app then shows profile setup.
+  final bool profileCompleted;
+
+  AppUser copyWith({String? fullName, bool? profileCompleted}) => AppUser(
+        id: id,
+        email: email,
+        role: role,
+        fullName: fullName ?? this.fullName,
+        emailVerified: emailVerified,
+        profileCompleted: profileCompleted ?? this.profileCompleted,
+      );
 
   String get roleLabel => UserRole.fromName(role)?.label ?? 'Administrator';
 

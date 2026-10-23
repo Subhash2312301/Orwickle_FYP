@@ -48,6 +48,54 @@ class Validators {
   static String? otp(String? value) =>
       _otpPattern.hasMatch(value?.trim() ?? '') ? null : 'Enter the 6-digit code';
 
+  // ---------- profile (backend/src/modules/profiles/profile.validation.js) ----------
+
+  static final _urlPattern = RegExp(r'^https?://[^\s.]+\.\S+$', caseSensitive: false);
+
+  static String? Function(String?) requiredText(String label, {int min = 2, required int max}) => (value) {
+        final v = value?.trim() ?? '';
+        if (v.isEmpty) return '$label is required';
+        if (v.length < min) return '$label must be at least $min characters';
+        if (v.length > max) return '$label must be at most $max characters';
+        return null;
+      };
+
+  static String? Function(String?) optionalText(String label, {required int max}) =>
+      (value) => (value?.trim().length ?? 0) > max ? '$label must be at most $max characters' : null;
+
+  static String? Function(String?) optionalUrl(String label) => (value) {
+        final v = value?.trim() ?? '';
+        if (v.isEmpty) return null;
+        return v.length <= 300 && _urlPattern.hasMatch(v) ? null : 'Enter a full $label starting with https://';
+      };
+
+  static String? graduationYear(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return null;
+    final year = int.tryParse(v);
+    return year == null || year < 1990 || year > 2100 ? 'Enter a valid graduation year' : null;
+  }
+
+  static String? Function(String?) amount(String label) => (value) {
+        final v = value?.trim() ?? '';
+        if (v.isEmpty) return '$label is required';
+        final n = num.tryParse(v);
+        if (n == null) return '$label must be a number';
+        if (n < 0) return '$label cannot be negative';
+        return null;
+      };
+
+  /// For the "maximum" field of a range; [minimum] reads the other field.
+  static String? Function(String?) rangeMax(String label, String Function() minimum, String rangeName) =>
+      (value) {
+        final own = amount(label)(value);
+        if (own != null) return own;
+        final min = num.tryParse(minimum().trim());
+        return min != null && num.parse(value!.trim()) < min
+            ? 'Maximum $rangeName must be greater than or equal to the minimum'
+            : null;
+      };
+
   /// Shown as a live checklist under the password field.
   static final List<PasswordRule> passwordRules = [
     PasswordRule('At least 8 characters', 'Password must be at least 8 characters', (v) => v.length >= 8),

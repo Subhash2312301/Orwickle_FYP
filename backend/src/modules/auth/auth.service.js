@@ -25,7 +25,7 @@ const GENERIC_OTP_SENT = 'If an account exists for this email, a code has been s
 // ---------- helpers ----------
 
 const USER_COLUMNS = `u.id, u.email, u.role, u.status, u.password_hash, u.email_verified_at,
-                      u.failed_login_count, u.locked_until, p.full_name`;
+                      u.failed_login_count, u.locked_until, p.full_name, p.profile_completed_at`;
 
 async function findUserByEmail(db, email) {
   const { rows } = await db.query(
@@ -48,6 +48,8 @@ function publicUser(user) {
     role: user.role,
     fullName: user.full_name,
     emailVerified: Boolean(user.email_verified_at),
+    // admins have no role profile to fill in
+    profileCompleted: user.role === 'admin' || Boolean(user.profile_completed_at),
   };
 }
 
@@ -285,7 +287,7 @@ async function recordFailedLogin(user, ip) {
 async function refresh({ refreshToken }, { userAgent, ip }) {
   const { rows } = await pool.query(
     `SELECT t.id, t.used_at, t.expires_at, t.last_used_at,
-            u.id AS user_id, u.email, u.role, u.status, u.email_verified_at, p.full_name
+            u.id AS user_id, u.email, u.role, u.status, u.email_verified_at, p.full_name, p.profile_completed_at
        FROM auth_tokens t
        JOIN users u ON u.id = t.user_id
        JOIN profiles p ON p.user_id = u.id
@@ -378,6 +380,8 @@ async function getMe(userId) {
 }
 
 module.exports = {
+  publicUser,
+  findUserById,
   register,
   verifyEmail,
   sendOtpAgain,

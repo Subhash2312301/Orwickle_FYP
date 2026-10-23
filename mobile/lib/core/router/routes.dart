@@ -12,6 +12,8 @@ class Routes {
   static const systemCheck = '/system-check';
   static const home = '/home';
   static const changePassword = '/change-password';
+  static const profileSetup = '/profile/setup';   // forced until the first profile is saved
+  static const profileEdit = '/profile/edit';
 
   /// Pages a logged-out user may open.
   static const public = {welcome, register, verifyEmail, login, forgotPassword, resetPassword, systemCheck};

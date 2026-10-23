@@ -9,11 +9,11 @@ const assert = require('node:assert/strict');
 const request = require('supertest');
 
 const app = require('../src/app');
-const { pool, withTransaction } = require('../src/db/pool');
+const { pool } = require('../src/db/pool');
 const { outbox } = require('../src/services/mailer');
 const { isCommonPassword } = require('../src/modules/auth/passwordPolicy');
+const { DOMAIN, cleanup } = require('./helpers');
 
-const DOMAIN = '@test.orwickle.dev';
 const email = `user${Date.now()}${DOMAIN}`;
 const PASSWORD = 'Orbit#Lane42';
 const NEW_PASSWORD = 'Maple!River77';
@@ -34,16 +34,6 @@ const skipCooldown = () => pool.query(
 const auditActions = async () => (await pool.query(
   `SELECT action FROM audit_logs WHERE entity_id = (SELECT id FROM users WHERE email = $1)`, [email]))
   .rows.map(r => r.action);
-
-// audit_logs is append-only, so its guard trigger is paused inside one transaction to remove test rows
-const cleanup = () => withTransaction(async client => {
-  await client.query('ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_immutable');
-  await client.query(
-    `DELETE FROM audit_logs WHERE entity_id IN (SELECT id FROM users WHERE email LIKE $1)
-        OR actor_id IN (SELECT id FROM users WHERE email LIKE $1)`, [`%${DOMAIN}`]);
-  await client.query('ALTER TABLE audit_logs ENABLE TRIGGER audit_logs_immutable');
-  await client.query('DELETE FROM users WHERE email LIKE $1', [`%${DOMAIN}`]);
-});
 
 before(cleanup);
 after(async () => {
