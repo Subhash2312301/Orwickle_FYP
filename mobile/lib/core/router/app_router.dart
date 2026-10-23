@@ -11,11 +11,13 @@ import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/auth/screens/welcome_screen.dart';
 import '../../features/auth/session/session_controller.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/profile/screens/profile_edit_screen.dart';
 import '../../features/system_check/system_check_screen.dart';
 import 'routes.dart';
 
 /// All app routes. Redirects follow the session: while it is being checked → splash,
-/// logged out → welcome (or login after an automatic logout), logged in → home.
+/// logged out → welcome (or login after an automatic logout), logged in without a
+/// completed profile → profile setup, otherwise → home.
 GoRouter buildRouter(SessionController session) => GoRouter(
       initialLocation: Routes.splash,
       refreshListenable: session,
@@ -31,7 +33,12 @@ GoRouter buildRouter(SessionController session) => GoRouter(
                 ? Routes.login
                 : Routes.welcome;
           case SessionStatus.authenticated:
-            return Routes.public.contains(location) || location == Routes.splash ? Routes.home : null;
+            if (!(session.user?.profileCompleted ?? true)) {
+              return location == Routes.profileSetup ? null : Routes.profileSetup;
+            }
+            return Routes.public.contains(location) || location == Routes.splash || location == Routes.profileSetup
+                ? Routes.home
+                : null;
         }
       },
       routes: [
@@ -55,5 +62,7 @@ GoRouter buildRouter(SessionController session) => GoRouter(
         GoRoute(path: Routes.systemCheck, builder: (context, state) => const SystemCheckScreen()),
         GoRoute(path: Routes.home, builder: (context, state) => const HomeScreen()),
         GoRoute(path: Routes.changePassword, builder: (context, state) => const ChangePasswordScreen()),
+        GoRoute(path: Routes.profileSetup, builder: (context, state) => const ProfileEditScreen(setup: true)),
+        GoRoute(path: Routes.profileEdit, builder: (context, state) => const ProfileEditScreen()),
       ],
     );
