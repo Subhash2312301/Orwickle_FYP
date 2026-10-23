@@ -27,8 +27,6 @@ const amount = label => z.number({ error: `${label} must be a number` })
   .min(0, `${label} cannot be negative`)
   .max(1e12, `${label} is too large`);
 
-const currency = z.enum(['PKR', 'USD'], { error: 'Choose PKR or USD' }).default('PKR');
-
 const interests = z.array(z.uuid('Invalid category'), required('Interests'))
   .min(1, 'Choose at least one category')
   .max(10, 'Choose at most 10 categories');
@@ -62,12 +60,13 @@ const ownerDetails = z.object({
   portfolioUrl: optionalUrl('portfolio URL'),
 });
 
+// Amounts are in PKR (Karachi pilot). The app sends ranges from preset chips;
+// a missing maximum means "and above" (e.g. 1 crore+).
 const investorDetails = z.object({
   investorType: z.enum(['individual', 'angel', 'firm', 'other'], { error: 'Choose an investor type' }),
   organizationName: optionalText('Organization name', 150),
-  minTicket: amount('Minimum investment'),
-  maxTicket: amount('Maximum investment'),
-  currency,
+  minTicket: z.number({ error: 'Choose an investment range' }).min(0).max(1e12),
+  maxTicket: amount('Maximum investment').nullable().optional().transform(v => v ?? null),
   interests,
 }).refine(...rangeOk('minTicket', 'maxTicket', 'investment'));
 
@@ -75,9 +74,8 @@ const buyerDetails = z.object({
   buyerType: z.enum(['individual', 'small_business', 'agency', 'other'], { error: 'Choose a buyer type' }),
   companyName: optionalText('Company name', 150),
   companyWebsite: optionalUrl('company website'),
-  budgetMin: amount('Minimum budget'),
-  budgetMax: amount('Maximum budget'),
-  currency,
+  budgetMin: amount('Minimum budget').nullable().optional().transform(v => v ?? null),
+  budgetMax: amount('Maximum budget').nullable().optional().transform(v => v ?? null),
   interests,
 }).refine(...rangeOk('budgetMin', 'budgetMax', 'budget'));
 

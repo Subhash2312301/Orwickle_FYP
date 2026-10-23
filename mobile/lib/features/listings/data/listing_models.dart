@@ -14,6 +14,7 @@ class Listing {
     required this.coverUrl,
     required this.status,
     required this.reviewStatus,
+    this.reviewNote,
     required this.ownerName,
   });
 
@@ -31,6 +32,7 @@ class Listing {
     coverUrl: j['coverUrl'] as String?,
     status: j['status'] as String,
     reviewStatus: j['reviewStatus'] as String,
+    reviewNote: j['reviewNote'] as String?,
     ownerName: (j['owner'] as Map?)?['fullName'] as String? ?? '',
   );
 
@@ -47,6 +49,7 @@ class Listing {
   final String? coverUrl;
   final String status; // draft | published | closed | suspended
   final String reviewStatus; // unreviewed | pending | approved | rejected | needs_evidence
+  final String? reviewNote; // admin's reason for a rejection (owner only)
   final String ownerName;
 
   bool get isFunding => listingType == 'funding';

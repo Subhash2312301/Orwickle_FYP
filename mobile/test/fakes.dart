@@ -13,11 +13,11 @@ const testUser = AppUser(
 );
 
 AuthSession sessionNo(int n) => AuthSession(
-      accessToken: 'access-$n',
-      refreshToken: 'refresh-$n',
-      expiresIn: const Duration(minutes: 15),
-      user: testUser,
-    );
+  accessToken: 'access-$n',
+  refreshToken: 'refresh-$n',
+  expiresIn: const Duration(minutes: 15),
+  user: testUser,
+);
 
 class MemoryTokenStorage implements TokenStorage {
   MemoryTokenStorage([this.token]);

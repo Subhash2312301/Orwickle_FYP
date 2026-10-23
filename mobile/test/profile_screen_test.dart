@@ -158,23 +158,34 @@ void main() {
     await _finish(tester);
   });
 
-  testWidgets('investor needs a type, a valid range and an interest', (tester) async {
+  testWidgets('investor needs a type, an investment range and an interest', (tester) async {
     await _pump(tester, 'investor');
-    await tester.scrollUntilVisible(
-      find.widgetWithText(TextFormField, 'Minimum (PKR)'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.enterText(find.widgetWithText(TextFormField, 'Minimum (PKR)'), '500000');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Maximum (PKR)'), '1000');
+    expect(find.text('PKR'), findsNothing, reason: 'no currency choice any more');
     await _tapSave(tester);
 
     expect(find.text('Choose Investor type', skipOffstage: false), findsOneWidget);
-    expect(
-      find.text('Maximum investment must be greater than or equal to the minimum', skipOffstage: false),
-      findsOneWidget,
-    );
+    expect(find.text('Choose an investment range', skipOffstage: false), findsOneWidget);
     expect(find.text('Choose at least one category', skipOffstage: false), findsOneWidget);
+    await _finish(tester);
+  });
+
+  testWidgets('investment range is picked with a chip and saved as min / max', (tester) async {
+    final api = await _pump(tester, 'investor');
+    final chip = find.widgetWithText(ChoiceChip, '5 – 20 lakh');
+    await tester.scrollUntilVisible(chip, 300, scrollable: find.byType(Scrollable).first);
+    await tester.tap(chip);
+    await tester.pump();
+    await _tapSave(tester);
+    expect(api.savedBody, isNull, reason: 'other required fields are still empty');
+    expect(find.text('Choose an investment range', skipOffstage: false), findsNothing);
+    await _finish(tester);
+  });
+
+  testWidgets('a buyer sees buyer examples and an optional budget', (tester) async {
+    await _pump(tester, 'buyer');
+    expect(find.text('e.g. Shop owner looking for a POS app'), findsOneWidget);
+    await _tapSave(tester);
+    expect(find.text('Choose an investment range', skipOffstage: false), findsNothing);
     await _finish(tester);
   });
 }

@@ -129,6 +129,57 @@ class _TagsInputState extends State<_TagsInput> {
   }
 }
 
+/// One-tap PKR range (investment size / budget). Tapping the selected chip again clears an optional range.
+class RangeChipsField extends FormField<AmountRange?> {
+  RangeChipsField({
+    super.key,
+    required String label,
+    required AmountRange? initial,
+    required bool required,
+    String? requiredError,
+    required ValueChanged<AmountRange?> onChanged,
+    String? serverError,
+  }) : super(
+         initialValue: initial,
+         forceErrorText: serverError,
+         validator: (range) => required && range == null ? requiredError : null,
+         builder: (state) {
+           final theme = Theme.of(state.context);
+           return Padding(
+             padding: const EdgeInsets.only(bottom: 16),
+             child: Column(
+               crossAxisAlignment: CrossAxisAlignment.start,
+               children: [
+                 Text(label, style: theme.textTheme.bodyMedium),
+                 const SizedBox(height: 8),
+                 Wrap(
+                   spacing: 8,
+                   runSpacing: 4,
+                   children: [
+                     for (final range in amountRanges)
+                       ChoiceChip(
+                         label: Text(range.label),
+                         selected: state.value == range,
+                         onSelected: (on) {
+                           final next = on ? range : (required ? range : null);
+                           state.didChange(next);
+                           onChanged(next);
+                         },
+                       ),
+                   ],
+                 ),
+                 if (state.hasError)
+                   Padding(
+                     padding: const EdgeInsets.only(top: 6, left: 12),
+                     child: Text(state.errorText!, style: TextStyle(color: theme.colorScheme.error, fontSize: 12)),
+                   ),
+               ],
+             ),
+           );
+         },
+       );
+}
+
 /// Category chips for investor and buyer interests (1–10).
 class InterestsField extends FormField<Set<String>> {
   InterestsField({

@@ -11,12 +11,12 @@ import 'package:provider/provider.dart';
 import 'fakes.dart';
 
 Widget _wrap(Widget screen, {required FakeAuthApi api, required SessionController session}) => MultiProvider(
-      providers: [
-        Provider<AuthApi>.value(value: api),
-        ChangeNotifierProvider.value(value: session),
-      ],
-      child: MaterialApp(home: screen),
-    );
+  providers: [
+    Provider<AuthApi>.value(value: api),
+    ChangeNotifierProvider.value(value: session),
+  ],
+  child: MaterialApp(home: screen),
+);
 
 void main() {
   late FakeAuthApi api;
@@ -50,7 +50,13 @@ void main() {
   });
 
   testWidgets('register checks every field and ticks password rules live', (tester) async {
-    await tester.pumpWidget(_wrap(const RegisterScreen(role: UserRole.investor), api: api, session: session));
+    await tester.pumpWidget(
+      _wrap(
+        const RegisterScreen(role: UserRole.investor),
+        api: api,
+        session: session,
+      ),
+    );
     expect(find.text('Signing up as Investor'), findsOneWidget);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret');

@@ -22,6 +22,8 @@ class MyProfile {
     this.linkedinUrl,
     this.websiteUrl,
     required this.completed,
+    this.reviewStatus = 'unreviewed',
+    this.reviewNote,
     required this.details,
   });
 
@@ -36,6 +38,8 @@ class MyProfile {
     linkedinUrl: json['linkedinUrl'] as String?,
     websiteUrl: json['websiteUrl'] as String?,
     completed: json['completed'] as bool? ?? false,
+    reviewStatus: json['reviewStatus'] as String? ?? 'unreviewed',
+    reviewNote: json['reviewNote'] as String?,
     details: json['details'] is Map ? Map<String, dynamic>.from(json['details'] as Map) : const {},
   );
 
@@ -49,6 +53,8 @@ class MyProfile {
   final String? linkedinUrl;
   final String? websiteUrl;
   final bool completed;
+  final String reviewStatus; // admin approval of the account
+  final String? reviewNote;
   final Map<String, dynamic> details;
 
   String? detailText(String key) => details[key] as String?;
@@ -76,4 +82,22 @@ const buyerTypes = {
   'other': 'Other',
 };
 
-const currencies = ['PKR', 'USD'];
+/// Investment / budget ranges in PKR, chosen with chips instead of typing two numbers.
+class AmountRange {
+  const AmountRange(this.label, this.min, this.max);
+
+  final String label;
+  final int min;
+  final int? max; // null = "and above"
+
+  /// The preset matching saved values, or null.
+  static AmountRange? match(num? min, num? max) => amountRanges.where((r) => r.min == min && r.max == max).firstOrNull;
+}
+
+const amountRanges = [
+  AmountRange('Up to 1 lakh', 0, 100000),
+  AmountRange('1 – 5 lakh', 100000, 500000),
+  AmountRange('5 – 20 lakh', 500000, 2000000),
+  AmountRange('20 lakh – 1 crore', 2000000, 10000000),
+  AmountRange('1 crore+', 10000000, null),
+];

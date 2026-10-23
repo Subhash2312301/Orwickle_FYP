@@ -18,14 +18,13 @@ class _FakeHealthService extends HealthService {
   }
 }
 
-Widget _screen(HealthService service) =>
-    MaterialApp(home: SystemCheckScreen(service: service));
+Widget _screen(HealthService service) => MaterialApp(home: SystemCheckScreen(service: service));
 
 void main() {
   testWidgets('shows backend and database as connected', (tester) async {
-    await tester.pumpWidget(_screen(_FakeHealthService(
-      const HealthStatus(serverOk: true, databaseConnected: true, dbLatencyMs: 42),
-    )));
+    await tester.pumpWidget(
+      _screen(_FakeHealthService(const HealthStatus(serverOk: true, databaseConnected: true, dbLatencyMs: 42))),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Backend server'), findsOneWidget);
@@ -34,9 +33,9 @@ void main() {
   });
 
   testWidgets('shows the error message when the server is unreachable', (tester) async {
-    await tester.pumpWidget(_screen(_FakeHealthService(
-      const ApiException(code: 'NETWORK_ERROR', message: 'Cannot reach the server.'),
-    )));
+    await tester.pumpWidget(
+      _screen(_FakeHealthService(const ApiException(code: 'NETWORK_ERROR', message: 'Cannot reach the server.'))),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Cannot reach the server.'), findsOneWidget);

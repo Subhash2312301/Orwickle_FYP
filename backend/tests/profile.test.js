@@ -98,6 +98,7 @@ test('a complete owner profile is saved and marks the profile completed', async 
 
   const relogin = await api.post('/api/auth/refresh').send({ refreshToken: session.refreshToken });
   assert.equal(relogin.body.user.profileCompleted, true);
+  assert.equal(relogin.body.user.approvalStatus, 'pending');
 });
 
 test('investor ranges and interests are checked', async () => {
@@ -133,7 +134,8 @@ test('a complete investor profile saves interests', async () => {
   });
   assert.equal(res.status, 200);
   assert.equal(res.body.profile.details.maxTicket, 2000000);
-  assert.equal(res.body.profile.details.currency, 'PKR');
+  assert.equal(res.body.profile.details.currency, undefined, 'amounts are PKR only');
+  assert.equal(res.body.profile.reviewStatus, 'pending', 'a saved profile waits for admin approval');
   assert.deepEqual(res.body.profile.details.interests.map(i => i.name), [categories[0].name, categories[1].name]);
 });
 
@@ -145,20 +147,36 @@ test('a complete buyer profile is saved', async () => {
       buyerType: 'small_business',
       companyName: 'Rehman Traders',
       companyWebsite: 'https://rehmantraders.pk',
-      budgetMin: 50000,
-      budgetMax: 300000,
-      currency: 'PKR',
+      budgetMin: null,      // budget is optional for buyers
+      budgetMax: null,
       interests: [categories[2].id],
     },
   });
   assert.equal(res.status, 200);
   assert.equal(res.body.profile.details.companyName, 'Rehman Traders');
+  assert.equal(res.body.profile.details.budgetMin, null);
   assert.equal(res.body.profile.completed, true);
+});
+
+test('an investor range may be open-ended ("1 crore+")', async () => {
+  const session = await loginAs('investor');
+  const res = await putProfile(session.accessToken, {
+    ...common,
+    details: { investorType: 'firm', minTicket: 10000000, maxTicket: null, interests: [categories[0].id] },
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.profile.details.maxTicket, null);
+
+  const missing = await putProfile(session.accessToken, {
+    ...common, details: { investorType: 'firm', interests: [categories[0].id] },
+  });
+  assert.equal(missing.body.error.details['details.minTicket'], 'Choose an investment range');
 });
 
 test('admins have no role profile to fill in', async () => {
   const session = await loginAs('admin');
   assert.equal(session.user.profileCompleted, true);
+  assert.equal(session.user.approvalStatus, 'approved');
   assert.equal((await putProfile(session.accessToken, common)).status, 403);
   assert.equal((await getProfile(session.accessToken)).body.profile.completed, true);
 });

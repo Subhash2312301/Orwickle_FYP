@@ -34,7 +34,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   bool _typeLocked = false; // only drafts may change type
   String? _categoryId;
   String? _stage;
-  String _currency = 'PKR';
   List<String> _techStack = [];
   bool _saving = false;
   Map<String, String> _serverErrors = const {};
@@ -60,7 +59,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _typeLocked = l.status != 'draft';
     _categoryId = l.categoryId;
     _stage = l.projectStage;
-    _currency = l.currency;
     _techStack = [...l.techStack];
     _ctl('title').text = l.title;
     _ctl('shortDescription').text = l.shortDescription;
@@ -89,7 +87,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     'techStack': _techStack,
     'projectStage': _stage,
     'askingAmount': num.tryParse(_t('askingAmount')),
-    'currency': _currency,
     'confidential': {
       for (final key in confidentialLabels.keys)
         if (key != 'transferDetails' || !_funding) key: _t(key),
@@ -288,15 +285,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     serverError: _serverErrors['techStack'],
                   ),
                   const SizedBox(height: 16),
-                  SegmentedButton<String>(
-                    segments: [for (final c in currencies) ButtonSegment(value: c, label: Text(c))],
-                    selected: {_currency},
-                    onSelectionChanged: (s) => setState(() => _currency = s.first),
-                  ),
-                  const SizedBox(height: 16),
                   _text(
                     'askingAmount',
-                    _funding ? 'Funding needed ($_currency)' : 'Asking price ($_currency)',
+                    _funding ? 'Funding needed (PKR)' : 'Asking price (PKR)',
                     icon: Icons.payments_outlined,
                     keyboard: TextInputType.number,
                     formatters: [FilteringTextInputFormatter.digitsOnly],

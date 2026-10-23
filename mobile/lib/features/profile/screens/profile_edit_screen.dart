@@ -33,7 +33,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   List<String> _skills = [];
   Set<String> _interests = {};
   String? _type; // investorType / buyerType
-  String _currency = 'PKR';
+  AmountRange? _range; // investor ticket size / buyer budget
   bool _saving = false;
   Map<String, String> _serverErrors = const {};
   String? _avatarUrl;
@@ -72,14 +72,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ]) {
       _ctl(key).text = profile.detailText(key) ?? '';
     }
-    for (final key in ['graduationYear', 'minTicket', 'maxTicket', 'budgetMin', 'budgetMax']) {
-      final n = profile.detailNumber(key);
-      _ctl(key).text = n == null ? '' : (n % 1 == 0 ? n.toInt().toString() : n.toString());
-    }
+    final year = profile.detailNumber('graduationYear');
+    _ctl('graduationYear').text = year == null ? '' : '${year.toInt()}';
+    _range = _role == 'investor'
+        ? AmountRange.match(profile.detailNumber('minTicket'), profile.detailNumber('maxTicket'))
+        : AmountRange.match(profile.detailNumber('budgetMin'), profile.detailNumber('budgetMax'));
     _skills = profile.skills;
     _interests = profile.interestIds;
     _type = profile.detailText(_role == 'investor' ? 'investorType' : 'buyerType');
-    _currency = profile.detailText('currency') ?? 'PKR';
     _avatarUrl = profile.avatarUrl;
   }
 
@@ -132,18 +132,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       'investor' => {
         'investorType': _type,
         'organizationName': _t('organizationName'),
-        'minTicket': _n('minTicket'),
-        'maxTicket': _n('maxTicket'),
-        'currency': _currency,
+        'minTicket': _range?.min,
+        'maxTicket': _range?.max,
         'interests': _interests.toList(),
       },
       _ => {
         'buyerType': _type,
         'companyName': _t('companyName'),
         'companyWebsite': _t('companyWebsite'),
-        'budgetMin': _n('budgetMin'),
-        'budgetMax': _n('budgetMax'),
-        'currency': _currency,
+        'budgetMin': _range?.min,
+        'budgetMax': _range?.max,
         'interests': _interests.toList(),
       },
     },
@@ -160,8 +158,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       final saved = await context.read<ProfileApi>().saveMine(_body());
       if (!mounted) return;
       final session = context.read<SessionController>();
-      session.updateUser(session.user!.copyWith(fullName: saved.fullName, profileCompleted: true));
-      showInfoSnack(context, widget.setup ? 'Profile completed. Welcome to Orwickle!' : 'Profile saved');
+      session.updateUser(
+        session.user!.copyWith(
+          fullName: saved.fullName,
+          profileCompleted: true,
+          approvalStatus: saved.reviewStatus,
+          approvalNote: saved.reviewNote,
+        ),
+      );
+      showInfoSnack(
+        context,
+        saved.reviewStatus == 'pending' ? 'Profile saved and sent to an admin for approval' : 'Profile saved',
+      );
       widget.setup ? context.go(Routes.home) : Navigator.of(context).maybePop();
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -206,19 +214,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ),
   );
 
+  static const _headlineHints = {
+    'owner': 'e.g. CS student building EdTech apps',
+    'investor': 'e.g. Angel investor in FinTech startups',
+    'buyer': 'e.g. Shop owner looking for a POS app',
+  };
+
   // "an Investor", "a Buyer"
   static String _withArticle(String noun) => '${RegExp('^[AEIOU]').hasMatch(noun) ? 'an' : 'a'} $noun';
-
-  // [label] is the short text on the field; [errorLabel] names it in error messages
-  Widget _money(String key, String label, String errorLabel, {String? Function(String?)? validator}) => Expanded(
-    child: _text(
-      key,
-      label,
-      keyboard: TextInputType.number,
-      formatters: [FilteringTextInputFormatter.digitsOnly],
-      validator: validator ?? Validators.amount(errorLabel),
-    ),
-  );
 
   Widget _typeDropdown(String label, Map<String, String> options, String errorKey) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
@@ -230,32 +233,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       forceErrorText: _serverErrors[errorKey],
       decoration: InputDecoration(labelText: label, prefixIcon: const Icon(Icons.badge_outlined)),
     ),
-  );
-
-  Widget _currencyAndRange(String minKey, String maxKey, String minLabel, String maxLabel, String rangeName) => Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: SegmentedButton<String>(
-          segments: [for (final c in currencies) ButtonSegment(value: c, label: Text(c))],
-          selected: {_currency},
-          onSelectionChanged: (s) => setState(() => _currency = s.first),
-        ),
-      ),
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _money(minKey, 'Minimum ($_currency)', minLabel),
-          const SizedBox(width: 12),
-          _money(
-            maxKey,
-            'Maximum ($_currency)',
-            maxLabel,
-            validator: Validators.rangeMax(maxLabel, () => _ctl(minKey).text, rangeName),
-          ),
-        ],
-      ),
-    ],
   );
 
   List<Widget> _roleSection() => switch (_role) {
@@ -319,7 +296,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         icon: Icons.business_outlined,
         validator: Validators.optionalText('Organization name', max: 150),
       ),
-      _currencyAndRange('minTicket', 'maxTicket', 'Minimum investment', 'Maximum investment', 'investment'),
+      RangeChipsField(
+        label: 'How much do you usually invest in one startup? (PKR)',
+        initial: _range,
+        required: true,
+        requiredError: 'Choose an investment range',
+        onChanged: (r) => _range = r,
+        serverError: _serverErrors['minTicket'] ?? _serverErrors['maxTicket'],
+      ),
       const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
       InterestsField(
         categories: _categories,
@@ -344,7 +328,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         keyboard: TextInputType.url,
         validator: Validators.optionalUrl('company website'),
       ),
-      _currencyAndRange('budgetMin', 'budgetMax', 'Minimum budget', 'Maximum budget', 'budget'),
+      RangeChipsField(
+        label: 'Typical budget for a project (PKR, optional)',
+        initial: _range,
+        required: false,
+        onChanged: (r) => _range = r,
+        serverError: _serverErrors['budgetMin'] ?? _serverErrors['budgetMax'],
+      ),
       const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
       InterestsField(
         categories: _categories,
@@ -440,7 +430,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     'headline',
                     'Headline',
                     icon: Icons.short_text,
-                    hint: _role == 'owner' ? 'e.g. CS student building EdTech apps' : 'e.g. Angel investor in FinTech',
+                    hint: _headlineHints[_role],
                     validator: Validators.requiredText('Headline', max: 150),
                   ),
                   _text(
