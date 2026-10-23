@@ -75,8 +75,11 @@ class _SystemCheckScreenState extends State<SystemCheckScreen> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 16),
-                Text(_error!.message,
-                    textAlign: TextAlign.center, style: TextStyle(color: theme.colorScheme.error)),
+                Text(
+                  _error!.message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
               ],
               const Spacer(),
               Text(AppConfig.apiBaseUrl, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),

@@ -7,6 +7,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/data/auth_api.dart';
 import 'features/auth/session/session_controller.dart';
+import 'features/listings/data/listing_api.dart';
 import 'features/profile/data/profile_api.dart';
 
 class OrwickleApp extends StatefulWidget {
@@ -15,12 +16,14 @@ class OrwickleApp extends StatefulWidget {
     required this.apiClient,
     required this.authApi,
     required this.profileApi,
+    required this.listingApi,
     required this.session,
   });
 
   final ApiClient apiClient;
   final AuthApi authApi;
   final ProfileApi profileApi;
+  final ListingApi listingApi;
   final SessionController session;
 
   @override
@@ -38,6 +41,7 @@ class _OrwickleAppState extends State<OrwickleApp> {
         Provider.value(value: widget.apiClient),
         Provider.value(value: widget.authApi),
         Provider.value(value: widget.profileApi),
+        Provider.value(value: widget.listingApi),
         ChangeNotifierProvider.value(value: widget.session),
       ],
       child: MaterialApp.router(

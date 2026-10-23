@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/image_widgets.dart';
 import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
 import '../data/profile_api.dart';
@@ -35,6 +36,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   String _currency = 'PKR';
   bool _saving = false;
   Map<String, String> _serverErrors = const {};
+  String? _avatarUrl;
+  bool _avatarBusy = false;
 
   String get _role => context.read<SessionController>().user!.role;
 
@@ -77,6 +80,26 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _interests = profile.interestIds;
     _type = profile.detailText(_role == 'investor' ? 'investorType' : 'buyerType');
     _currency = profile.detailText('currency') ?? 'PKR';
+    _avatarUrl = profile.avatarUrl;
+  }
+
+  // The photo is saved straight away, separately from the rest of the form.
+  Future<void> _changeAvatar() async {
+    final choice = await pickImage(context, canRemove: _avatarUrl != null);
+    if (choice == null || !mounted) return;
+    final api = context.read<ProfileApi>();
+    setState(() => _avatarBusy = true);
+    try {
+      final profile = switch (choice) {
+        PickedImage(:final path) => await api.setAvatar(path),
+        RemoveImage() => await api.removeAvatar(),
+      };
+      if (mounted) setState(() => _avatarUrl = profile.avatarUrl);
+    } on ApiException catch (e) {
+      if (mounted) showErrorSnack(context, e);
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
   }
 
   @override
@@ -259,7 +282,17 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         formatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
         validator: Validators.graduationYear,
       ),
-      SkillsField(initial: _skills, onChanged: (s) => _skills = s, serverError: _serverErrors['skills']),
+      TagsField(
+        initial: _skills,
+        onChanged: (s) => _skills = s,
+        label: 'Skills',
+        hint: 'e.g. Flutter, then press +',
+        icon: Icons.psychology_outlined,
+        emptyError: 'Add at least one skill',
+        maxCount: 20,
+        maxError: 'Add at most 20 skills',
+        serverError: _serverErrors['skills'],
+      ),
       const SizedBox(height: 16),
       _text(
         'githubUrl',
@@ -374,6 +407,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                           'Welcome, ${session.user?.fullName ?? ''}! Tell others a little about yourself '
                           'as ${_withArticle(session.user?.roleLabel ?? '')}.',
                     ),
+                  Center(
+                    child: Stack(
+                      children: [
+                        UserAvatar(radius: 48, url: _avatarUrl, initials: session.user?.initials ?? '?'),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: IconButton.filled(
+                            tooltip: 'Change photo',
+                            onPressed: _avatarBusy ? null : _changeAvatar,
+                            icon: _avatarBusy
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.photo_camera_outlined, size: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SectionTitle('About you'),
                   _text(
                     'fullName',

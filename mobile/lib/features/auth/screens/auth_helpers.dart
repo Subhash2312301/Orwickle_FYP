@@ -18,5 +18,4 @@ Future<int> resendCode(BuildContext context, AuthApi api, String email, OtpPurpo
   }
 }
 
-String locationWithEmail(String path, String email) =>
-    Uri(path: path, queryParameters: {'email': email}).toString();
+String locationWithEmail(String path, String email) => Uri(path: path, queryParameters: {'email': email}).toString();

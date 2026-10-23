@@ -55,9 +55,6 @@ class _ResendCodeButtonState extends State<ResendCodeButton> {
     if (_secondsLeft > 0) {
       return TextButton(onPressed: null, child: Text('Resend code in ${_secondsLeft}s'));
     }
-    return TextButton(
-      onPressed: _sending ? null : _resend,
-      child: Text(_sending ? 'Sending...' : 'Resend code'),
-    );
+    return TextButton(onPressed: _sending ? null : _resend, child: Text(_sending ? 'Sending...' : 'Resend code'));
   }
 }

@@ -27,8 +27,12 @@ const cleanup = () => withTransaction(async client => {
   await client.query('ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_immutable');
   await client.query(
     `DELETE FROM audit_logs WHERE entity_id IN (SELECT id FROM users WHERE email LIKE $1)
+        OR entity_id IN (SELECT l.id FROM listings l JOIN users u ON u.id = l.owner_id WHERE u.email LIKE $1)
         OR actor_id IN (SELECT id FROM users WHERE email LIKE $1)`, [`%${DOMAIN}`]);
   await client.query('ALTER TABLE audit_logs ENABLE TRIGGER audit_logs_immutable');
+  // listings keep their owner (no cascade), so they go first
+  await client.query(
+    `DELETE FROM listings WHERE owner_id IN (SELECT id FROM users WHERE email LIKE $1)`, [`%${DOMAIN}`]);
   await client.query('DELETE FROM users WHERE email LIKE $1', [`%${DOMAIN}`]);
 });
 

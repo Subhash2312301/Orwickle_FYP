@@ -74,8 +74,11 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         LoadingButton(label: 'Verify', loading: _loading, onPressed: _verify),
         const SizedBox(height: 8),
         ResendCodeButton(onResend: () => resendCode(context, api, widget.email, OtpPurpose.emailVerify)),
-        Text('The code is valid for 10 minutes. Check your spam folder if you cannot find it.',
-            textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          'The code is valid for 10 minutes. Check your spam folder if you cannot find it.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
       ],
     );
   }

@@ -31,3 +31,6 @@ desktop.ini
 
 # Office temp/lock files
 ~$*
+
+# Uploaded files when Supabase Storage is not configured (development)
+backend/uploads/

@@ -39,9 +39,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     setState(() => _loading = true);
     try {
       await context.read<SessionController>().changePassword(
-            currentPassword: _current.text,
-            newPassword: _password.text,
-          );
+        currentPassword: _current.text,
+        newPassword: _password.text,
+      );
       if (!mounted) return;
       showInfoSnack(context, 'Password changed. Other devices have been logged out.');
       context.pop();
@@ -100,8 +100,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 12),
-                Text('Changing your password logs you out on all other devices.',
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  'Changing your password logs you out on all other devices.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const SizedBox(height: 24),
                 LoadingButton(label: 'Change password', loading: _loading, onPressed: _submit),
               ],

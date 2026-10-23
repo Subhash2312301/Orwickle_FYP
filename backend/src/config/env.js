@@ -26,7 +26,20 @@ if (isProduction && !smtp.configured) {
   throw new Error('SMTP_USER and SMTP_PASS are required in production to send OTP emails.');
 }
 
+// Supabase Storage when both values are set, otherwise files are kept in backend/uploads (development only)
+const storage = Object.freeze({
+  supabaseUrl: (process.env.SUPABASE_URL || '').replace(/\/$/, ''),
+  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  bucket: process.env.STORAGE_BUCKET || 'private-files',
+  get useSupabase() { return Boolean(this.supabaseUrl && this.serviceRoleKey); },
+});
+
+if (isProduction && !storage.useSupabase) {
+  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required in production for file storage.');
+}
+
 module.exports = Object.freeze({
+  storage,
   nodeEnv,
   isProduction,
   isTest: nodeEnv === 'test',

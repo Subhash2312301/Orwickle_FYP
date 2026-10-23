@@ -83,8 +83,11 @@ class _OtpInputState extends State<OtpInput> {
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(widget.errorText!,
-                textAlign: TextAlign.center, style: TextStyle(color: colors.error, fontSize: 13)),
+            child: Text(
+              widget.errorText!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: colors.error, fontSize: 13),
+            ),
           ),
       ],
     );

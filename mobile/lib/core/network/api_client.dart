@@ -12,13 +12,16 @@ typedef AccessTokenProvider = Future<String?> Function({bool forceRefresh});
 /// Requests with `auth: true` carry the access token; on a 401 the session is refreshed once and retried.
 class ApiClient {
   ApiClient({Dio? dio})
-      : _dio = dio ??
-            Dio(BaseOptions(
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
               baseUrl: AppConfig.apiBaseUrl,
               connectTimeout: AppConfig.requestTimeout,
               receiveTimeout: AppConfig.requestTimeout,
               contentType: Headers.jsonContentType,
-            ));
+            ),
+          );
 
   final Dio _dio;
 
@@ -34,10 +37,21 @@ class ApiClient {
   Future<Map<String, dynamic>> put(String path, {Object? body, bool auth = false}) =>
       _send(auth, (options) => _dio.put<dynamic>(path, data: body, options: options));
 
-  Future<Map<String, dynamic>> _send(
-    bool auth,
-    Future<Response<dynamic>> Function(Options options) request,
-  ) async {
+  Future<Map<String, dynamic>> delete(String path, {bool auth = false}) =>
+      _send(auth, (options) => _dio.delete<dynamic>(path, options: options));
+
+  /// Uploads one image file as multipart field "image" (PUT).
+  Future<Map<String, dynamic>> uploadImage(String path, String filePath, {bool auth = true}) => _send(
+    auth,
+    // a fresh FormData per attempt, because a sent one cannot be sent again on retry
+    (options) async => _dio.put<dynamic>(
+      path,
+      data: FormData.fromMap({'image': await MultipartFile.fromFile(filePath)}),
+      options: options,
+    ),
+  );
+
+  Future<Map<String, dynamic>> _send(bool auth, Future<Response<dynamic>> Function(Options options) request) async {
     try {
       return _body(await request(await _options(auth)));
     } on DioException catch (e) {

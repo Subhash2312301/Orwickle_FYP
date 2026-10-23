@@ -25,32 +25,55 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
-/// Skills as removable chips plus an input to add more (1–20 skills).
-class SkillsField extends FormField<List<String>> {
-  SkillsField({super.key, required List<String> initial, required ValueChanged<List<String>> onChanged, String? serverError})
-      : super(
-          initialValue: initial,
-          forceErrorText: serverError,
-          validator: (skills) {
-            if (skills == null || skills.isEmpty) return 'Add at least one skill';
-            if (skills.length > 20) return 'Add at most 20 skills';
-            return null;
-          },
-          builder: (state) => _SkillsInput(state: state, onChanged: onChanged),
-        );
+/// Short text tags as removable chips plus an input to add more — owner skills, listing tech stack.
+class TagsField extends FormField<List<String>> {
+  TagsField({
+    super.key,
+    required List<String> initial,
+    required ValueChanged<List<String>> onChanged,
+    required String label,
+    required String hint,
+    required IconData icon,
+    String? emptyError, // null = tags are optional
+    required int maxCount,
+    required String maxError,
+    int maxLength = 40,
+    String? serverError,
+  }) : super(
+         initialValue: initial,
+         forceErrorText: serverError,
+         validator: (tags) {
+           if ((tags == null || tags.isEmpty) && emptyError != null) return emptyError;
+           if ((tags?.length ?? 0) > maxCount) return maxError;
+           return null;
+         },
+         builder: (state) =>
+             _TagsInput(state: state, onChanged: onChanged, label: label, hint: hint, icon: icon, maxLength: maxLength),
+       );
 }
 
-class _SkillsInput extends StatefulWidget {
-  const _SkillsInput({required this.state, required this.onChanged});
+class _TagsInput extends StatefulWidget {
+  const _TagsInput({
+    required this.state,
+    required this.onChanged,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.maxLength,
+  });
 
   final FormFieldState<List<String>> state;
   final ValueChanged<List<String>> onChanged;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final int maxLength;
 
   @override
-  State<_SkillsInput> createState() => _SkillsInputState();
+  State<_TagsInput> createState() => _TagsInputState();
 }
 
-class _SkillsInputState extends State<_SkillsInput> {
+class _TagsInputState extends State<_TagsInput> {
   final _input = TextEditingController();
 
   @override
@@ -67,7 +90,7 @@ class _SkillsInputState extends State<_SkillsInput> {
   void _add() {
     final skill = _input.text.trim();
     final skills = widget.state.value ?? [];
-    if (skill.isEmpty || skill.length > 40) return;
+    if (skill.isEmpty || skill.length > widget.maxLength) return;
     if (!skills.any((s) => s.toLowerCase() == skill.toLowerCase())) _set([...skills, skill]);
     _input.clear();
   }
@@ -80,16 +103,16 @@ class _SkillsInputState extends State<_SkillsInput> {
       children: [
         TextField(
           controller: _input,
-          maxLength: 40,
+          maxLength: widget.maxLength,
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _add(),
           decoration: InputDecoration(
-            labelText: 'Skills',
-            hintText: 'e.g. Flutter, then press +',
-            prefixIcon: const Icon(Icons.psychology_outlined),
+            labelText: widget.label,
+            hintText: widget.hint,
+            prefixIcon: Icon(widget.icon),
             counterText: '',
             errorText: widget.state.errorText,
-            suffixIcon: IconButton(tooltip: 'Add skill', icon: const Icon(Icons.add), onPressed: _add),
+            suffixIcon: IconButton(tooltip: 'Add', icon: const Icon(Icons.add), onPressed: _add),
           ),
         ),
         const SizedBox(height: 8),
@@ -115,43 +138,43 @@ class InterestsField extends FormField<Set<String>> {
     required ValueChanged<Set<String>> onChanged,
     String? serverError,
   }) : super(
-          initialValue: initial,
-          forceErrorText: serverError,
-          validator: (ids) {
-            if (ids == null || ids.isEmpty) return 'Choose at least one category';
-            if (ids.length > 10) return 'Choose at most 10 categories';
-            return null;
-          },
-          builder: (state) {
-            final selected = state.value ?? {};
-            final colors = Theme.of(state.context).colorScheme;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final c in categories)
-                      FilterChip(
-                        label: Text(c.name),
-                        selected: selected.contains(c.id),
-                        onSelected: (on) {
-                          final next = {...selected};
-                          on ? next.add(c.id) : next.remove(c.id);
-                          state.didChange(next);
-                          onChanged(next);
-                        },
-                      ),
-                  ],
-                ),
-                if (state.hasError)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 12),
-                    child: Text(state.errorText!, style: TextStyle(color: colors.error, fontSize: 12)),
-                  ),
-              ],
-            );
-          },
-        );
+         initialValue: initial,
+         forceErrorText: serverError,
+         validator: (ids) {
+           if (ids == null || ids.isEmpty) return 'Choose at least one category';
+           if (ids.length > 10) return 'Choose at most 10 categories';
+           return null;
+         },
+         builder: (state) {
+           final selected = state.value ?? {};
+           final colors = Theme.of(state.context).colorScheme;
+           return Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+               Wrap(
+                 spacing: 8,
+                 runSpacing: 4,
+                 children: [
+                   for (final c in categories)
+                     FilterChip(
+                       label: Text(c.name),
+                       selected: selected.contains(c.id),
+                       onSelected: (on) {
+                         final next = {...selected};
+                         on ? next.add(c.id) : next.remove(c.id);
+                         state.didChange(next);
+                         onChanged(next);
+                       },
+                     ),
+                 ],
+               ),
+               if (state.hasError)
+                 Padding(
+                   padding: const EdgeInsets.only(top: 6, left: 12),
+                   child: Text(state.errorText!, style: TextStyle(color: colors.error, fontSize: 12)),
+                 ),
+             ],
+           );
+         },
+       );
 }

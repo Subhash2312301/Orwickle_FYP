@@ -35,39 +35,37 @@ class Validators {
   }
 
   /// Presence only, for logging in.
-  static String? loginPassword(String? value) =>
-      (value == null || value.isEmpty) ? 'Password is required' : null;
+  static String? loginPassword(String? value) => (value == null || value.isEmpty) ? 'Password is required' : null;
 
   static String? Function(String?) confirmPassword(String Function() original) =>
       (value) => (value ?? '').isEmpty
-          ? 'Please confirm your password'
-          : value != original()
-              ? 'Passwords do not match'
-              : null;
+      ? 'Please confirm your password'
+      : value != original()
+      ? 'Passwords do not match'
+      : null;
 
-  static String? otp(String? value) =>
-      _otpPattern.hasMatch(value?.trim() ?? '') ? null : 'Enter the 6-digit code';
+  static String? otp(String? value) => _otpPattern.hasMatch(value?.trim() ?? '') ? null : 'Enter the 6-digit code';
 
   // ---------- profile (backend/src/modules/profiles/profile.validation.js) ----------
 
   static final _urlPattern = RegExp(r'^https?://[^\s.]+\.\S+$', caseSensitive: false);
 
   static String? Function(String?) requiredText(String label, {int min = 2, required int max}) => (value) {
-        final v = value?.trim() ?? '';
-        if (v.isEmpty) return '$label is required';
-        if (v.length < min) return '$label must be at least $min characters';
-        if (v.length > max) return '$label must be at most $max characters';
-        return null;
-      };
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return '$label is required';
+    if (v.length < min) return '$label must be at least $min characters';
+    if (v.length > max) return '$label must be at most $max characters';
+    return null;
+  };
 
   static String? Function(String?) optionalText(String label, {required int max}) =>
       (value) => (value?.trim().length ?? 0) > max ? '$label must be at most $max characters' : null;
 
   static String? Function(String?) optionalUrl(String label) => (value) {
-        final v = value?.trim() ?? '';
-        if (v.isEmpty) return null;
-        return v.length <= 300 && _urlPattern.hasMatch(v) ? null : 'Enter a full $label starting with https://';
-      };
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return null;
+    return v.length <= 300 && _urlPattern.hasMatch(v) ? null : 'Enter a full $label starting with https://';
+  };
 
   static String? graduationYear(String? value) {
     final v = value?.trim() ?? '';
@@ -77,46 +75,122 @@ class Validators {
   }
 
   static String? Function(String?) amount(String label) => (value) {
-        final v = value?.trim() ?? '';
-        if (v.isEmpty) return '$label is required';
-        final n = num.tryParse(v);
-        if (n == null) return '$label must be a number';
-        if (n < 0) return '$label cannot be negative';
-        return null;
-      };
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return '$label is required';
+    final n = num.tryParse(v);
+    if (n == null) return '$label must be a number';
+    if (n < 0) return '$label cannot be negative';
+    return null;
+  };
 
   /// For the "maximum" field of a range; [minimum] reads the other field.
-  static String? Function(String?) rangeMax(String label, String Function() minimum, String rangeName) =>
-      (value) {
-        final own = amount(label)(value);
-        if (own != null) return own;
-        final min = num.tryParse(minimum().trim());
-        return min != null && num.parse(value!.trim()) < min
-            ? 'Maximum $rangeName must be greater than or equal to the minimum'
-            : null;
-      };
+  static String? Function(String?) rangeMax(String label, String Function() minimum, String rangeName) => (value) {
+    final own = amount(label)(value);
+    if (own != null) return own;
+    final min = num.tryParse(minimum().trim());
+    return min != null && num.parse(value!.trim()) < min
+        ? 'Maximum $rangeName must be greater than or equal to the minimum'
+        : null;
+  };
 
   /// Shown as a live checklist under the password field.
   static final List<PasswordRule> passwordRules = [
     PasswordRule('At least 8 characters', 'Password must be at least 8 characters', (v) => v.length >= 8),
     PasswordRule('At most 72 characters', 'Password must be at most 72 characters', (v) => v.length <= 72),
-    PasswordRule('An uppercase letter', 'Password must contain an uppercase letter', (v) => v.contains(RegExp('[A-Z]'))),
+    PasswordRule(
+      'An uppercase letter',
+      'Password must contain an uppercase letter',
+      (v) => v.contains(RegExp('[A-Z]')),
+    ),
     PasswordRule('A lowercase letter', 'Password must contain a lowercase letter', (v) => v.contains(RegExp('[a-z]'))),
     PasswordRule('A number', 'Password must contain a number', (v) => v.contains(RegExp('[0-9]'))),
-    PasswordRule('A special character', 'Password must contain a special character (e.g. ! @ # \$)',
-        (v) => v.contains(RegExp('[^A-Za-z0-9]'))),
+    PasswordRule(
+      'A special character',
+      'Password must contain a special character (e.g. ! @ # \$)',
+      (v) => v.contains(RegExp('[^A-Za-z0-9]')),
+    ),
   ];
 
   // Same list and logic as backend/src/modules/auth/passwordPolicy.js
   static const _commonWords = {
-    'password', 'passwd', 'pass', 'qwerty', 'qwertyuiop', 'asdf', 'asdfgh', 'asdfghjkl', 'zxcv', 'zxcvbn',
-    'zxcvbnm', 'qwer', 'qwe', 'abc', 'abcd', 'abcde', 'abcdef', 'abcdefg', 'abcdefgh', 'admin', 'administrator',
-    'welcome', 'letmein', 'iloveyou', 'love', 'test', 'testing', 'user', 'login', 'secret', 'master', 'monkey',
-    'dragon', 'football', 'cricket', 'baseball', 'soccer', 'sunshine', 'princess', 'superman', 'batman',
-    'shadow', 'freedom', 'whatever', 'trustno', 'hello', 'hellohello', 'changeme', 'default', 'guest',
-    'pakistan', 'karachi', 'lahore', 'islamabad', 'allah', 'bismillah', 'mashallah', 'india', 'orwickle',
-    'szabist', 'student', 'computer', 'internet', 'google', 'facebook', 'instagram', 'samsung', 'apple',
-    'iphone', 'android', 'summer', 'winter', 'spring', 'autumn', 'money', 'qazwsx', 'aaa', 'aaaa',
+    'password',
+    'passwd',
+    'pass',
+    'qwerty',
+    'qwertyuiop',
+    'asdf',
+    'asdfgh',
+    'asdfghjkl',
+    'zxcv',
+    'zxcvbn',
+    'zxcvbnm',
+    'qwer',
+    'qwe',
+    'abc',
+    'abcd',
+    'abcde',
+    'abcdef',
+    'abcdefg',
+    'abcdefgh',
+    'admin',
+    'administrator',
+    'welcome',
+    'letmein',
+    'iloveyou',
+    'love',
+    'test',
+    'testing',
+    'user',
+    'login',
+    'secret',
+    'master',
+    'monkey',
+    'dragon',
+    'football',
+    'cricket',
+    'baseball',
+    'soccer',
+    'sunshine',
+    'princess',
+    'superman',
+    'batman',
+    'shadow',
+    'freedom',
+    'whatever',
+    'trustno',
+    'hello',
+    'hellohello',
+    'changeme',
+    'default',
+    'guest',
+    'pakistan',
+    'karachi',
+    'lahore',
+    'islamabad',
+    'allah',
+    'bismillah',
+    'mashallah',
+    'india',
+    'orwickle',
+    'szabist',
+    'student',
+    'computer',
+    'internet',
+    'google',
+    'facebook',
+    'instagram',
+    'samsung',
+    'apple',
+    'iphone',
+    'android',
+    'summer',
+    'winter',
+    'spring',
+    'autumn',
+    'money',
+    'qazwsx',
+    'aaa',
+    'aaaa',
   };
   static const _leet = {'0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '@': 'a', r'$': 's'};
 
