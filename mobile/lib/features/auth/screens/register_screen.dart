@@ -175,8 +175,10 @@ class _TermsCheckbox extends StatelessWidget {
                   const Text('I agree to the '),
                   GestureDetector(
                     onTap: () => showTermsDialog(context),
-                    child: Text('Terms of Use & Disclaimer',
-                        style: TextStyle(color: colors.primary, decoration: TextDecoration.underline)),
+                    child: Text(
+                      'Terms of Use & Disclaimer',
+                      style: TextStyle(color: colors.primary, decoration: TextDecoration.underline),
+                    ),
                   ),
                 ],
               ),

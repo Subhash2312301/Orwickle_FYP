@@ -52,6 +52,28 @@ Rules (see `src/config/auth.js`):
 - Audit log: registration, verification, login, failed login, lock, logout, password change/reset and
   refresh-token reuse are written to `audit_logs`.
 
+## Profile and listing API
+
+All need `Authorization: Bearer <accessToken>`.
+
+| Method & path | Who | What |
+|---|---|---|
+| `GET /api/categories` | anyone | active categories |
+| `GET /api/profile/me` | any user | own profile, `details` per role, `avatarUrl` |
+| `PUT /api/profile/me` | owner / investor / buyer | save the whole profile (first save marks it complete) |
+| `PUT /api/profile/me/avatar` | any user | multipart field `image` (JPEG/PNG/WebP, ≤ 5 MB) |
+| `DELETE /api/profile/me/avatar` | any user | remove photo |
+| `POST /api/listings` | owner | create a draft: preview fields + `confidential` |
+| `GET /api/listings/mine` | owner | own listings |
+| `GET /api/listings/:id` | any user | owner/admin get preview + confidential; others only the preview of a published listing |
+| `PUT /api/listings/:id` | owner | save; editing a published listing sends it back for review |
+| `POST /api/listings/:id/publish` · `unpublish` · `close` | owner | draft → published (review pending) → draft; draft/published → closed |
+| `DELETE /api/listings/:id` | owner | drafts only |
+| `PUT` / `DELETE /api/listings/:id/cover` | owner | cover image (multipart field `image`) |
+
+Images are stored privately (Supabase Storage when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set,
+otherwise `backend/uploads`) and returned as links that expire after one hour.
+
 ## Admin accounts
 
 Admins cannot sign up in the app. Create one with:

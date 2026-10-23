@@ -43,7 +43,7 @@ class SessionController extends ChangeNotifier with WidgetsBindingObserver {
   DateTime? _sessionRenewedAt;
   String? _refreshToken;
   Future<bool>? _refreshInFlight;
-  int _generation = 0;   // bumped on logout so late refresh answers are ignored
+  int _generation = 0; // bumped on logout so late refresh answers are ignored
 
   Timer? _idleTimer;
   DateTime _lastActivity = DateTime.fromMillisecondsSinceEpoch(0);

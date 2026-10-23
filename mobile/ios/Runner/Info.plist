@@ -47,6 +47,10 @@
 				</array>
 			</dict>
 		</dict>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Orwickle uses your photos for your profile picture and project cover images.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Orwickle uses the camera to take your profile picture or a project cover image.</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UILaunchStoryboardName</key>

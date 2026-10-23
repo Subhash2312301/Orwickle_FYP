@@ -20,7 +20,7 @@ class PasswordField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final String? Function(String?)? validator;
-  final String? errorText;   // error from the server for this field
+  final String? errorText; // error from the server for this field
   final ValueChanged<String>? onChanged;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onSubmitted;
@@ -135,8 +135,10 @@ class InfoBanner extends StatelessWidget {
           Icon(icon, color: isError ? colors.onErrorContainer : colors.onSecondaryContainer),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(message,
-                style: TextStyle(color: isError ? colors.onErrorContainer : colors.onSecondaryContainer)),
+            child: Text(
+              message,
+              style: TextStyle(color: isError ? colors.onErrorContainer : colors.onSecondaryContainer),
+            ),
           ),
         ],
       ),

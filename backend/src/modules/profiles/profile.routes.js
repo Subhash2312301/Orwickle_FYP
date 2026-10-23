@@ -2,6 +2,7 @@
 
 const { Router } = require('express');
 const validate = require('../../middleware/validate');
+const imageUpload = require('../../middleware/imageUpload');
 const { requireAuth, requireRole } = require('../../middleware/auth');
 const { profileSchemas } = require('./profile.validation');
 const controller = require('./profile.controller');
@@ -15,6 +16,8 @@ profileRouter.put(
   (req, res, next) => validate(profileSchemas[req.user.role])(req, res, next),
   controller.updateMine,
 );
+profileRouter.put('/me/avatar', imageUpload, controller.setAvatar);
+profileRouter.delete('/me/avatar', controller.removeAvatar);
 
 const categoryRouter = Router();
 categoryRouter.get('/', controller.categories);

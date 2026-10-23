@@ -9,8 +9,7 @@ enum UserRole {
   final String label;
   final String description;
 
-  static UserRole? fromName(String? name) =>
-      UserRole.values.where((r) => r.name == name).firstOrNull;
+  static UserRole? fromName(String? name) => UserRole.values.where((r) => r.name == name).firstOrNull;
 }
 
 class AppUser {
@@ -24,17 +23,17 @@ class AppUser {
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
-        id: json['id'] as String,
-        email: json['email'] as String,
-        role: json['role'] as String,
-        fullName: json['fullName'] as String,
-        emailVerified: json['emailVerified'] as bool? ?? false,
-        profileCompleted: json['profileCompleted'] as bool? ?? false,
-      );
+    id: json['id'] as String,
+    email: json['email'] as String,
+    role: json['role'] as String,
+    fullName: json['fullName'] as String,
+    emailVerified: json['emailVerified'] as bool? ?? false,
+    profileCompleted: json['profileCompleted'] as bool? ?? false,
+  );
 
   final String id;
   final String email;
-  final String role;        // owner / investor / buyer / admin
+  final String role; // owner / investor / buyer / admin
   final String fullName;
   final bool emailVerified;
 
@@ -42,13 +41,13 @@ class AppUser {
   final bool profileCompleted;
 
   AppUser copyWith({String? fullName, bool? profileCompleted}) => AppUser(
-        id: id,
-        email: email,
-        role: role,
-        fullName: fullName ?? this.fullName,
-        emailVerified: emailVerified,
-        profileCompleted: profileCompleted ?? this.profileCompleted,
-      );
+    id: id,
+    email: email,
+    role: role,
+    fullName: fullName ?? this.fullName,
+    emailVerified: emailVerified,
+    profileCompleted: profileCompleted ?? this.profileCompleted,
+  );
 
   String get roleLabel => UserRole.fromName(role)?.label ?? 'Administrator';
 
@@ -72,11 +71,11 @@ class AuthSession {
   });
 
   factory AuthSession.fromJson(Map<String, dynamic> json) => AuthSession(
-        accessToken: json['accessToken'] as String,
-        refreshToken: json['refreshToken'] as String,
-        expiresIn: Duration(seconds: (json['expiresIn'] as num).toInt()),
-        user: AppUser.fromJson(Map<String, dynamic>.from(json['user'] as Map)),
-      );
+    accessToken: json['accessToken'] as String,
+    refreshToken: json['refreshToken'] as String,
+    expiresIn: Duration(seconds: (json['expiresIn'] as num).toInt()),
+    user: AppUser.fromJson(Map<String, dynamic>.from(json['user'] as Map)),
+  );
 
   final String accessToken;
   final String refreshToken;

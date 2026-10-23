@@ -6,10 +6,7 @@ class AppConfig {
   const AppConfig._();
 
   /// 10.0.2.2 is how the Android emulator reaches the laptop's localhost.
-  static const String apiBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:4000/api',
-  );
+  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:4000/api');
 
   static const Duration requestTimeout = Duration(seconds: 15);
 }

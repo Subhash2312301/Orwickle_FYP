@@ -15,6 +15,7 @@ class MyProfile {
     required this.role,
     required this.email,
     required this.fullName,
+    this.avatarUrl,
     this.headline,
     this.bio,
     this.city,
@@ -25,21 +26,23 @@ class MyProfile {
   });
 
   factory MyProfile.fromJson(Map<String, dynamic> json) => MyProfile(
-        role: json['role'] as String,
-        email: json['email'] as String,
-        fullName: json['fullName'] as String,
-        headline: json['headline'] as String?,
-        bio: json['bio'] as String?,
-        city: json['city'] as String?,
-        linkedinUrl: json['linkedinUrl'] as String?,
-        websiteUrl: json['websiteUrl'] as String?,
-        completed: json['completed'] as bool? ?? false,
-        details: json['details'] is Map ? Map<String, dynamic>.from(json['details'] as Map) : const {},
-      );
+    role: json['role'] as String,
+    email: json['email'] as String,
+    fullName: json['fullName'] as String,
+    avatarUrl: json['avatarUrl'] as String?,
+    headline: json['headline'] as String?,
+    bio: json['bio'] as String?,
+    city: json['city'] as String?,
+    linkedinUrl: json['linkedinUrl'] as String?,
+    websiteUrl: json['websiteUrl'] as String?,
+    completed: json['completed'] as bool? ?? false,
+    details: json['details'] is Map ? Map<String, dynamic>.from(json['details'] as Map) : const {},
+  );
 
   final String role;
   final String email;
   final String fullName;
+  final String? avatarUrl; // short-lived link; null when there is no photo
   final String? headline;
   final String? bio;
   final String? city;
@@ -54,8 +57,8 @@ class MyProfile {
   List<String> get skills => [for (final s in (details['skills'] as List? ?? const [])) '$s'];
 
   Set<String> get interestIds => {
-        for (final i in (details['interests'] as List? ?? const [])) (i as Map)['id'] as String,
-      };
+    for (final i in (details['interests'] as List? ?? const [])) (i as Map)['id'] as String,
+  };
 }
 
 /// Labels for the API's enum values.

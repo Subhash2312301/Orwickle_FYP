@@ -1,8 +1,10 @@
 // Reads and saves the logged-in user's profile: common fields + role details + category interests.
 
+const crypto = require('node:crypto');
 const { pool, withTransaction } = require('../../db/pool');
 const HttpError = require('../../utils/httpError');
 const { audit } = require('../../services/audit');
+const storage = require('../../services/storage');
 
 const toNumber = v => (v == null ? null : Number(v));
 
@@ -15,9 +17,9 @@ async function loadInterests(db, userId) {
   return rows;
 }
 
-async function getMyProfile(userId, role, db = pool) {
+async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
   const { rows: [p] } = await db.query(
-    `SELECT u.email, p.full_name, p.headline, p.bio, p.city, p.linkedin_url, p.website_url,
+    `SELECT u.email, p.full_name, p.headline, p.bio, p.city, p.linkedin_url, p.website_url, p.avatar_path,
             p.review_status, p.completed_deal_count, p.profile_completed_at
        FROM users u JOIN profiles p ON p.user_id = u.id WHERE u.id = $1`,
     [userId]);
@@ -27,6 +29,7 @@ async function getMyProfile(userId, role, db = pool) {
     role,
     email: p.email,
     fullName: p.full_name,
+    avatarUrl: await storage.signedUrl(p.avatar_path, baseUrl),
     headline: p.headline,
     bio: p.bio,
     city: p.city,
@@ -88,7 +91,7 @@ async function saveInterests(client, userId, categoryIds) {
 }
 
 // Saves the whole profile; the first complete save marks the profile as completed.
-async function updateMyProfile(userId, role, body, { ip }) {
+async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
   const d = body.details;
   return withTransaction(async client => {
     await client.query(
@@ -123,8 +126,27 @@ async function updateMyProfile(userId, role, body, { ip }) {
     }
 
     await audit(client, { actorId: userId, action: 'profile.updated', entityId: userId, ip });
-    return getMyProfile(userId, role, client);
+    return getMyProfile(userId, role, { db: client, baseUrl });
   });
+}
+
+// Replaces the profile photo; the old file is deleted after the database points to the new one.
+async function setAvatar(userId, role, image, { ip, baseUrl }) {
+  const filePath = `avatars/${userId}/${crypto.randomUUID()}.${image.ext}`;
+  await storage.upload(filePath, image.buffer, image.contentType);
+  const { rows: [old] } = await pool.query('SELECT avatar_path FROM profiles WHERE user_id = $1', [userId]);
+  await pool.query('UPDATE profiles SET avatar_path = $2 WHERE user_id = $1', [userId, filePath]);
+  await storage.remove(old?.avatar_path);
+  await audit(pool, { actorId: userId, action: 'profile.avatar_updated', entityId: userId, ip });
+  return getMyProfile(userId, role, { baseUrl });
+}
+
+async function removeAvatar(userId, role, { ip, baseUrl }) {
+  const { rows: [old] } = await pool.query('SELECT avatar_path FROM profiles WHERE user_id = $1', [userId]);
+  await pool.query('UPDATE profiles SET avatar_path = NULL WHERE user_id = $1', [userId]);
+  await storage.remove(old?.avatar_path);
+  await audit(pool, { actorId: userId, action: 'profile.avatar_removed', entityId: userId, ip });
+  return getMyProfile(userId, role, { baseUrl });
 }
 
 async function listCategories() {
@@ -133,4 +155,4 @@ async function listCategories() {
   return { categories: rows };
 }
 
-module.exports = { getMyProfile, updateMyProfile, listCategories };
+module.exports = { getMyProfile, updateMyProfile, setAvatar, removeAvatar, listCategories };
