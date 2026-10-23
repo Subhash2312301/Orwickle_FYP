@@ -11,6 +11,7 @@ const authRoutes = require('./modules/auth/auth.routes');
 const { profileRouter, categoryRouter } = require('./modules/profiles/profile.routes');
 const listingRoutes = require('./modules/listings/listing.routes');
 const fileRoutes = require('./routes/files');
+const adminRoutes = require('./modules/admin/admin.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -26,6 +27,7 @@ app.use('/api/profile', profileRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/listings', listingRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

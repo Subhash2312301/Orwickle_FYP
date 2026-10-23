@@ -31,7 +31,7 @@ const listingSchema = z.object({
   askingAmount: z.number({ error: 'Amount must be a number' })
     .positive('Amount must be greater than 0')
     .max(1e12, 'Amount is too large'),
-  currency: z.enum(['PKR', 'USD'], { error: 'Choose PKR or USD' }).default('PKR'),
+  currency: z.literal('PKR', { error: 'Amounts are in PKR' }).default('PKR'),   // Karachi pilot
   confidential: z.object({
     fullDescription: text('Full description', 5000, 20),
     problemStatement: optionalText('Problem statement', 2000),

@@ -16,14 +16,16 @@ class _Categories extends ProfileApi {
 }
 
 Future<void> _pumpForm(WidgetTester tester) async {
-  await tester.pumpWidget(MultiProvider(
-    providers: [
-      Provider<ProfileApi>.value(value: _Categories()),
-      // the form never reaches the API in these tests: validation stops it first
-      Provider<ListingApi>.value(value: ListingApi(ApiClient())),
-    ],
-    child: const MaterialApp(home: ListingFormScreen()),
-  ));
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        Provider<ProfileApi>.value(value: _Categories()),
+        // the form never reaches the API in these tests: validation stops it first
+        Provider<ListingApi>.value(value: ListingApi(ApiClient())),
+      ],
+      child: const MaterialApp(home: ListingFormScreen()),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -32,7 +34,7 @@ Future<void> _save(WidgetTester tester) async {
   await tester.scrollUntilVisible(button, 400, scrollable: find.byType(Scrollable).first);
   await tester.tap(button);
   await tester.pumpAndSettle();
-  await tester.pump(const Duration(seconds: 5));   // let the snack bar time out
+  await tester.pump(const Duration(seconds: 5)); // let the snack bar time out
 }
 
 void main() {

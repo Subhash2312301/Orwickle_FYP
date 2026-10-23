@@ -18,7 +18,8 @@ const PREVIEW_SELECT = `
     JOIN categories c ON c.id = l.category_id
     JOIN profiles p ON p.user_id = l.owner_id`;
 
-async function toPreview(row, baseUrl) {
+// reviewNote (why an admin rejected the listing) is only for the owner and admins
+async function toPreview(row, baseUrl, { withReviewNote = false } = {}) {
   return {
     id: row.id,
     listingType: row.listing_type,
@@ -32,6 +33,7 @@ async function toPreview(row, baseUrl) {
     coverUrl: await storage.signedUrl(row.thumbnail_path, baseUrl),
     status: row.status,
     reviewStatus: row.review_status,
+    ...(withReviewNote && { reviewNote: row.review_note }),
     publishedAt: row.published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -83,6 +85,14 @@ async function assertCategory(db, categoryId) {
   }
 }
 
+async function assertOwnerApproved(db, ownerId) {
+  const { rows: [p] } = await db.query('SELECT review_status FROM profiles WHERE user_id = $1', [ownerId]);
+  if (p?.review_status !== 'approved') {
+    throw new HttpError(403, 'ACCOUNT_NOT_APPROVED',
+      'Your account is waiting for admin approval. You can publish once it is approved.');
+  }
+}
+
 const confidentialValues = c => [
   c.fullDescription, c.problemStatement, c.solutionDetails, c.businessModel, c.traction,
   c.financialSummary, c.roadmap, c.teamDetails, c.ipOwnershipNotes, c.equityOfferedPercent ?? null,
@@ -97,9 +107,10 @@ async function getListing(listingId, user, baseUrl) {
   if (!row) throw notFound();
 
   const canSeeAll = row.owner_id === user.id || user.role === 'admin';
-  if (!canSeeAll && row.status !== 'published') throw notFound();
+  // everyone else sees a listing only once it is published AND approved by an admin
+  if (!canSeeAll && !(row.status === 'published' && row.review_status === 'approved')) throw notFound();
 
-  const result = { listing: await toPreview(row, baseUrl) };
+  const result = { listing: await toPreview(row, baseUrl, { withReviewNote: canSeeAll }) };
   if (canSeeAll) {
     const { rows: [c] } = await pool.query('SELECT * FROM listing_confidential WHERE listing_id = $1', [listingId]);
     result.confidential = c ? toConfidential(c) : null;
@@ -109,7 +120,7 @@ async function getListing(listingId, user, baseUrl) {
 
 async function listMine(ownerId, baseUrl) {
   const { rows } = await pool.query(`${PREVIEW_SELECT} WHERE l.owner_id = $1 ORDER BY l.updated_at DESC`, [ownerId]);
-  return { listings: await Promise.all(rows.map(r => toPreview(r, baseUrl))) };
+  return { listings: await Promise.all(rows.map(r => toPreview(r, baseUrl, { withReviewNote: true }))) };
 }
 
 // ---------- changes (owner only) ----------
@@ -167,7 +178,10 @@ async function updateListing(listingId, ownerId, body, { ip, baseUrl }) {
 
 // Allowed status moves: draft → published (review pending), published → draft, draft/published → closed.
 const TRANSITIONS = {
-  publish: { from: ['draft'], to: 'published', done: 'published', set: ", published_at = now(), review_status = 'pending'" },
+  publish: {
+    from: ['draft'], to: 'published', done: 'published',
+    set: ", published_at = now(), review_status = 'pending', review_note = NULL",
+  },
   unpublish: { from: ['published'], to: 'draft', done: 'unpublished', set: '' },
   close: { from: ['draft', 'published'], to: 'closed', done: 'closed', set: ', closed_at = now()' },
 };
@@ -180,6 +194,7 @@ async function changeStatus(listingId, ownerId, action, { ip, baseUrl }) {
     if (!t.from.includes(row.status)) {
       throw new HttpError(409, 'INVALID_STATUS', `A ${row.status} listing cannot be ${t.done}`);
     }
+    if (action === 'publish') await assertOwnerApproved(client, ownerId);
     await client.query(`UPDATE listings SET status = $2 ${t.set} WHERE id = $1`, [listingId, t.to]);
     await audit(client, { actorId: ownerId, action: `listing.${t.done}`, entityType: 'listing', entityId: listingId, ip });
   });

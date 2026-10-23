@@ -31,7 +31,7 @@ void main() {
     await session.restore();
     expect(session.status, SessionStatus.authenticated);
     expect(session.user!.fullName, 'Subhash Rai');
-    expect(storage.token, 'refresh-2');   // rotated
+    expect(storage.token, 'refresh-2'); // rotated
     session.dispose();
   });
 
@@ -63,7 +63,7 @@ void main() {
     expect(session.isLoggedIn, isFalse);
     expect(session.lastLogoutReason, LogoutReason.inactivity);
     expect(storage.token, isNull);
-    expect(api.loggedOut, ['refresh-1']);   // server session ended too
+    expect(api.loggedOut, ['refresh-1']); // server session ended too
     session.dispose();
   });
 

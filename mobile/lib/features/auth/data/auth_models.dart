@@ -20,6 +20,8 @@ class AppUser {
     required this.fullName,
     required this.emailVerified,
     this.profileCompleted = false,
+    this.approvalStatus = 'unreviewed',
+    this.approvalNote,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -29,6 +31,8 @@ class AppUser {
     fullName: json['fullName'] as String,
     emailVerified: json['emailVerified'] as bool? ?? false,
     profileCompleted: json['profileCompleted'] as bool? ?? false,
+    approvalStatus: json['approvalStatus'] as String? ?? 'unreviewed',
+    approvalNote: json['approvalNote'] as String?,
   );
 
   final String id;
@@ -40,18 +44,28 @@ class AppUser {
   /// False until the first complete profile is saved; the app then shows profile setup.
   final bool profileCompleted;
 
-  AppUser copyWith({String? fullName, bool? profileCompleted}) => AppUser(
+  /// Admin approval of the account: unreviewed | pending | approved | rejected | needs_evidence.
+  final String approvalStatus;
+
+  /// The admin's reason when the account was rejected or more information is needed.
+  final String? approvalNote;
+
+  bool get isApproved => approvalStatus == 'approved';
+
+  AppUser copyWith({String? fullName, bool? profileCompleted, String? approvalStatus, String? approvalNote}) => AppUser(
     id: id,
     email: email,
     role: role,
     fullName: fullName ?? this.fullName,
     emailVerified: emailVerified,
     profileCompleted: profileCompleted ?? this.profileCompleted,
+    approvalStatus: approvalStatus ?? this.approvalStatus,
+    approvalNote: approvalStatus == null ? this.approvalNote : approvalNote,
   );
 
   String get roleLabel => UserRole.fromName(role)?.label ?? 'Administrator';
 
-  /// "Subhash Rai" → "SR"; used as the avatar until photos arrive in Phase 3.
+  /// "Subhash Rai" → "SR"; shown when there is no profile photo.
   String get initials {
     final parts = fullName.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return '?';

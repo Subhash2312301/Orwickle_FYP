@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/widgets/image_widgets.dart';
+import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
 import '../data/listing_api.dart';
 import '../data/listing_models.dart';
@@ -188,6 +189,25 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                         for (final t in l.techStack) Chip(label: Text(t)),
                       ],
                     ),
+                    if (l.reviewStatus == 'rejected' && l.status == 'draft')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: InfoBanner(
+                          isError: true,
+                          icon: Icons.feedback_outlined,
+                          message:
+                              'An admin did not approve this listing: ${l.reviewNote ?? 'no reason given'}. '
+                              'Edit it and publish again.',
+                        ),
+                      ),
+                    if (l.status == 'published' && l.reviewStatus == 'pending')
+                      const Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: InfoBanner(
+                          icon: Icons.hourglass_top,
+                          message: 'Waiting for admin review. Investors and buyers will see it once approved.',
+                        ),
+                      ),
                     if (l.status == 'suspended')
                       const Padding(
                         padding: EdgeInsets.only(top: 12),
@@ -212,13 +232,21 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   List<Widget> _actions(Listing l) {
+    final approved = context.read<SessionController>().user?.isApproved ?? false;
     final buttons = <Widget>[
-      if (l.status == 'draft')
+      if (l.status == 'draft') ...[
         FilledButton.icon(
-          onPressed: _busy ? null : _publish,
+          onPressed: _busy || !approved ? null : _publish,
           icon: const Icon(Icons.publish),
           label: const Text('Publish'),
         ),
+        if (!approved)
+          Text(
+            'You can publish once an admin approves your account.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
       if (l.status == 'draft' || l.status == 'published')
         OutlinedButton.icon(
           onPressed: _busy ? null : _edit,

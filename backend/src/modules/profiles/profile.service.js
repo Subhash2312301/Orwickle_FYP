@@ -20,7 +20,7 @@ async function loadInterests(db, userId) {
 async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
   const { rows: [p] } = await db.query(
     `SELECT u.email, p.full_name, p.headline, p.bio, p.city, p.linkedin_url, p.website_url, p.avatar_path,
-            p.review_status, p.completed_deal_count, p.profile_completed_at
+            p.review_status, p.review_note, p.completed_deal_count, p.profile_completed_at
        FROM users u JOIN profiles p ON p.user_id = u.id WHERE u.id = $1`,
     [userId]);
   if (!p) throw new HttpError(404, 'NOT_FOUND', 'Profile not found');
@@ -35,7 +35,9 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
     city: p.city,
     linkedinUrl: p.linkedin_url,
     websiteUrl: p.website_url,
-    reviewStatus: p.review_status,
+    // admin approval of the account; reviewNote explains a rejection or a request for more information
+    reviewStatus: role === 'admin' ? 'approved' : p.review_status,
+    reviewNote: p.review_note,
     completedDealCount: p.completed_deal_count,
     completed: role === 'admin' || Boolean(p.profile_completed_at),
     details: null,
@@ -58,7 +60,6 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
       organizationName: d.organization_name,
       minTicket: toNumber(d.min_ticket),
       maxTicket: toNumber(d.max_ticket),
-      currency: d.currency,
       interests: await loadInterests(db, userId),
     };
   } else if (role === 'buyer') {
@@ -69,7 +70,6 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
       companyWebsite: d.company_website,
       budgetMin: toNumber(d.budget_min),
       budgetMax: toNumber(d.budget_max),
-      currency: d.currency,
       interests: await loadInterests(db, userId),
     };
   }
@@ -97,7 +97,10 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
     await client.query(
       `UPDATE profiles
           SET full_name = $2, headline = $3, bio = $4, city = $5, linkedin_url = $6, website_url = $7,
-              profile_completed_at = coalesce(profile_completed_at, now())
+              profile_completed_at = coalesce(profile_completed_at, now()),
+              -- a first save, or a save after a rejection / request for more information, goes to the admin
+              review_status = CASE WHEN review_status IN ('unreviewed', 'rejected', 'needs_evidence')
+                                   THEN 'pending'::review_status ELSE review_status END
         WHERE user_id = $1`,
       [userId, body.fullName, body.headline, body.bio, body.city, body.linkedinUrl, body.websiteUrl]);
 
@@ -111,17 +114,16 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
     } else if (role === 'investor') {
       await client.query(
         `UPDATE investor_profiles
-            SET investor_type = $2, organization_name = $3, min_ticket = $4, max_ticket = $5, currency = $6
+            SET investor_type = $2, organization_name = $3, min_ticket = $4, max_ticket = $5
           WHERE user_id = $1`,
-        [userId, d.investorType, d.organizationName, d.minTicket, d.maxTicket, d.currency]);
+        [userId, d.investorType, d.organizationName, d.minTicket, d.maxTicket]);
       await saveInterests(client, userId, d.interests);
     } else if (role === 'buyer') {
       await client.query(
         `UPDATE buyer_profiles
-            SET buyer_type = $2, company_name = $3, company_website = $4, budget_min = $5, budget_max = $6,
-                currency = $7
+            SET buyer_type = $2, company_name = $3, company_website = $4, budget_min = $5, budget_max = $6
           WHERE user_id = $1`,
-        [userId, d.buyerType, d.companyName, d.companyWebsite, d.budgetMin, d.budgetMax, d.currency]);
+        [userId, d.buyerType, d.companyName, d.companyWebsite, d.budgetMin, d.budgetMax]);
       await saveInterests(client, userId, d.interests);
     }
 

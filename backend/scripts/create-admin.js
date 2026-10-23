@@ -37,7 +37,9 @@ async function main() {
       `INSERT INTO users (email, password_hash, role, email_verified_at, terms_accepted_at)
        VALUES ($1, $2, 'admin', now(), now()) RETURNING id`,
       [email, hash]);
-    await client.query('INSERT INTO profiles (user_id, full_name) VALUES ($1, $2)', [admin.id, name]);
+    await client.query(
+      `INSERT INTO profiles (user_id, full_name, review_status, reviewed_at) VALUES ($1, $2, 'approved', now())`,
+      [admin.id, name]);
     await client.query(
       `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id) VALUES (NULL, 'admin.created', 'user', $1)`,
       [admin.id]);

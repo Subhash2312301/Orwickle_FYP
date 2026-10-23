@@ -17,8 +17,8 @@ const SECRET_TEXT = 'Our secret revenue figures and full technical design';
 
 let owner, otherOwner, investor, categoryId;
 
-const login = async role => {
-  const res = await api.post('/api/auth/login').send(await createVerifiedUser(role));
+const login = async (role, options) => {
+  const res = await api.post('/api/auth/login').send(await createVerifiedUser(role, undefined, options));
   return res.body.accessToken;
 };
 const as = token => ({
@@ -37,7 +37,6 @@ const fundingListing = overrides => ({
   techStack: ['Flutter', 'Node.js', 'Flutter'],
   projectStage: 'mvp',
   askingAmount: 1500000,
-  currency: 'PKR',
   confidential: { fullDescription: SECRET_TEXT, equityOfferedPercent: 10, traction: '300 beta users' },
   ...overrides,
 });
@@ -52,8 +51,8 @@ const pathOf = url => { const u = new URL(url); return u.pathname + u.search; };
 before(async () => {
   await cleanup();
   categoryId = (await api.get('/api/categories')).body.categories[0].id;
-  owner = as(await login('owner'));
-  otherOwner = as(await login('owner'));
+  owner = as(await login('owner', { approved: true }));
+  otherOwner = as(await login('owner', { approved: true }));
   investor = as(await login('investor'));
 });
 after(async () => {
@@ -93,6 +92,20 @@ test('listing rules depend on the type', async () => {
   assert.equal(badCategory.body.error.details.categoryId, 'This category no longer exists');
 });
 
+test('an owner waiting for approval can create drafts but not publish', async () => {
+  const pendingOwner = as(await login('owner'));
+  const draft = await pendingOwner.post('/api/listings', fundingListing());
+  assert.equal(draft.status, 201);
+  const publish = await pendingOwner.post(`/api/listings/${draft.body.listing.id}/publish`);
+  assert.equal(publish.status, 403);
+  assert.equal(publish.body.error.code, 'ACCOUNT_NOT_APPROVED');
+});
+
+test('amounts are in PKR only', async () => {
+  const res = await owner.post('/api/listings', fundingListing({ currency: 'USD' }));
+  assert.equal(res.body.error.details.currency, 'Amounts are in PKR');
+});
+
 test('only project owners can create listings', async () => {
   assert.equal((await investor.post('/api/listings', fundingListing())).status, 403);
   assert.equal((await api.post('/api/listings').send(fundingListing())).status, 401);
@@ -125,7 +138,12 @@ test('publishing sends the listing for review', async () => {
   assert.equal((await owner.post(`/api/listings/${fundingId}/publish`)).status, 409);
 });
 
-test('others see only the public preview of a published listing', async () => {
+test('a published listing stays hidden from others until an admin approves it', async () => {
+  assert.equal((await investor.get(`/api/listings/${fundingId}`)).status, 404);
+  await pool.query("UPDATE listings SET review_status = 'approved' WHERE id = $1", [fundingId]);
+});
+
+test('others see only the public preview of an approved listing', async () => {
   const res = await investor.get(`/api/listings/${fundingId}`);
   assert.equal(res.status, 200);
   assert.equal(res.body.listing.title, 'StudyBuddy — AI tutor for O Levels');
@@ -134,7 +152,6 @@ test('others see only the public preview of a published listing', async () => {
 });
 
 test('editing a published listing sends it back for review; its type cannot change', async () => {
-  await pool.query("UPDATE listings SET review_status = 'approved' WHERE id = $1", [fundingId]);
   const edited = await owner.put(`/api/listings/${fundingId}`, fundingListing({ askingAmount: 2000000 }));
   assert.equal(edited.status, 200);
   assert.equal(edited.body.listing.askingAmount, 2000000);

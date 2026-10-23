@@ -25,9 +25,15 @@ void main() {
       expect(Validators.newPassword(weak), tooCommon, reason: weak);
     }
     expect(Validators.newPassword('Subhash#2026', name: 'Subhash Rai'), 'Password must not contain your name or email');
-    expect(Validators.newPassword('Orbit#al2026', name: 'Al Noor'), isNull, reason: 'parts under 3 letters are ignored');
-    expect(Validators.newPassword('Xavi#subhash1', email: 'subhash@example.com'),
-        'Password must not contain your name or email');
+    expect(
+      Validators.newPassword('Orbit#al2026', name: 'Al Noor'),
+      isNull,
+      reason: 'parts under 3 letters are ignored',
+    );
+    expect(
+      Validators.newPassword('Xavi#subhash1', email: 'subhash@example.com'),
+      'Password must not contain your name or email',
+    );
   });
 
   test('confirm password', () {
