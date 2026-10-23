@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/router/routes.dart';
 import '../auth/session/session_controller.dart';
 
 /// Placeholder home for logged-in users. Profile setup (Step 3) and listings (Phase 3) come next.
@@ -50,6 +52,16 @@ class HomeScreen extends StatelessWidget {
               subtitle: const Text('Coming in the next step'),
               trailing: const Icon(Icons.chevron_right),
               enabled: false,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.password),
+              title: const Text('Change password'),
+              subtitle: const Text('Also logs you out on other devices'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(Routes.changePassword),
             ),
           ),
           const SizedBox(height: 8),

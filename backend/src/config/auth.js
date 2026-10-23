@@ -10,5 +10,8 @@ module.exports = Object.freeze({
   otpMaxAttempts: 5,                         // then a new OTP must be requested
   otpResendCooldownMs: 60 * 1000,            // one new OTP per minute
 
+  maxFailedLogins: 5,                        // wrong passwords in a row before the account locks
+  accountLockMs: 15 * 60 * 1000,             // for 15 minutes
+
   bcryptRounds: 12,
 });

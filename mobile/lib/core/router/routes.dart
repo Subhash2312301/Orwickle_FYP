@@ -11,6 +11,7 @@ class Routes {
   static const resetPassword = '/reset-password'; // ?email=
   static const systemCheck = '/system-check';
   static const home = '/home';
+  static const changePassword = '/change-password';
 
   /// Pages a logged-out user may open.
   static const public = {welcome, register, verifyEmail, login, forgotPassword, resetPassword, systemCheck};

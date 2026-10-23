@@ -1,5 +1,5 @@
 // Sends emails through Gmail SMTP (nodemailer).
-// Without SMTP settings (development) the email is printed to the console instead,
+// Outside production the email is also printed to the console (or only printed, when SMTP is not set),
 // and in tests it is kept in `outbox` so tests can read the OTP.
 
 const nodemailer = require('nodemailer');
@@ -21,11 +21,9 @@ async function sendMail({ to, subject, text, html }) {
     outbox.push({ to, subject, text });
     return;
   }
-  if (!transport) {
-    console.log(`\n[dev email] to: ${to}\nsubject: ${subject}\n${text}\n`);
-    return;
-  }
-  await transport.sendMail({ from: env.mailFrom, to, subject, text, html });
+  // development only: the email is also shown in the terminal, which helps when testing on an emulator
+  if (!env.isProduction) console.log(`\n[dev email] to: ${to}\nsubject: ${subject}\n${text}\n`);
+  if (transport) await transport.sendMail({ from: env.mailFrom, to, subject, text, html });
 }
 
 module.exports = { sendMail, outbox };

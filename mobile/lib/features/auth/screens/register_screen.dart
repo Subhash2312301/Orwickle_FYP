@@ -10,6 +10,7 @@ import '../data/auth_models.dart';
 import '../widgets/auth_link_row.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/form_widgets.dart';
+import '../widgets/terms_dialog.dart';
 import 'auth_helpers.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -29,6 +30,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirm = TextEditingController();
 
   bool _loading = false;
+  bool _acceptedTerms = false;
+  bool _termsError = false;
   Map<String, String> _serverErrors = const {};
 
   @override
@@ -40,14 +43,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _submit() async {
-    setState(() => _serverErrors = const {});
-    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _serverErrors = const {};
+      _termsError = !_acceptedTerms;
+    });
+    final formOk = _form.currentState!.validate();
+    if (!formOk || !_acceptedTerms) return;
 
     final api = context.read<AuthApi>();
     final email = _email.text.trim().toLowerCase();
     setState(() => _loading = true);
     try {
-      await api.register(fullName: _name.text.trim(), email: email, password: _password.text, role: widget.role);
+      await api.register(
+        fullName: _name.text.trim(),
+        email: email,
+        password: _password.text,
+        role: widget.role,
+        acceptTerms: _acceptedTerms,
+      );
       if (mounted) context.go(locationWithEmail(Routes.verifyEmail, email));
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -102,7 +115,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 PasswordField(
                   controller: _password,
                   label: 'Password',
-                  validator: Validators.newPassword,
+                  validator: (v) => Validators.newPassword(v, name: _name.text, email: _email.text),
                   errorText: _serverErrors['password'],
                   autofillHints: const [AutofillHints.newPassword],
                   onChanged: (_) => setState(() {}),
@@ -117,7 +130,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 12),
+                _TermsCheckbox(
+                  value: _acceptedTerms,
+                  error: _termsError ? (_serverErrors['acceptTerms'] ?? 'You must accept the terms to continue') : null,
+                  onChanged: (v) => setState(() {
+                    _acceptedTerms = v;
+                    if (v) _termsError = false;
+                  }),
+                ),
+                const SizedBox(height: 16),
                 LoadingButton(label: 'Create account', loading: _loading, onPressed: _submit),
               ],
             ),
@@ -125,6 +147,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 12),
         AuthLinkRow(text: 'Already have an account?', action: 'Log in', onPressed: () => context.go(Routes.login)),
+      ],
+    );
+  }
+}
+
+class _TermsCheckbox extends StatelessWidget {
+  const _TermsCheckbox({required this.value, required this.onChanged, this.error});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Checkbox(value: value, onChanged: (v) => onChanged(v ?? false), isError: error != null),
+            Expanded(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text('I agree to the '),
+                  GestureDetector(
+                    onTap: () => showTermsDialog(context),
+                    child: Text('Terms of Use & Disclaimer',
+                        style: TextStyle(color: colors.primary, decoration: TextDecoration.underline)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(error!, style: TextStyle(color: colors.error, fontSize: 12)),
+          ),
       ],
     );
   }
