@@ -7,7 +7,8 @@ const pool = new Pool({
   connectionString: env.databaseUrl,
   ssl: { rejectUnauthorized: false },   // Supabase uses its own CA
   max: 5,                               // free-tier pooler allows few connections
-  idleTimeoutMillis: 30_000,
+  idleTimeoutMillis: 5 * 60_000,        // reopening a connection to Sydney costs ~2.5 s
+  keepAlive: true,
 });
 
 pool.on('error', err => {
