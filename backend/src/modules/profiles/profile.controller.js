@@ -14,5 +14,9 @@ module.exports = {
     res.json(await service.setAvatar(req.user.id, req.user.role, req.image, context(req))),
   removeAvatar: async (req, res) =>
     res.json(await service.removeAvatar(req.user.id, req.user.role, context(req))),
+  setDocument: async (req, res) =>
+    res.json(await service.setDocument(req.user.id, req.user.role, req.params.kind, req.image, context(req))),
+  removeDocument: async (req, res) =>
+    res.json(await service.removeDocument(req.user.id, req.user.role, req.params.kind, context(req))),
   categories: async (req, res) => res.json(await service.listCategories()),
 };

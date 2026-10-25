@@ -1,10 +1,12 @@
-// Reads and saves the logged-in user's profile: common fields + role details + category interests.
+// Reads and saves the logged-in user's profile: common fields, role details, category interests
+// and verification documents (CNIC, university ID, company certificate).
 
 const crypto = require('node:crypto');
 const { pool, withTransaction } = require('../../db/pool');
 const HttpError = require('../../utils/httpError');
 const { audit } = require('../../services/audit');
 const storage = require('../../services/storage');
+const { requiredDocuments, DOCUMENT_LABELS, ALLOWED_DOCUMENTS } = require('./profile.validation');
 
 const toNumber = v => (v == null ? null : Number(v));
 
@@ -17,10 +19,24 @@ async function loadInterests(db, userId) {
   return rows;
 }
 
+// Uploaded verification documents with short-lived links (only the user and admins ever get these).
+async function loadDocuments(db, userId, baseUrl) {
+  const { rows } = await db.query(
+    `SELECT kind, storage_path, content_type, created_at FROM evidence_submissions
+      WHERE subject_user_id = $1 AND kind = ANY($2::text[]) ORDER BY created_at`,
+    [userId, Object.keys(DOCUMENT_LABELS)]);
+  return Promise.all(rows.map(async r => ({
+    kind: r.kind,
+    url: await storage.signedUrl(r.storage_path, baseUrl),
+    contentType: r.content_type,
+    uploadedAt: r.created_at,
+  })));
+}
+
 async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
   const { rows: [p] } = await db.query(
-    `SELECT u.email, p.full_name, p.headline, p.bio, p.city, p.linkedin_url, p.website_url, p.avatar_path,
-            p.review_status, p.review_note, p.completed_deal_count, p.profile_completed_at
+    `SELECT u.email, p.full_name, p.headline, p.bio, p.city, p.phone, p.linkedin_url, p.website_url, p.avatar_path,
+            p.review_status, p.review_note, p.completed_deal_count, p.profile_completed_at, p.is_sample
        FROM users u JOIN profiles p ON p.user_id = u.id WHERE u.id = $1`,
     [userId]);
   if (!p) throw new HttpError(404, 'NOT_FOUND', 'Profile not found');
@@ -33,6 +49,7 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
     headline: p.headline,
     bio: p.bio,
     city: p.city,
+    phone: p.phone,
     linkedinUrl: p.linkedin_url,
     websiteUrl: p.website_url,
     // admin approval of the account; reviewNote explains a rejection or a request for more information
@@ -40,7 +57,9 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
     reviewNote: p.review_note,
     completedDealCount: p.completed_deal_count,
     completed: role === 'admin' || Boolean(p.profile_completed_at),
+    isSample: p.is_sample,
     details: null,
+    documents: role === 'admin' ? [] : await loadDocuments(db, userId, baseUrl),
   };
 
   if (role === 'owner') {
@@ -57,7 +76,11 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
     const { rows: [d] } = await db.query('SELECT * FROM investor_profiles WHERE user_id = $1', [userId]);
     profile.details = d && {
       investorType: d.investor_type,
-      organizationName: d.organization_name,
+      cnicNumber: d.cnic_number,
+      companyName: d.organization_name,
+      companyWebsite: d.company_website,
+      companyEmail: d.company_email,
+      investmentExperience: d.investment_experience,
       minTicket: toNumber(d.min_ticket),
       maxTicket: toNumber(d.max_ticket),
       interests: await loadInterests(db, userId),
@@ -66,10 +89,8 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
     const { rows: [d] } = await db.query('SELECT * FROM buyer_profiles WHERE user_id = $1', [userId]);
     profile.details = d && {
       buyerType: d.buyer_type,
+      affiliation: d.affiliation,
       companyName: d.company_name,
-      companyWebsite: d.company_website,
-      budgetMin: toNumber(d.budget_min),
-      budgetMax: toNumber(d.budget_max),
       interests: await loadInterests(db, userId),
     };
   }
@@ -90,19 +111,42 @@ async function saveInterests(client, userId, categoryIds) {
     [userId, ids]);
 }
 
-// Saves the whole profile; the first complete save marks the profile as completed.
+async function assertDocuments(db, userId, role, details) {
+  const needed = requiredDocuments(role, details);
+  if (!needed.length) return;
+  const { rows } = await db.query(
+    'SELECT kind FROM evidence_submissions WHERE subject_user_id = $1 AND kind = ANY($2::text[])', [userId, needed]);
+  const have = new Set(rows.map(r => r.kind));
+  const missing = needed.filter(kind => !have.has(kind));
+  if (missing.length) {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'Please upload the required documents',
+      Object.fromEntries(missing.map(kind => [`documents.${kind}`, `Upload ${DOCUMENT_LABELS[kind]}`])));
+  }
+}
+
+// Saves the whole profile; the first complete save marks the profile as completed and sends it for review.
 async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
   const d = body.details;
   return withTransaction(async client => {
+    await assertDocuments(client, userId, role, d);
+
+    // fields a role does not have are left untouched
     await client.query(
       `UPDATE profiles
-          SET full_name = $2, headline = $3, bio = $4, city = $5, linkedin_url = $6, website_url = $7,
+          SET full_name = $2, city = $3,
+              headline = CASE WHEN $8 THEN $4 ELSE headline END,
+              bio = CASE WHEN $8 THEN $5 ELSE bio END,
+              website_url = CASE WHEN $8 THEN $7 ELSE website_url END,
+              linkedin_url = CASE WHEN $9 THEN $6 ELSE linkedin_url END,
+              phone = CASE WHEN $10 THEN $11 ELSE phone END,
               profile_completed_at = coalesce(profile_completed_at, now()),
               -- a first save, or a save after a rejection / request for more information, goes to the admin
               review_status = CASE WHEN review_status IN ('unreviewed', 'rejected', 'needs_evidence')
                                    THEN 'pending'::review_status ELSE review_status END
         WHERE user_id = $1`,
-      [userId, body.fullName, body.headline, body.bio, body.city, body.linkedinUrl, body.websiteUrl]);
+      [userId, body.fullName, body.city, body.headline ?? null, body.bio ?? null, body.linkedinUrl ?? null,
+        body.websiteUrl ?? null, role === 'owner', role === 'owner' || role === 'investor',
+        role === 'investor', body.phone ?? null]);
 
     if (role === 'owner') {
       await client.query(
@@ -112,18 +156,23 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
           WHERE user_id = $1`,
         [userId, d.university, d.degreeProgram, d.graduationYear ?? null, d.skills, d.githubUrl, d.portfolioUrl]);
     } else if (role === 'investor') {
+      const firm = d.investorType === 'firm';
       await client.query(
         `UPDATE investor_profiles
-            SET investor_type = $2, organization_name = $3, min_ticket = $4, max_ticket = $5
+            SET investor_type = $2, cnic_number = $3, organization_name = $4, company_website = $5,
+                company_email = $6, investment_experience = $7, min_ticket = $8, max_ticket = $9
           WHERE user_id = $1`,
-        [userId, d.investorType, d.organizationName, d.minTicket, d.maxTicket]);
+        [userId, d.investorType, d.cnicNumber, d.companyName, d.companyWebsite, d.companyEmail,
+          d.investmentExperience, d.minTicket, d.maxTicket]);
+      if (!firm) await removeDocumentRows(client, userId, ['company_certificate']);
       await saveInterests(client, userId, d.interests);
     } else if (role === 'buyer') {
       await client.query(
-        `UPDATE buyer_profiles
-            SET buyer_type = $2, company_name = $3, company_website = $4, budget_min = $5, budget_max = $6
-          WHERE user_id = $1`,
-        [userId, d.buyerType, d.companyName, d.companyWebsite, d.budgetMin, d.budgetMax]);
+        `UPDATE buyer_profiles SET buyer_type = $2, affiliation = $3, company_name = $4 WHERE user_id = $1`,
+        [userId, d.buyerType, d.affiliation, d.affiliation === 'company' ? d.companyName : null]);
+      if (d.affiliation === 'company') {
+        await removeDocumentRows(client, userId, ['university_id_front', 'university_id_back']);
+      }
       await saveInterests(client, userId, d.interests);
     }
 
@@ -131,6 +180,55 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
     return getMyProfile(userId, role, { db: client, baseUrl });
   });
 }
+
+// ---------- verification documents ----------
+
+// Deletes document rows (files are removed afterwards by the caller or left for cleanup).
+async function removeDocumentRows(db, userId, kinds) {
+  const { rows } = await db.query(
+    `DELETE FROM evidence_submissions WHERE subject_user_id = $1 AND kind = ANY($2::text[]) RETURNING storage_path`,
+    [userId, kinds]);
+  await Promise.all(rows.map(r => storage.remove(r.storage_path)));
+}
+
+function assertKind(role, kind) {
+  if (!(ALLOWED_DOCUMENTS[role] || []).includes(kind)) {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'This document is not needed for your role',
+      { kind: 'This document is not needed for your role' });
+  }
+}
+
+// Stores or replaces one document. Changing a document of an approved account sends it back to review.
+async function setDocument(userId, role, kind, file, { ip, baseUrl }) {
+  assertKind(role, kind);
+  const filePath = `documents/${userId}/${kind}-${crypto.randomUUID()}.${file.ext}`;
+  await storage.upload(filePath, file.buffer, file.contentType);
+
+  const oldPath = await withTransaction(async client => {
+    const { rows: [old] } = await client.query(
+      'DELETE FROM evidence_submissions WHERE subject_user_id = $1 AND kind = $2 RETURNING storage_path', [userId, kind]);
+    await client.query(
+      `INSERT INTO evidence_submissions (submitted_by, subject_user_id, kind, storage_path, content_type)
+       VALUES ($1, $1, $2, $3, $4)`,
+      [userId, kind, filePath, file.contentType]);
+    await client.query(
+      `UPDATE profiles SET review_status = 'pending', review_note = NULL
+        WHERE user_id = $1 AND review_status = 'approved'`, [userId]);
+    await audit(client, { actorId: userId, action: 'profile.document_uploaded', entityId: userId, ip, details: { kind } });
+    return old?.storage_path;
+  });
+  await storage.remove(oldPath);
+  return getMyProfile(userId, role, { baseUrl });
+}
+
+async function removeDocument(userId, role, kind, { ip, baseUrl }) {
+  assertKind(role, kind);
+  await removeDocumentRows(pool, userId, [kind]);
+  await audit(pool, { actorId: userId, action: 'profile.document_removed', entityId: userId, ip, details: { kind } });
+  return getMyProfile(userId, role, { baseUrl });
+}
+
+// ---------- profile photo ----------
 
 // Replaces the profile photo; the old file is deleted after the database points to the new one.
 async function setAvatar(userId, role, image, { ip, baseUrl }) {
@@ -157,4 +255,6 @@ async function listCategories() {
   return { categories: rows };
 }
 
-module.exports = { getMyProfile, updateMyProfile, setAvatar, removeAvatar, listCategories };
+module.exports = {
+  getMyProfile, updateMyProfile, setDocument, removeDocument, setAvatar, removeAvatar, listCategories,
+};

@@ -17,6 +17,9 @@ class MyProfile {
     required this.fullName,
     this.avatarUrl,
     this.headline,
+    this.phone,
+    this.isSample = false,
+    this.documents = const [],
     this.bio,
     this.city,
     this.linkedinUrl,
@@ -33,6 +36,12 @@ class MyProfile {
     fullName: json['fullName'] as String,
     avatarUrl: json['avatarUrl'] as String?,
     headline: json['headline'] as String?,
+    phone: json['phone'] as String?,
+    isSample: json['isSample'] as bool? ?? false,
+    documents: [
+      for (final d in json['documents'] as List? ?? const [])
+        ProfileDocument.fromJson(Map<String, dynamic>.from(d as Map)),
+    ],
     bio: json['bio'] as String?,
     city: json['city'] as String?,
     linkedinUrl: json['linkedinUrl'] as String?,
@@ -48,6 +57,9 @@ class MyProfile {
   final String fullName;
   final String? avatarUrl; // short-lived link; null when there is no photo
   final String? headline;
+  final String? phone;
+  final bool isSample;
+  final List<ProfileDocument> documents; // verification documents, visible to the user and admins only
   final String? bio;
   final String? city;
   final String? linkedinUrl;
@@ -66,6 +78,32 @@ class MyProfile {
     for (final i in (details['interests'] as List? ?? const [])) (i as Map)['id'] as String,
   };
 }
+
+/// An uploaded verification document (CNIC, university ID, company certificate).
+class ProfileDocument {
+  const ProfileDocument({required this.kind, required this.url, required this.contentType});
+
+  factory ProfileDocument.fromJson(Map<String, dynamic> j) =>
+      ProfileDocument(kind: j['kind'] as String, url: j['url'] as String?, contentType: j['contentType'] as String?);
+
+  final String kind;
+  final String? url; // short-lived link
+  final String? contentType;
+
+  bool get isPdf => contentType == 'application/pdf';
+}
+
+/// 4210112345671 → "*****-*******-1": only the last digit is shown in the app.
+String maskCnic(String? cnic) => cnic == null || cnic.length != 13 ? '—' : '*****-*******-${cnic.substring(12)}';
+
+const investmentExperiences = {
+  'first_time': 'This will be my first investment',
+  '1_3': '1–3 startups',
+  '4_10': '4–10 startups',
+  '10_plus': 'More than 10 startups',
+};
+
+const affiliations = {'university': 'University', 'company': 'Company'};
 
 /// Labels for the API's enum values.
 const investorTypes = {

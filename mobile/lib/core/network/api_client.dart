@@ -40,16 +40,17 @@ class ApiClient {
   Future<Map<String, dynamic>> delete(String path, {bool auth = false}) =>
       _send(auth, (options) => _dio.delete<dynamic>(path, options: options));
 
-  /// Uploads one image file as multipart field "image" (PUT).
-  Future<Map<String, dynamic>> uploadImage(String path, String filePath, {bool auth = true}) => _send(
-    auth,
-    // a fresh FormData per attempt, because a sent one cannot be sent again on retry
-    (options) async => _dio.put<dynamic>(
-      path,
-      data: FormData.fromMap({'image': await MultipartFile.fromFile(filePath)}),
-      options: options,
-    ),
-  );
+  /// Uploads one file as a multipart [field] (PUT): "image" for photos, "file" for documents.
+  Future<Map<String, dynamic>> uploadImage(String path, String filePath, {bool auth = true, String field = 'image'}) =>
+      _send(
+        auth,
+        // a fresh FormData per attempt, because a sent one cannot be sent again on retry
+        (options) async => _dio.put<dynamic>(
+          path,
+          data: FormData.fromMap({field: await MultipartFile.fromFile(filePath)}),
+          options: options,
+        ),
+      );
 
   Future<Map<String, dynamic>> _send(bool auth, Future<Response<dynamic>> Function(Options options) request) async {
     try {

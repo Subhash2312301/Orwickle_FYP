@@ -74,6 +74,12 @@ class _ProfileTabState extends State<ProfileTab> {
             Text(user.fullName, textAlign: TextAlign.center, style: theme.textTheme.titleLarge),
             if (subtitle.isNotEmpty) Text(subtitle, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
             Text(user.email, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+            if (user.role == 'investor' && _profile != null)
+              Text(
+                'CNIC ${maskCnic(_profile!.detailText('cnicNumber'))} · ${_profile!.phone ?? ''}',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
+              ),
             const SizedBox(height: 10),
             Wrap(
               alignment: WrapAlignment.center,

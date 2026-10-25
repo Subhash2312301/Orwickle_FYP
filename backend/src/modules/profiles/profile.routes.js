@@ -3,6 +3,7 @@
 const { Router } = require('express');
 const validate = require('../../middleware/validate');
 const imageUpload = require('../../middleware/imageUpload');
+const { documentUpload } = imageUpload;
 const { requireAuth, requireRole } = require('../../middleware/auth');
 const { profileSchemas } = require('./profile.validation');
 const controller = require('./profile.controller');
@@ -18,6 +19,9 @@ profileRouter.put(
 );
 profileRouter.put('/me/avatar', imageUpload, controller.setAvatar);
 profileRouter.delete('/me/avatar', controller.removeAvatar);
+// verification documents: CNIC, university ID, company certificate (multipart field "file")
+profileRouter.put('/me/documents/:kind', requireRole('owner', 'investor', 'buyer'), documentUpload, controller.setDocument);
+profileRouter.delete('/me/documents/:kind', requireRole('owner', 'investor', 'buyer'), controller.removeDocument);
 
 const categoryRouter = Router();
 categoryRouter.get('/', controller.categories);
