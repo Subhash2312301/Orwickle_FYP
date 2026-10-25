@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/router/routes.dart';
 import '../../core/widgets/image_widgets.dart';
 import '../auth/session/session_controller.dart';
+import '../auth/widgets/form_widgets.dart';
 import '../profile/data/profile_api.dart';
 import '../profile/data/profile_models.dart';
 import '../shell/approval_banner.dart';
@@ -121,7 +122,7 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
-              onPressed: () => session.logout(),
+              onPressed: () => confirmLogout(context),
               icon: const Icon(Icons.logout),
               label: const Text('Log out'),
             ),

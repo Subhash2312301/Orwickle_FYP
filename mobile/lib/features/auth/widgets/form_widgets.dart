@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/validation/validators.dart';
+import '../session/session_controller.dart';
 
 /// Password input with a show/hide button.
 class PasswordField extends StatefulWidget {
@@ -144,6 +146,24 @@ class InfoBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Asks "Are you sure?" before logging out, then logs out.
+Future<void> confirmLogout(BuildContext context) async {
+  final session = context.read<SessionController>();
+  final sure = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      icon: const Icon(Icons.logout),
+      title: const Text('Log out?'),
+      content: const Text('Are you sure you want to log out? You will need your email and password to log in again.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Log out')),
+      ],
+    ),
+  );
+  if (sure ?? false) await session.logout();
 }
 
 void showErrorSnack(BuildContext context, ApiException error) {

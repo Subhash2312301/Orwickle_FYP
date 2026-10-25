@@ -53,6 +53,9 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 1. Investor: phone (03XXXXXXXXX), LinkedIn, CNIC number (dashes added while typing), CNIC front + back photos,
    investor type, experience, range chips, categories — all required; no headline, no currency choice.
 2. Investor type "Investment firm": company name, website, email and registration certificate become required.
+   Any other type: proof of funds (bank statement, bank letter or tax return) is required instead.
+   Experience other than "first investment": proof of a past investment is required.
+   Documents can be a photo or a PDF. Website is optional.
 3. Profile tab shows the CNIC masked (`*****-*******-1`).
 4. Buyer: University or Company; Company → company name; University → university ID front + back.
    No headline, website or budget.
@@ -68,6 +71,7 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 2. Forgot password: OTP by email, new password works.
 3. 15 minutes without touching the app → back to login with the inactivity message.
 4. Profile → Change password works.
+5. Log out asks "Are you sure?"; Cancel keeps you logged in.
 
 ## Reporting a problem
 Send the checklist number (e.g. "A-5"), a screenshot, and the last 10–15 lines of the backend terminal.

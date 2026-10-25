@@ -65,10 +65,7 @@ Future<void> showComingSoon(BuildContext context, UpcomingFeature feature) => sh
   showDragHandle: true,
   isScrollControlled: true, // sized to its content, scrolls on short screens
   builder: (context) => SafeArea(
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      child: _ComingSoonBody(feature),
-    ),
+    child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(24, 0, 24, 24), child: _ComingSoonBody(feature)),
   ),
 );
 

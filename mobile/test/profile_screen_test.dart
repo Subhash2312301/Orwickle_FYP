@@ -219,6 +219,31 @@ void main() {
       expect(find.text(message, skipOffstage: false), findsOneWidget, reason: message);
     }
     expect(find.text('Company name', skipOffstage: false), findsNothing, reason: 'company fields only for firms');
+    expect(find.text('Website (optional)', skipOffstage: false), findsOneWidget);
+    await _finish(tester);
+  });
+
+  testWidgets('an individual investor proves funds; past investments need proof too', (tester) async {
+    await _pump(tester, 'investor');
+    final scrollable = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(find.text('Investor type'), 200, scrollable: scrollable);
+    await tester.tap(find.text('Investor type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Individual investor').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Investment experience'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1–3 startups').last);
+    await tester.pumpAndSettle();
+
+    await _tapSave(tester);
+    for (final message in [
+      'Upload proof of funds (bank statement, bank letter or tax return)',
+      'Upload proof of a past investment',
+    ]) {
+      expect(find.text(message, skipOffstage: false), findsOneWidget, reason: message);
+    }
+    expect(find.text('Upload your company registration certificate', skipOffstage: false), findsNothing);
     await _finish(tester);
   });
 
@@ -234,6 +259,7 @@ void main() {
     await _tapSave(tester);
     expect(find.text('Company email is required for investment firms', skipOffstage: false), findsOneWidget);
     expect(find.text('Upload your company registration certificate', skipOffstage: false), findsOneWidget);
+    expect(find.textContaining('proof of funds', skipOffstage: false), findsNothing, reason: 'firms prove the company');
     await _finish(tester);
   });
 

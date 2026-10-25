@@ -169,21 +169,32 @@ test('investor: phone, CNIC, LinkedIn, experience and range are required', async
   assert.equal(badFormats.body.error.details['details.cnicNumber'], 'Enter the 13-digit CNIC number, e.g. 42101-1234567-1');
 });
 
-test('an angel investor needs the CNIC photos but no company details', async () => {
+test('an angel investor proves identity, funds and a past investment, but needs no company details', async () => {
   const session = await loginAs('investor');
   const missing = await putProfile(session.accessToken, investorBody());
-  assert.equal(missing.body.error.details['documents.cnic_front'], 'Upload the front of your CNIC');
-  assert.equal(missing.body.error.details['documents.company_certificate'], undefined);
+  const d = missing.body.error.details;
+  assert.equal(d['documents.cnic_front'], 'Upload the front of your CNIC');
+  assert.equal(d['documents.funds_proof'], 'Upload proof of funds (bank statement, bank letter or tax return)');
+  assert.equal(d['documents.investment_proof'],
+    'Upload proof of a past investment (share certificate, investment agreement or letter from the startup)');
+  assert.equal(d['documents.company_certificate'], undefined);
 
-  await upload(session.accessToken, 'cnic_front');
-  await upload(session.accessToken, 'cnic_back');
-  const saved = await putProfile(session.accessToken, investorBody());
+  for (const kind of ['cnic_front', 'cnic_back', 'investment_proof']) await upload(session.accessToken, kind);
+  await upload(session.accessToken, 'funds_proof', PDF, 'statement.pdf');
+  const withWebsite = { ...investorBody(), websiteUrl: 'https://farhan.pk' };
+  const saved = await putProfile(session.accessToken, withWebsite);
   assert.equal(saved.status, 200);
   const p = saved.body.profile;
   assert.equal(p.phone, '03001234567', 'phone normalised');
+  assert.equal(p.websiteUrl, 'https://farhan.pk', 'investors may add a website');
   assert.equal(p.details.cnicNumber, '4210112345671', 'CNIC stored as 13 digits');
   assert.equal(p.details.maxTicket, 2000000);
   assert.equal(p.reviewStatus, 'pending');
+
+  // first-time investors have no past investment to prove; the old proof is removed
+  const firstTime = await putProfile(session.accessToken, investorBody({ investmentExperience: 'first_time' }));
+  assert.equal(firstTime.status, 200);
+  assert.deepEqual(firstTime.body.profile.documents.map(x => x.kind).sort(), ['cnic_back', 'cnic_front', 'funds_proof']);
 });
 
 test('an investment firm must give company details and the registration certificate', async () => {
@@ -201,8 +212,10 @@ test('an investment firm must give company details and the registration certific
   });
   const noCertificate = await putProfile(session.accessToken, firm);
   assert.equal(noCertificate.body.error.details['documents.company_certificate'], 'Upload your company registration certificate');
+  assert.equal(noCertificate.body.error.details['documents.funds_proof'], undefined, 'the certificate replaces proof of funds');
 
   await upload(session.accessToken, 'company_certificate', PDF, 'cert.pdf');
+  await upload(session.accessToken, 'investment_proof', PDF, 'agreement.pdf');
   const saved = await putProfile(session.accessToken, firm);
   assert.equal(saved.status, 200);
   assert.equal(saved.body.profile.details.companyEmail, 'deals@ksv.pk');
