@@ -52,26 +52,33 @@ const cnic = z.string(required('CNIC number'))
 const fullName = text('Full name', 100);
 const city = text('City', 80);
 
+// Owners may be university students or independent (self-taught) developers;
+// university and degree are asked only from students.
 const owner = z.object({
   fullName,
   headline: text('Headline', 150),
   city,
   bio: optionalText('Bio', 2000),
-  linkedinUrl: optionalUrl('LinkedIn URL'),
+  linkedinUrl: requiredUrl('LinkedIn profile'),
   websiteUrl: optionalUrl('website URL'),
   details: z.object({
-    university: text('University', 150),
-    degreeProgram: text('Degree program', 100),
-    graduationYear: z.number({ error: 'Graduation year must be a number' }).int()
-      .min(1990, 'Enter a valid graduation year').max(2100, 'Enter a valid graduation year')
-      .nullable().optional(),
+    isStudent: z.boolean({ error: 'Choose whether you are a university student' }),
+    university: optionalText('University', 150),
+    degreeProgram: optionalText('Degree program', 100),
     skills: z.array(z.string().trim().min(1).max(40, 'Each skill must be at most 40 characters'), required('Skills'))
       .min(1, 'Add at least one skill')
       .max(20, 'Add at most 20 skills')
       .transform(list => [...new Set(list)]),
-    githubUrl: optionalUrl('GitHub URL'),
-    portfolioUrl: optionalUrl('portfolio URL'),
-  }, required('Details')),
+    githubUrl: requiredUrl('GitHub profile'),
+    portfolioUrl: requiredUrl('Portfolio link'),
+  }, required('Details')).superRefine((d, ctx) => {
+    if (!d.isStudent) return;
+    const need = { university: 'University', degreeProgram: 'Degree program' };
+    for (const [field, label] of Object.entries(need)) {
+      const value = d[field] ?? '';
+      if (value.length < 2) ctx.addIssue({ code: 'custom', path: [field], message: `${label} is required for students` });
+    }
+  }),
 });
 
 // Company details are required only for investment firms; individual and angel investors may have none.
@@ -125,7 +132,7 @@ const profileSchemas = { owner, investor, buyer };
 
 // Documents each role must upload before the profile can be submitted for review.
 function requiredDocuments(role, details) {
-  if (role === 'owner') return ['university_id_front', 'university_id_back'];
+  if (role === 'owner') return details.isStudent ? ['university_id_front', 'university_id_back'] : [];
   if (role === 'investor') {
     return ['cnic_front', 'cnic_back', ...(details.investorType === 'firm' ? ['company_certificate'] : [])];
   }

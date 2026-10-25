@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:orwickle/core/network/api_client.dart';
+import 'package:orwickle/features/auth/session/session_controller.dart';
 import 'package:orwickle/features/listings/data/listing_api.dart';
 import 'package:orwickle/features/listings/data/listing_models.dart';
 import 'package:orwickle/features/listings/screens/listing_form_screen.dart';
 import 'package:orwickle/features/profile/data/profile_api.dart';
 import 'package:orwickle/features/profile/data/profile_models.dart';
 import 'package:provider/provider.dart';
+
+import 'fakes.dart';
 
 class _Categories extends ProfileApi {
   _Categories() : super(ApiClient());
@@ -22,6 +25,10 @@ Future<void> _pumpForm(WidgetTester tester) async {
         Provider<ProfileApi>.value(value: _Categories()),
         // the form never reaches the API in these tests: validation stops it first
         Provider<ListingApi>.value(value: ListingApi(ApiClient())),
+        // no logged-in user, so the account counts as not approved yet
+        ChangeNotifierProvider(
+          create: (_) => SessionController(api: FakeAuthApi(), storage: MemoryTokenStorage()),
+        ),
       ],
       child: const MaterialApp(home: ListingFormScreen()),
     ),
@@ -30,7 +37,7 @@ Future<void> _pumpForm(WidgetTester tester) async {
 }
 
 Future<void> _save(WidgetTester tester) async {
-  final button = find.widgetWithText(FilledButton, 'Save as draft');
+  final button = find.widgetWithText(OutlinedButton, 'Save as draft');
   await tester.scrollUntilVisible(button, 400, scrollable: find.byType(Scrollable).first);
   await tester.tap(button);
   await tester.pumpAndSettle();
@@ -56,10 +63,28 @@ void main() {
       'Amount is required',
       'Equity offered is required for funding listings',
       'Full description is required',
+      'Problem statement is required',
+      'Business model is required',
+      'Financial summary is required',
+      'Ownership notes is required',
     ]) {
       expect(find.text(message, skipOffstage: false), findsOneWidget, reason: message);
     }
     expect(find.text('Describe what the buyer will receive', skipOffstage: false), findsNothing);
+    for (final removed in ['Solution details', 'Traction', 'Roadmap', 'Team']) {
+      expect(find.textContaining(removed, skipOffstage: false), findsNothing, reason: removed);
+    }
+  });
+
+  testWidgets('a new listing can be saved as a draft or published; publishing waits for account approval', (
+    tester,
+  ) async {
+    await _pumpForm(tester);
+    final publish = find.widgetWithText(FilledButton, 'Save & publish', skipOffstage: false);
+    expect(publish, findsOneWidget);
+    expect(tester.widget<FilledButton>(publish).onPressed, isNull, reason: 'account not approved yet');
+    expect(find.textContaining('once an admin approves your account', skipOffstage: false), findsOneWidget);
+    expect(find.text('Add photo', skipOffstage: false), findsOneWidget, reason: 'photos can be added to a new listing');
   });
 
   testWidgets('a sale listing asks what the buyer receives instead of equity', (tester) async {

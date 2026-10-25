@@ -30,15 +30,19 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 1. Register; a weak password (`Pakistan@123`) is refused.
 2. "Create account" without ticking the terms shows an error.
 3. OTP arrives by email; a wrong code shows "4 attempts left"; the right code continues.
-4. Profile setup: photo, skills, university ID card front + back (required), "Submit for review".
-5. Tabs Home / My Listings / Profile, and the "Account under review" banner.
-6. New funding listing: equity % is required; add a cover photo.
-7. Publish is disabled while the account is not approved.
+4. Profile setup: LinkedIn, GitHub and portfolio are required, website optional, no graduation year.
+   "University student" → university, degree and ID card front + back required;
+   "Independent developer" → none of these. Then "Submit for review".
+5. Tabs Home / My Listings / Requests / Messages / Profile, and the "Account under review" banner.
+   Requests, Messages and the bell show "Coming soon".
+6. New funding listing: equity %, full description, problem statement, business model, financial summary and
+   ownership notes are required (no solution, traction, roadmap or team). Add up to 6 photos.
+7. "Save & publish" is disabled while the account is not approved; "Save as draft" works.
 
 **B. Approve on the laptop**
 1. `npm run approve -- --email you+owner@gmail.com` → approval email arrives.
 2. Pull to refresh on Profile → banner gone, status "Approved".
-3. Publish the listing → "Waiting for admin review".
+3. Publish the listing (or create a new one with "Save & publish") → "Waiting for admin review".
 4. Run the approve command again → listing approved, email, Home shows "Live: 1".
 
 **C. Rejection / more information**
@@ -53,6 +57,11 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 4. Buyer: University or Company; Company → company name; University → university ID front + back.
    No headline, website or budget.
 5. Replacing a document after approval puts the account back "Under review".
+6. Requests and Messages tabs show "Coming soon".
+
+**F. Listing photos**
+1. On the listing page add and remove photos (max 6); tap a photo to see it full screen.
+2. On a live listing, changing the cover or photos first warns that it goes back to admin review.
 
 **E. Security**
 1. 5 wrong passwords in a row lock the account for 15 minutes.

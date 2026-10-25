@@ -65,9 +65,9 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
   if (role === 'owner') {
     const { rows: [d] } = await db.query('SELECT * FROM owner_profiles WHERE user_id = $1', [userId]);
     profile.details = d && {
+      isStudent: d.is_student,
       university: d.university,
       degreeProgram: d.degree_program,
-      graduationYear: d.graduation_year,
       skills: d.skills,
       githubUrl: d.github_url,
       portfolioUrl: d.portfolio_url,
@@ -151,10 +151,12 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
     if (role === 'owner') {
       await client.query(
         `UPDATE owner_profiles
-            SET university = $2, degree_program = $3, graduation_year = $4, skills = $5,
+            SET is_student = $2, university = $3, degree_program = $4, skills = $5,
                 github_url = $6, portfolio_url = $7
           WHERE user_id = $1`,
-        [userId, d.university, d.degreeProgram, d.graduationYear ?? null, d.skills, d.githubUrl, d.portfolioUrl]);
+        [userId, d.isStudent, d.isStudent ? d.university : null, d.isStudent ? d.degreeProgram : null, d.skills,
+          d.githubUrl, d.portfolioUrl]);
+      if (!d.isStudent) await removeDocumentRows(client, userId, ['university_id_front', 'university_id_back']);
     } else if (role === 'investor') {
       const firm = d.investorType === 'firm';
       await client.query(

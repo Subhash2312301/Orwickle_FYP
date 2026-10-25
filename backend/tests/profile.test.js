@@ -34,12 +34,12 @@ const ownerBody = {
   city: 'Karachi',
   linkedinUrl: 'https://www.linkedin.com/in/ayesha',
   details: {
+    isStudent: true,
     university: 'SZABIST Karachi',
     degreeProgram: 'BS Computer Science',
-    graduationYear: 2027,
     skills: ['Flutter', 'Node.js', 'Flutter'],
     githubUrl: 'https://github.com/ayesha',
-    portfolioUrl: '',
+    portfolioUrl: 'https://ayesha.dev',
   },
 };
 const investorBody = overrides => ({
@@ -96,16 +96,30 @@ test('owner fields are validated one by one', async () => {
   const res = await putProfile(session.accessToken, {
     fullName: 'Ayesha Khan',
     linkedinUrl: 'linkedin.com/ayesha',
-    details: { university: '', skills: [], graduationYear: 1800 },
+    details: { skills: [], portfolioUrl: '' },
   });
   assert.equal(res.status, 400);
   const d = res.body.error.details;
   assert.equal(d.headline, 'Headline is required');
   assert.equal(d.city, 'City is required');
-  assert.equal(d.linkedinUrl, 'Enter a full LinkedIn URL starting with https://');
-  assert.equal(d['details.university'], 'University must be at least 2 characters');
+  assert.equal(d.linkedinUrl, 'Enter a full LinkedIn profile starting with https://');
+  assert.equal(d['details.isStudent'], 'Choose whether you are a university student');
   assert.equal(d['details.skills'], 'Add at least one skill');
-  assert.equal(d['details.graduationYear'], 'Enter a valid graduation year');
+  assert.equal(d['details.githubUrl'], 'GitHub profile is required');
+  assert.equal(d['details.portfolioUrl'], 'Portfolio link is required');
+
+  const student = await putProfile(session.accessToken, { ...ownerBody, details: { ...ownerBody.details, university: '' } });
+  assert.equal(student.body.error.details['details.university'], 'University is required for students');
+});
+
+test('an independent developer needs no university, degree or university ID', async () => {
+  const session = await loginAs('owner');
+  const independent = { ...ownerBody, details: { ...ownerBody.details, isStudent: false, university: '', degreeProgram: '' } };
+  const saved = await putProfile(session.accessToken, independent);
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.profile.reviewStatus, 'pending');
+  assert.equal(saved.body.profile.details.isStudent, false);
+  assert.equal(saved.body.profile.details.university, null);
 });
 
 test('an owner must upload both sides of the university ID card', async () => {

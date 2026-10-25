@@ -59,7 +59,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       ) ??
       false;
 
+  // Changing a live listing (edit, cover, photos) hides it again until an admin re-approves it,
+  // so the owner is warned first.
+  Future<bool> _confirmLiveChange(Listing listing, String what) async =>
+      !listing.isLive ||
+      await _confirm(
+        'Change a live listing?',
+        'After you $what, the listing goes back to admin review and is hidden from investors and buyers '
+            'until it is approved again.',
+        'Continue',
+      );
+
   Future<void> _changeCover(Listing listing) async {
+    if (!await _confirmLiveChange(listing, 'change the cover') || !mounted) return;
     final choice = await pickImage(context, canRemove: listing.coverUrl != null);
     if (choice == null || !mounted) return;
     await _run(
@@ -69,6 +81,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       },
       choice is RemoveImage ? 'Cover image removed' : 'Cover image updated',
     );
+  }
+
+  Future<void> _addPhoto(Listing listing) async {
+    if (!await _confirmLiveChange(listing, 'add a photo') || !mounted) return;
+    final choice = await pickImage(context, canRemove: false);
+    if (choice is! PickedImage || !mounted) return;
+    await _run(() => _api.addPhoto(listing.id, choice.path), 'Photo added');
+  }
+
+  Future<void> _removePhoto(Listing listing, ListingPhoto photo) async {
+    if (!await _confirm('Remove photo?', 'The photo is deleted from this listing.', 'Remove')) return;
+    if (!await _confirmLiveChange(listing, 'remove a photo')) return;
+    await _run(() => _api.removePhoto(listing.id, photo.id), 'Photo removed');
   }
 
   Future<void> _publish() async {
@@ -109,19 +134,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     }
   }
 
-  // Editing a live listing hides it again until an admin re-approves it, so the owner is warned first.
   Future<void> _edit(Listing listing) async {
-    final live = listing.status == 'published' && listing.reviewStatus == 'approved';
-    if (live &&
-        !await _confirm(
-          'Edit a live listing?',
-          'After you save, the listing goes back to admin review and is hidden from investors and buyers '
-              'until it is approved again.',
-          'Continue',
-        )) {
-      return;
-    }
-    if (!mounted) return;
+    if (!await _confirmLiveChange(listing, 'save changes') || !mounted) return;
     final saved = await context.push<bool>(Routes.editListing(widget.listingId));
     if (saved == true && mounted) _reload();
   }
@@ -201,6 +215,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                         for (final t in l.techStack) Chip(label: Text(t)),
                       ],
                     ),
+                    if (l.photos.isNotEmpty || editable) ...[
+                      const SizedBox(height: 16),
+                      Text('Photos (${l.photos.length}/$maxListingPhotos)', style: theme.textTheme.titleSmall),
+                      const SizedBox(height: 8),
+                      PhotoStrip(
+                        images: [for (final p in l.photos) NetworkImage(p.url ?? '')],
+                        onAdd: editable && !_busy ? () => _addPhoto(l) : null,
+                        onRemove: editable && !_busy ? (i) => _removePhoto(l, l.photos[i]) : null,
+                      ),
+                    ],
                     if (l.reviewStatus == 'rejected' && l.status == 'draft')
                       Padding(
                         padding: const EdgeInsets.only(top: 12),

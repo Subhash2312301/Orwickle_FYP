@@ -31,4 +31,10 @@ class ListingApi {
 
   Future<ListingDetail> removeCover(String id) async =>
       ListingDetail.fromJson(await _api.delete('/listings/$id/cover', auth: true));
+
+  Future<ListingDetail> addPhoto(String id, String filePath) async =>
+      ListingDetail.fromJson(await _api.uploadImage('/listings/$id/photos', filePath, post: true));
+
+  Future<ListingDetail> removePhoto(String id, String photoId) async =>
+      ListingDetail.fromJson(await _api.delete('/listings/$id/photos/$photoId', auth: true));
 }

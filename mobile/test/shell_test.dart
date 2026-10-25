@@ -79,19 +79,36 @@ Future<SessionController> _pump(WidgetTester tester, String role, {String approv
 }
 
 void main() {
-  testWidgets('owners get Home, My Listings and Profile tabs', (tester) async {
+  testWidgets('owners get Home, My Listings, Requests, Messages and Profile tabs', (tester) async {
     final session = await _pump(tester, 'owner');
-    for (final label in ['Home', 'My Listings', 'Profile']) {
+    for (final label in ['Home', 'My Listings', 'Requests', 'Messages', 'Profile']) {
       expect(find.widgetWithText(NavigationDestination, label), findsOneWidget);
     }
     expect(find.text('Account under review'), findsNothing, reason: 'approved accounts see no banner');
     session.dispose();
   });
 
-  testWidgets('investors get Discover and Profile tabs', (tester) async {
+  testWidgets('investors get Discover, Requests, Messages and Profile tabs', (tester) async {
     final session = await _pump(tester, 'investor');
-    expect(find.widgetWithText(NavigationDestination, 'Discover'), findsOneWidget);
+    for (final label in ['Discover', 'Requests', 'Messages', 'Profile']) {
+      expect(find.widgetWithText(NavigationDestination, label), findsOneWidget);
+    }
     expect(find.widgetWithText(NavigationDestination, 'My Listings'), findsNothing);
+    session.dispose();
+  });
+
+  testWidgets('later-phase features say "Coming soon" when opened', (tester) async {
+    final session = await _pump(tester, 'buyer');
+    await tester.tap(find.widgetWithText(NavigationDestination, 'Messages'));
+    await tester.pumpAndSettle();
+    expect(find.text('Coming soon'), findsWidgets);
+    expect(find.text('Real-time chat with approved connections'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(NavigationDestination, 'Discover'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Notifications'));
+    await tester.pumpAndSettle();
+    expect(find.text('New access requests and offers'), findsOneWidget);
     session.dispose();
   });
 

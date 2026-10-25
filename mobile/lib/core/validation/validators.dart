@@ -67,6 +67,9 @@ class Validators {
     return v.length <= 300 && _urlPattern.hasMatch(v) ? null : 'Enter a full $label starting with https://';
   };
 
+  static String? Function(String?) requiredUrl(String label) =>
+      (value) => (value?.trim().isEmpty ?? true) ? '$label is required' : optionalUrl(label)(value);
+
   /// 0300-1234567, 03001234567 or +923001234567
   static String? phone(String? value) {
     final v = normalizePhone(value ?? '');
@@ -89,13 +92,6 @@ class Validators {
     if (v.isEmpty) return required() ? 'Company email is required for investment firms' : null;
     return _emailPattern.hasMatch(v) ? null : 'Enter a valid company email';
   };
-
-  static String? graduationYear(String? value) {
-    final v = value?.trim() ?? '';
-    if (v.isEmpty) return null;
-    final year = int.tryParse(v);
-    return year == null || year < 1990 || year > 2100 ? 'Enter a valid graduation year' : null;
-  }
 
   static String? Function(String?) amount(String label) => (value) {
     final v = value?.trim() ?? '';

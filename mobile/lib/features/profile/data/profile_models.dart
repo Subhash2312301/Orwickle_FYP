@@ -105,6 +105,9 @@ const investmentExperiences = {
 
 const affiliations = {'university': 'University', 'company': 'Company'};
 
+/// Project owners: university students, or independent / self-taught developers.
+const ownerKinds = {'student': 'University student', 'independent': 'Independent developer'};
+
 /// Labels for the API's enum values.
 const investorTypes = {
   'individual': 'Individual investor',
