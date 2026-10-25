@@ -25,6 +25,7 @@ const loginAs = async (role, name) => {
   return { client: as(res.body.accessToken), email: creds.email, id: res.body.user.id, session: res.body };
 };
 const lastMailTo = to => [...outbox].reverse().find(m => m.to === to);
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
 const ownerProfile = {
   fullName: 'Sara Ahmed',
@@ -48,6 +49,9 @@ before(async () => {
   admin = (await loginAs('admin', 'Test Admin')).client;
   const o = await loginAs('owner', 'Sara Ahmed');
   owner = o.client;
+  for (const kind of ['university_id_front', 'university_id_back']) {
+    await api.put(`/api/profile/me/documents/${kind}`).set('Authorization', `Bearer ${o.session.accessToken}`).attach('file', PNG, 'id.png');
+  }
   ownerEmail = o.email;
   ownerId = o.id;
   investor = (await loginAs('investor')).client;
@@ -72,6 +76,7 @@ test('a new account is unreviewed until the profile is saved, then waits for rev
   const entry = queue.body.users.find(u => u.id === ownerId);
   assert.ok(entry, 'owner is in the pending queue');
   assert.equal(entry.details.university, 'SZABIST');
+  assert.equal(entry.documents.length, 2, 'admins see the uploaded ID card');
 });
 
 test('rejecting needs a reason; the user is told why and can resubmit', async () => {
@@ -98,7 +103,8 @@ test('approval unlocks publishing and is emailed', async () => {
   const draft = (await owner.post('/api/listings', listing())).body.listing.id;
   assert.equal((await owner.post(`/api/listings/${draft}/publish`)).status, 403);
 
-  const res = await admin.post(`/api/admin/users/${ownerId}/review`, { decision: 'approve' });
+  const res = await admin.post(`/api/admin/users/${ownerId}/review`,
+    { decision: 'approve', checklist: { 'University ID matches name': true, 'GitHub profile opens': true } });
   assert.equal(res.body.reviewStatus, 'approved');
   assert.match(lastMailTo(ownerEmail).subject, /approved/);
 
@@ -133,6 +139,9 @@ test('every decision is recorded with the reviewer and reason', async () => {
   const { rows } = await pool.query(
     `SELECT decision, reason FROM review_decisions WHERE subject_user_id = $1 ORDER BY created_at`, [ownerId]);
   assert.deepEqual(rows.map(r => r.decision), ['request_more', 'approve']);
+  const checklist = await pool.query(
+    `SELECT checklist FROM review_decisions WHERE subject_user_id = $1 AND decision = 'approve'`, [ownerId]);
+  assert.equal(checklist.rows[0].checklist['University ID matches name'], true);
   const audit = await pool.query(`SELECT action FROM audit_logs WHERE action LIKE 'admin.%' AND entity_id = $1`, [ownerId]);
   assert.deepEqual(audit.rows.map(r => r.action).sort(), ['admin.user_approved', 'admin.user_needs_evidence']);
 });

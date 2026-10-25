@@ -15,6 +15,7 @@ class Listing {
     required this.status,
     required this.reviewStatus,
     this.reviewNote,
+    this.isSample = false,
     required this.ownerName,
   });
 
@@ -33,6 +34,7 @@ class Listing {
     status: j['status'] as String,
     reviewStatus: j['reviewStatus'] as String,
     reviewNote: j['reviewNote'] as String?,
+    isSample: j['isSample'] as bool? ?? false,
     ownerName: (j['owner'] as Map?)?['fullName'] as String? ?? '',
   );
 
@@ -51,6 +53,8 @@ class Listing {
   final String reviewStatus; // unreviewed | pending | approved | rejected | needs_evidence
   final String? reviewNote; // admin's reason for a rejection (owner only)
   final String ownerName;
+
+  final bool isSample; // demonstration data, shown with a "Sample" badge
 
   bool get isFunding => listingType == 'funding';
 }

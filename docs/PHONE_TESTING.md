@@ -13,6 +13,11 @@ Copy `Orwickle-phone-test.apk` to the phone's Download folder (USB file transfer
 
 Use Gmail "+" addresses for separate roles, e.g. `you+owner@gmail.com`, `you+investor@gmail.com`, `you+buyer@gmail.com`.
 
+## Demo data
+`npm run seed:demo` creates 6 approved sample users and 6 approved sample listings (badge "Sample").
+Log in as `ayesha@demo.orwickle.app` (owner), `farhan@demo.orwickle.app` (investor) or `imran@demo.orwickle.app`
+(buyer), password `Demo#Orwickle26`. `npm run seed:demo -- --remove` deletes them.
+
 ## Approve accounts and listings (until the admin dashboard exists)
 ```
 npm run approve -- --email you+owner@gmail.com                   # approve account + its pending listings
@@ -25,7 +30,7 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 1. Register; a weak password (`Pakistan@123`) is refused.
 2. "Create account" without ticking the terms shows an error.
 3. OTP arrives by email; a wrong code shows "4 attempts left"; the right code continues.
-4. Profile setup: photo, skills, save.
+4. Profile setup: photo, skills, university ID card front + back (required), "Submit for review".
 5. Tabs Home / My Listings / Profile, and the "Account under review" banner.
 6. New funding listing: equity % is required; add a cover photo.
 7. Publish is disabled while the account is not approved.
@@ -41,8 +46,13 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 2. Saving the profile puts it back "Under review".
 
 **D. Investor and buyer**
-1. Investor: Discover + Profile tabs; investment range chips required; no currency choice.
-2. Buyer: headline example "Shop owner…"; budget optional.
+1. Investor: phone (03XXXXXXXXX), LinkedIn, CNIC number (dashes added while typing), CNIC front + back photos,
+   investor type, experience, range chips, categories — all required; no headline, no currency choice.
+2. Investor type "Investment firm": company name, website, email and registration certificate become required.
+3. Profile tab shows the CNIC masked (`*****-*******-1`).
+4. Buyer: University or Company; Company → company name; University → university ID front + back.
+   No headline, website or budget.
+5. Replacing a document after approval puts the account back "Under review".
 
 **E. Security**
 1. 5 wrong passwords in a row lock the account for 15 minutes.

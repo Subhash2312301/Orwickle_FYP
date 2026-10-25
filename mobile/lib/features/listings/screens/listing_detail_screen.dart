@@ -109,7 +109,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     }
   }
 
-  Future<void> _edit() async {
+  // Editing a live listing hides it again until an admin re-approves it, so the owner is warned first.
+  Future<void> _edit(Listing listing) async {
+    final live = listing.status == 'published' && listing.reviewStatus == 'approved';
+    if (live &&
+        !await _confirm(
+          'Edit a live listing?',
+          'After you save, the listing goes back to admin review and is hidden from investors and buyers '
+              'until it is approved again.',
+          'Continue',
+        )) {
+      return;
+    }
+    if (!mounted) return;
     final saved = await context.push<bool>(Routes.editListing(widget.listingId));
     if (saved == true && mounted) _reload();
   }
@@ -249,7 +261,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       ],
       if (l.status == 'draft' || l.status == 'published')
         OutlinedButton.icon(
-          onPressed: _busy ? null : _edit,
+          onPressed: _busy ? null : () => _edit(l),
           icon: const Icon(Icons.edit_outlined),
           label: const Text('Edit'),
         ),

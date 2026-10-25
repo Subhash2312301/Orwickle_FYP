@@ -11,9 +11,15 @@ import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
 import '../data/profile_api.dart';
 import '../data/profile_models.dart';
+import '../widgets/document_field.dart';
 import '../widgets/profile_fields.dart';
 
-/// Profile form for owners, investors and buyers.
+/// Profile form for owners, investors and buyers. The fields follow
+/// backend/src/modules/profiles/profile.validation.js:
+///  - owner: headline, bio, links, education, skills + university ID card
+///  - investor: phone, LinkedIn, CNIC (+ photos), type, experience, range, interests; company details for firms
+///  - buyer: type, university or company (company name / university ID card), interests
+/// Documents and the photo are uploaded as soon as they are picked; the rest is saved with the button.
 /// [setup] = first time after sign-up (no back button, goes home after saving).
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key, this.setup = false});
@@ -33,13 +39,17 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   List<String> _skills = [];
   Set<String> _interests = {};
   String? _type; // investorType / buyerType
-  AmountRange? _range; // investor ticket size / buyer budget
+  String? _experience; // investor
+  String? _affiliation; // buyer: university | company
+  AmountRange? _range; // investor ticket size
+  Map<String, ProfileDocument> _documents = {};
   bool _saving = false;
   Map<String, String> _serverErrors = const {};
   String? _avatarUrl;
   bool _avatarBusy = false;
 
   String get _role => context.read<SessionController>().user!.role;
+  bool get _isFirm => _type == 'firm';
 
   TextEditingController _ctl(String key) => _c.putIfAbsent(key, TextEditingController.new);
 
@@ -56,50 +66,34 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _categories = results[1] as List<Category>;
 
     _ctl('fullName').text = profile.fullName;
-    _ctl('headline').text = profile.headline ?? '';
     _ctl('city').text = profile.city ?? '';
+    _ctl('headline').text = profile.headline ?? '';
     _ctl('bio').text = profile.bio ?? '';
     _ctl('linkedinUrl').text = profile.linkedinUrl ?? '';
     _ctl('websiteUrl').text = profile.websiteUrl ?? '';
+    _ctl('phone').text = profile.phone ?? '';
     for (final key in [
       'university',
       'degreeProgram',
       'githubUrl',
       'portfolioUrl',
-      'organizationName',
       'companyName',
       'companyWebsite',
+      'companyEmail',
     ]) {
       _ctl(key).text = profile.detailText(key) ?? '';
     }
+    _ctl('cnicNumber').text = formatCnic(profile.detailText('cnicNumber'));
     final year = profile.detailNumber('graduationYear');
     _ctl('graduationYear').text = year == null ? '' : '${year.toInt()}';
-    _range = _role == 'investor'
-        ? AmountRange.match(profile.detailNumber('minTicket'), profile.detailNumber('maxTicket'))
-        : AmountRange.match(profile.detailNumber('budgetMin'), profile.detailNumber('budgetMax'));
     _skills = profile.skills;
     _interests = profile.interestIds;
     _type = profile.detailText(_role == 'investor' ? 'investorType' : 'buyerType');
+    _experience = profile.detailText('investmentExperience');
+    _affiliation = profile.detailText('affiliation');
+    _range = AmountRange.match(profile.detailNumber('minTicket'), profile.detailNumber('maxTicket'));
+    _documents = {for (final d in profile.documents) d.kind: d};
     _avatarUrl = profile.avatarUrl;
-  }
-
-  // The photo is saved straight away, separately from the rest of the form.
-  Future<void> _changeAvatar() async {
-    final choice = await pickImage(context, canRemove: _avatarUrl != null);
-    if (choice == null || !mounted) return;
-    final api = context.read<ProfileApi>();
-    setState(() => _avatarBusy = true);
-    try {
-      final profile = switch (choice) {
-        PickedImage(:final path) => await api.setAvatar(path),
-        RemoveImage() => await api.removeAvatar(),
-      };
-      if (mounted) setState(() => _avatarUrl = profile.avatarUrl);
-    } on ApiException catch (e) {
-      if (mounted) showErrorSnack(context, e);
-    } finally {
-      if (mounted) setState(() => _avatarBusy = false);
-    }
   }
 
   @override
@@ -111,37 +105,48 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   String _t(String key) => _ctl(key).text.trim();
-  num? _n(String key) => num.tryParse(_t(key));
 
-  Map<String, dynamic> _body() => {
-    'fullName': _t('fullName'),
-    'headline': _t('headline'),
-    'city': _t('city'),
-    'bio': _t('bio'),
-    'linkedinUrl': _t('linkedinUrl'),
-    'websiteUrl': _t('websiteUrl'),
-    'details': switch (_role) {
-      'owner' => {
+  Map<String, dynamic> _body() => switch (_role) {
+    'owner' => {
+      'fullName': _t('fullName'),
+      'city': _t('city'),
+      'headline': _t('headline'),
+      'bio': _t('bio'),
+      'linkedinUrl': _t('linkedinUrl'),
+      'websiteUrl': _t('websiteUrl'),
+      'details': {
         'university': _t('university'),
         'degreeProgram': _t('degreeProgram'),
-        'graduationYear': _n('graduationYear')?.toInt(),
+        'graduationYear': int.tryParse(_t('graduationYear')),
         'skills': _skills,
         'githubUrl': _t('githubUrl'),
         'portfolioUrl': _t('portfolioUrl'),
       },
-      'investor' => {
+    },
+    'investor' => {
+      'fullName': _t('fullName'),
+      'city': _t('city'),
+      'phone': Validators.normalizePhone(_t('phone')),
+      'linkedinUrl': _t('linkedinUrl'),
+      'details': {
         'investorType': _type,
-        'organizationName': _t('organizationName'),
+        'cnicNumber': _t('cnicNumber'),
+        'companyName': _t('companyName'),
+        'companyWebsite': _t('companyWebsite'),
+        'companyEmail': _t('companyEmail'),
+        'investmentExperience': _experience,
         'minTicket': _range?.min,
         'maxTicket': _range?.max,
         'interests': _interests.toList(),
       },
-      _ => {
+    },
+    _ => {
+      'fullName': _t('fullName'),
+      'city': _t('city'),
+      'details': {
         'buyerType': _type,
-        'companyName': _t('companyName'),
-        'companyWebsite': _t('companyWebsite'),
-        'budgetMin': _range?.min,
-        'budgetMax': _range?.max,
+        'affiliation': _affiliation,
+        'companyName': _affiliation == 'company' ? _t('companyName') : null,
         'interests': _interests.toList(),
       },
     },
@@ -174,10 +179,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.fieldErrors.isNotEmpty) {
-        // the API names role fields "details.university"; the form uses "university"
+        // the API names role fields "details.university" and documents "documents.cnic_front"
         setState(
           () => _serverErrors = {
-            for (final entry in e.fieldErrors.entries) entry.key.replaceFirst('details.', ''): entry.value,
+            for (final entry in e.fieldErrors.entries)
+              entry.key.replaceFirst('details.', '').replaceFirst('documents.', ''): entry.value,
           },
         );
         showInfoSnack(context, e.message);
@@ -186,6 +192,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  // The photo is saved straight away, separately from the rest of the form.
+  Future<void> _changeAvatar() async {
+    final choice = await pickImage(context, canRemove: _avatarUrl != null);
+    if (choice == null || !mounted) return;
+    final api = context.read<ProfileApi>();
+    setState(() => _avatarBusy = true);
+    try {
+      final profile = switch (choice) {
+        PickedImage(:final path) => await api.setAvatar(path),
+        RemoveImage() => await api.removeAvatar(),
+      };
+      if (mounted) setState(() => _avatarUrl = profile.avatarUrl);
+    } on ApiException catch (e) {
+      if (mounted) showErrorSnack(context, e);
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
     }
   }
 
@@ -214,136 +239,279 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ),
   );
 
-  static const _headlineHints = {
-    'owner': 'e.g. CS student building EdTech apps',
-    'investor': 'e.g. Angel investor in FinTech startups',
-    'buyer': 'e.g. Shop owner looking for a POS app',
-  };
-
-  // "an Investor", "a Buyer"
-  static String _withArticle(String noun) => '${RegExp('^[AEIOU]').hasMatch(noun) ? 'an' : 'a'} $noun';
-
-  Widget _typeDropdown(String label, Map<String, String> options, String errorKey) => Padding(
+  Widget _dropdown(
+    String label,
+    String? value,
+    Map<String, String> options,
+    ValueChanged<String?> onChanged, {
+    required String errorKey,
+    required String requiredError,
+    IconData icon = Icons.badge_outlined,
+  }) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: DropdownButtonFormField<String>(
-      initialValue: options.containsKey(_type) ? _type : null,
+      initialValue: options.containsKey(value) ? value : null,
+      isExpanded: true,
       items: [for (final e in options.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
-      onChanged: (v) => setState(() => _type = v),
-      validator: (v) => v == null ? 'Choose $label' : null,
+      onChanged: (v) => setState(() => onChanged(v)),
+      validator: (v) => v == null ? requiredError : null,
       forceErrorText: _serverErrors[errorKey],
-      decoration: InputDecoration(labelText: label, prefixIcon: const Icon(Icons.badge_outlined)),
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
     ),
   );
 
-  List<Widget> _roleSection() => switch (_role) {
-    'owner' => [
-      const SectionTitle('Education & skills', subtitle: 'Helps investors and buyers trust your work'),
-      _text(
-        'university',
-        'University',
-        icon: Icons.school_outlined,
-        validator: Validators.requiredText('University', max: 150),
-      ),
-      _text(
-        'degreeProgram',
-        'Degree program',
-        icon: Icons.menu_book_outlined,
-        hint: 'e.g. BS Computer Science',
-        validator: Validators.requiredText('Degree program', max: 100),
-      ),
-      _text(
-        'graduationYear',
-        'Graduation year (optional)',
-        icon: Icons.event_outlined,
-        keyboard: TextInputType.number,
-        formatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
-        validator: Validators.graduationYear,
-      ),
-      TagsField(
-        initial: _skills,
-        onChanged: (s) => _skills = s,
-        label: 'Skills',
-        hint: 'e.g. Flutter, then press +',
-        icon: Icons.psychology_outlined,
-        emptyError: 'Add at least one skill',
-        maxCount: 20,
-        maxError: 'Add at most 20 skills',
-        serverError: _serverErrors['skills'],
-      ),
-      const SizedBox(height: 16),
-      _text(
-        'githubUrl',
-        'GitHub (optional)',
-        icon: Icons.code,
-        keyboard: TextInputType.url,
-        hint: 'https://github.com/username',
-        validator: Validators.optionalUrl('GitHub URL'),
-      ),
-      _text(
-        'portfolioUrl',
-        'Portfolio (optional)',
-        icon: Icons.web_outlined,
-        keyboard: TextInputType.url,
-        validator: Validators.optionalUrl('portfolio URL'),
-      ),
-    ],
-    'investor' => [
-      const SectionTitle('Investment preferences'),
-      _typeDropdown('Investor type', investorTypes, 'investorType'),
-      _text(
-        'organizationName',
-        'Organization (optional)',
-        icon: Icons.business_outlined,
-        validator: Validators.optionalText('Organization name', max: 150),
-      ),
-      RangeChipsField(
-        label: 'How much do you usually invest in one startup? (PKR)',
-        initial: _range,
-        required: true,
-        requiredError: 'Choose an investment range',
-        onChanged: (r) => _range = r,
-        serverError: _serverErrors['minTicket'] ?? _serverErrors['maxTicket'],
-      ),
-      const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
-      InterestsField(
-        categories: _categories,
-        initial: _interests,
-        onChanged: (s) => _interests = s,
-        serverError: _serverErrors['interests'],
-      ),
-    ],
-    _ => [
-      const SectionTitle('Buyer details'),
-      _typeDropdown('Buyer type', buyerTypes, 'buyerType'),
+  Widget _document(String kind, String label, {bool required = true}) => DocumentField(
+    key: ValueKey(kind),
+    label: label,
+    initial: _documents[kind],
+    required: required,
+    serverError: _serverErrors[kind],
+    onUpload: (path) async {
+      final profile = await context.read<ProfileApi>().uploadDocument(kind, path);
+      _documents = {for (final d in profile.documents) d.kind: d};
+      return _documents[kind];
+    },
+    onRemove: () async {
+      final profile = await context.read<ProfileApi>().removeDocument(kind);
+      _documents = {for (final d in profile.documents) d.kind: d};
+    },
+  );
+
+  Widget _interestsField() => InterestsField(
+    categories: _categories,
+    initial: _interests,
+    onChanged: (s) => _interests = s,
+    serverError: _serverErrors['interests'],
+  );
+
+  List<Widget> _ownerSection() => [
+    _text(
+      'headline',
+      'Headline',
+      icon: Icons.short_text,
+      hint: 'e.g. CS student building EdTech apps',
+      validator: Validators.requiredText('Headline', max: 150),
+    ),
+    _text('bio', 'Bio (optional)', maxLines: 4, validator: Validators.optionalText('Bio', max: 2000)),
+    _text(
+      'linkedinUrl',
+      'LinkedIn (optional)',
+      icon: Icons.link,
+      keyboard: TextInputType.url,
+      hint: 'https://www.linkedin.com/in/...',
+      validator: Validators.optionalUrl('LinkedIn URL'),
+    ),
+    _text(
+      'websiteUrl',
+      'Website (optional)',
+      icon: Icons.language,
+      keyboard: TextInputType.url,
+      validator: Validators.optionalUrl('website URL'),
+    ),
+    const SectionTitle('Education & skills', subtitle: 'Helps investors and buyers trust your work'),
+    _text(
+      'university',
+      'University',
+      icon: Icons.school_outlined,
+      validator: Validators.requiredText('University', max: 150),
+    ),
+    _text(
+      'degreeProgram',
+      'Degree program',
+      icon: Icons.menu_book_outlined,
+      hint: 'e.g. BS Computer Science',
+      validator: Validators.requiredText('Degree program', max: 100),
+    ),
+    _text(
+      'graduationYear',
+      'Graduation year (optional)',
+      icon: Icons.event_outlined,
+      keyboard: TextInputType.number,
+      formatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
+      validator: Validators.graduationYear,
+    ),
+    TagsField(
+      initial: _skills,
+      onChanged: (s) => _skills = s,
+      label: 'Skills',
+      hint: 'e.g. Flutter, then press +',
+      icon: Icons.psychology_outlined,
+      emptyError: 'Add at least one skill',
+      maxCount: 20,
+      maxError: 'Add at most 20 skills',
+      serverError: _serverErrors['skills'],
+    ),
+    const SizedBox(height: 16),
+    _text(
+      'githubUrl',
+      'GitHub (optional)',
+      icon: Icons.code,
+      keyboard: TextInputType.url,
+      hint: 'https://github.com/username',
+      validator: Validators.optionalUrl('GitHub URL'),
+    ),
+    _text(
+      'portfolioUrl',
+      'Portfolio (optional)',
+      icon: Icons.web_outlined,
+      keyboard: TextInputType.url,
+      validator: Validators.optionalUrl('portfolio URL'),
+    ),
+    const SectionTitle('Verification'),
+    const PrivacyNote(
+      'Your university ID card is used only to verify you are a student. Only Orwickle admins can see it.',
+    ),
+    _document('university_id_front', 'the front of your university ID card'),
+    _document('university_id_back', 'the back of your university ID card'),
+  ];
+
+  List<Widget> _investorSection() => [
+    _text(
+      'phone',
+      'Phone number',
+      icon: Icons.phone_outlined,
+      keyboard: TextInputType.phone,
+      hint: '03001234567',
+      validator: Validators.phone,
+    ),
+    _text(
+      'linkedinUrl',
+      'LinkedIn profile',
+      icon: Icons.link,
+      keyboard: TextInputType.url,
+      hint: 'https://www.linkedin.com/in/...',
+      validator: (v) =>
+          (v?.trim().isEmpty ?? true) ? 'LinkedIn profile is required' : Validators.optionalUrl('LinkedIn URL')(v),
+    ),
+    const SectionTitle('Investor details'),
+    _dropdown(
+      'Investor type',
+      _type,
+      investorTypes,
+      (v) => _type = v,
+      errorKey: 'investorType',
+      requiredError: 'Choose an investor type',
+    ),
+    _dropdown(
+      'Investment experience',
+      _experience,
+      investmentExperiences,
+      (v) => _experience = v,
+      errorKey: 'investmentExperience',
+      requiredError: 'Choose your investment experience',
+      icon: Icons.timeline,
+    ),
+    RangeChipsField(
+      label: 'How much do you usually invest in one startup? (PKR)',
+      initial: _range,
+      required: true,
+      requiredError: 'Choose an investment range',
+      onChanged: (r) => _range = r,
+      serverError: _serverErrors['minTicket'] ?? _serverErrors['maxTicket'],
+    ),
+    const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
+    _interestsField(),
+    if (_isFirm) ...[
+      const SectionTitle('Company', subtitle: 'Required for investment firms'),
       _text(
         'companyName',
-        'Company (optional)',
+        'Company name',
         icon: Icons.business_outlined,
-        validator: Validators.optionalText('Company name', max: 150),
+        validator: (v) => (v?.trim().isEmpty ?? true) ? 'Company name is required for investment firms' : null,
       ),
       _text(
         'companyWebsite',
-        'Company website (optional)',
+        'Company website',
         icon: Icons.language,
         keyboard: TextInputType.url,
-        validator: Validators.optionalUrl('company website'),
+        validator: (v) => (v?.trim().isEmpty ?? true)
+            ? 'Company website is required for investment firms'
+            : Validators.optionalUrl('company website')(v),
       ),
-      RangeChipsField(
-        label: 'Typical budget for a project (PKR, optional)',
-        initial: _range,
-        required: false,
-        onChanged: (r) => _range = r,
-        serverError: _serverErrors['budgetMin'] ?? _serverErrors['budgetMax'],
-      ),
-      const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
-      InterestsField(
-        categories: _categories,
-        initial: _interests,
-        onChanged: (s) => _interests = s,
-        serverError: _serverErrors['interests'],
+      _text(
+        'companyEmail',
+        'Company email',
+        icon: Icons.alternate_email,
+        keyboard: TextInputType.emailAddress,
+        validator: Validators.companyEmail(required: () => _isFirm),
       ),
     ],
-  };
+    const SectionTitle('Identity verification'),
+    const PrivacyNote(
+      'Your CNIC is used only to verify your identity. It is stored privately and only Orwickle admins can see it.',
+    ),
+    _text(
+      'cnicNumber',
+      'CNIC number',
+      icon: Icons.badge_outlined,
+      keyboard: TextInputType.number,
+      hint: '42101-1234567-1',
+      formatters: [CnicInputFormatter()],
+      validator: Validators.cnic,
+    ),
+    _document('cnic_front', 'the front of your CNIC'),
+    _document('cnic_back', 'the back of your CNIC'),
+    if (_isFirm) _document('company_certificate', 'your company registration certificate'),
+  ];
+
+  List<Widget> _buyerSection() => [
+    const SectionTitle('Buyer details'),
+    _dropdown(
+      'Buyer type',
+      _type,
+      buyerTypes,
+      (v) => _type = v,
+      errorKey: 'buyerType',
+      requiredError: 'Choose a buyer type',
+    ),
+    Text('Are you buying as a student or for a company?', style: Theme.of(context).textTheme.bodyMedium),
+    const SizedBox(height: 8),
+    FormField<String>(
+      initialValue: _affiliation,
+      validator: (_) => _affiliation == null ? 'Choose University or Company' : null,
+      builder: (state) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SegmentedButton<String>(
+            emptySelectionAllowed: true,
+            segments: [
+              for (final e in affiliations.entries)
+                ButtonSegment(
+                  value: e.key,
+                  label: Text(e.value),
+                  icon: Icon(e.key == 'university' ? Icons.school_outlined : Icons.business_outlined),
+                ),
+            ],
+            selected: {?_affiliation},
+            onSelectionChanged: (s) {
+              setState(() => _affiliation = s.isEmpty ? null : s.first);
+              state.didChange(_affiliation);
+            },
+          ),
+          if (state.hasError)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 12),
+              child: Text(state.errorText!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12)),
+            ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    ),
+    if (_affiliation == 'company')
+      _text(
+        'companyName',
+        'Company name',
+        icon: Icons.business_outlined,
+        validator: (v) => (v?.trim().isEmpty ?? true) ? 'Company name is required' : null,
+      ),
+    if (_affiliation == 'university') ...[
+      const PrivacyNote('Your university ID card is used only to verify you. Only Orwickle admins can see it.'),
+      _document('university_id_front', 'the front of your university ID card'),
+      _document('university_id_back', 'the back of your university ID card'),
+    ],
+    const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
+    _interestsField(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -394,8 +562,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     InfoBanner(
                       icon: Icons.waving_hand_outlined,
                       message:
-                          'Welcome, ${session.user?.fullName ?? ''}! Tell others a little about yourself '
-                          'as ${_withArticle(session.user?.roleLabel ?? '')}.',
+                          'Welcome, ${session.user?.fullName ?? ''}! Complete your profile — an admin reviews it '
+                          'before you get full access.',
                     ),
                   Center(
                     child: Stack(
@@ -427,37 +595,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     validator: Validators.requiredText('Full name', max: 100),
                   ),
                   _text(
-                    'headline',
-                    'Headline',
-                    icon: Icons.short_text,
-                    hint: _headlineHints[_role],
-                    validator: Validators.requiredText('Headline', max: 150),
-                  ),
-                  _text(
                     'city',
                     'City',
                     icon: Icons.location_city_outlined,
                     validator: Validators.requiredText('City', max: 80),
                   ),
-                  _text('bio', 'Bio (optional)', maxLines: 4, validator: Validators.optionalText('Bio', max: 2000)),
-                  _text(
-                    'linkedinUrl',
-                    'LinkedIn (optional)',
-                    icon: Icons.link,
-                    keyboard: TextInputType.url,
-                    hint: 'https://www.linkedin.com/in/...',
-                    validator: Validators.optionalUrl('LinkedIn URL'),
-                  ),
-                  _text(
-                    'websiteUrl',
-                    'Website (optional)',
-                    icon: Icons.language,
-                    keyboard: TextInputType.url,
-                    validator: Validators.optionalUrl('website URL'),
-                  ),
-                  ..._roleSection(),
+                  ...switch (_role) {
+                    'owner' => _ownerSection(),
+                    'investor' => _investorSection(),
+                    _ => _buyerSection(),
+                  },
                   const SizedBox(height: 24),
-                  LoadingButton(label: widget.setup ? 'Save and continue' : 'Save', loading: _saving, onPressed: _save),
+                  LoadingButton(label: widget.setup ? 'Submit for review' : 'Save', loading: _saving, onPressed: _save),
                 ],
               ),
             ),

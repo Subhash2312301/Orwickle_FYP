@@ -77,6 +77,7 @@ class ListingChips extends StatelessWidget {
       spacing: 6,
       runSpacing: 6,
       children: [
+        if (listing.isSample) StatusChip('Sample', color: colors.outline, icon: Icons.science_outlined),
         StatusChip(
           listingTypeLabels[listing.listingType]!,
           color: colors.primary,

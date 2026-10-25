@@ -32,6 +32,7 @@ async function toPreview(row, baseUrl, { withReviewNote = false } = {}) {
     currency: row.currency,
     coverUrl: await storage.signedUrl(row.thumbnail_path, baseUrl),
     status: row.status,
+    isSample: row.is_sample,   // demonstration data, shown with a "Sample" badge
     reviewStatus: row.review_status,
     ...(withReviewNote && { reviewNote: row.review_note }),
     publishedAt: row.published_at,

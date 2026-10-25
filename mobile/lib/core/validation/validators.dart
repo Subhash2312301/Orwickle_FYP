@@ -67,6 +67,29 @@ class Validators {
     return v.length <= 300 && _urlPattern.hasMatch(v) ? null : 'Enter a full $label starting with https://';
   };
 
+  /// 0300-1234567, 03001234567 or +923001234567
+  static String? phone(String? value) {
+    final v = normalizePhone(value ?? '');
+    if (v.isEmpty) return 'Phone number is required';
+    return RegExp(r'^03[0-9]{9}$').hasMatch(v) ? null : 'Enter a mobile number like 03001234567';
+  }
+
+  static String normalizePhone(String value) =>
+      value.replaceAll(RegExp(r'[\s-]'), '').replaceFirst(RegExp(r'^\+92'), '0');
+
+  static String? cnic(String? value) {
+    final digits = (value ?? '').replaceAll(RegExp('[^0-9]'), '');
+    if (digits.isEmpty) return 'CNIC number is required';
+    return digits.length == 13 ? null : 'Enter the 13-digit CNIC number, e.g. 42101-1234567-1';
+  }
+
+  /// Company email: required for investment firms ([required]), otherwise only the format is checked.
+  static String? Function(String?) companyEmail({required bool Function() required}) => (value) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return required() ? 'Company email is required for investment firms' : null;
+    return _emailPattern.hasMatch(v) ? null : 'Enter a valid company email';
+  };
+
   static String? graduationYear(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return null;

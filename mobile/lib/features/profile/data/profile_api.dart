@@ -23,6 +23,17 @@ class ProfileApi {
     Map<String, dynamic>.from((await _api.delete('/profile/me/avatar', auth: true))['profile'] as Map),
   );
 
+  /// [kind]: cnic_front, cnic_back, university_id_front, university_id_back or company_certificate.
+  Future<MyProfile> uploadDocument(String kind, String filePath) async => MyProfile.fromJson(
+    Map<String, dynamic>.from(
+      (await _api.uploadImage('/profile/me/documents/$kind', filePath, field: 'file'))['profile'] as Map,
+    ),
+  );
+
+  Future<MyProfile> removeDocument(String kind) async => MyProfile.fromJson(
+    Map<String, dynamic>.from((await _api.delete('/profile/me/documents/$kind', auth: true))['profile'] as Map),
+  );
+
   Future<List<Category>> categories() async => [
     for (final c in (await _api.get('/categories'))['categories'] as List)
       Category.fromJson(Map<String, dynamic>.from(c as Map)),

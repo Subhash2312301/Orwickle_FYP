@@ -39,7 +39,7 @@ async function listUserReviews(status, baseUrl) {
   return { users };
 }
 
-async function reviewUser(adminId, userId, { decision, reason }, { ip }) {
+async function reviewUser(adminId, userId, { decision, reason, checklist = {} }, { ip }) {
   if (!UUID.test(userId)) throw new HttpError(404, 'NOT_FOUND', 'User not found');
   const user = await withTransaction(async client => {
     const { rows: [u] } = await client.query(
@@ -55,9 +55,9 @@ async function reviewUser(adminId, userId, { decision, reason }, { ip }) {
       `UPDATE profiles SET review_status = $2, review_note = $3, reviewed_at = now() WHERE user_id = $1`,
       [userId, USER_STATUS[decision], decision === 'approve' ? null : reason]);
     await client.query(
-      `INSERT INTO review_decisions (reviewer_id, subject_user_id, decision, reason)
-       VALUES ($1, $2, $3, $4)`,
-      [adminId, userId, decision, reason ?? 'Approved']);
+      `INSERT INTO review_decisions (reviewer_id, subject_user_id, decision, reason, checklist)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [adminId, userId, decision, reason ?? 'Approved', checklist]);
     await audit(client, { actorId: adminId, action: `admin.user_${USER_STATUS[decision]}`, entityId: userId, ip,
       details: { reason } });
     return u;
@@ -76,7 +76,7 @@ async function listListingReviews(status, admin, baseUrl) {
   return { listings: await Promise.all(rows.map(r => listingService.getListing(r.id, admin, baseUrl))) };
 }
 
-async function reviewListing(admin, listingId, { decision, reason }, { ip, baseUrl }) {
+async function reviewListing(admin, listingId, { decision, reason, checklist = {} }, { ip, baseUrl }) {
   if (!UUID.test(listingId)) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
   const listing = await withTransaction(async client => {
     const { rows: [l] } = await client.query(
@@ -95,8 +95,9 @@ async function reviewListing(admin, listingId, { decision, reason }, { ip, baseU
         : `UPDATE listings SET review_status = 'rejected', review_note = $2, reviewed_at = now(), status = 'draft' WHERE id = $1`,
       decision === 'approve' ? [listingId] : [listingId, reason]);
     await client.query(
-      `INSERT INTO review_decisions (reviewer_id, subject_listing_id, decision, reason) VALUES ($1, $2, $3, $4)`,
-      [admin.id, listingId, decision, reason ?? 'Approved']);
+      `INSERT INTO review_decisions (reviewer_id, subject_listing_id, decision, reason, checklist)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [admin.id, listingId, decision, reason ?? 'Approved', checklist]);
     await audit(client, { actorId: admin.id, action: `admin.listing_${decision === 'approve' ? 'approved' : 'rejected'}`,
       entityType: 'listing', entityId: listingId, ip, details: { reason } });
     return l;

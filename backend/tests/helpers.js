@@ -43,7 +43,10 @@ const cleanup = () => withTransaction(async client => {
         OR reviewer_id IN (${testUsers})`, like);
   await client.query('ALTER TABLE review_decisions ENABLE TRIGGER review_decisions_immutable');
   await client.query('ALTER TABLE audit_logs ENABLE TRIGGER audit_logs_immutable');
-  // listings keep their owner (no cascade), so they go first
+  // uploaded documents and listings keep their user (no cascade), so they go first
+  await client.query(
+    `DELETE FROM evidence_submissions WHERE submitted_by IN (${testUsers}) OR subject_user_id IN (${testUsers})
+        OR subject_listing_id IN (${testListings})`, like);
   await client.query(`DELETE FROM listings WHERE id IN (${testListings})`, like);
   await client.query(`DELETE FROM users WHERE id IN (${testUsers})`, like);
 });
