@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -6,15 +8,19 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/image_widgets.dart';
+import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
 import '../../profile/data/profile_api.dart';
 import '../../profile/data/profile_models.dart';
 import '../../profile/widgets/profile_fields.dart';
 import '../data/listing_api.dart';
 import '../data/listing_models.dart';
+import '../widgets/listing_widgets.dart';
 
 /// Create a listing (no [listingId]) or edit one. Rules match backend/src/modules/listings/listing.validation.js.
 /// The public preview and the confidential details are separate sections, as they are stored separately.
+/// A draft can be saved as is, or saved and published (sent for admin review) in one step.
 class ListingFormScreen extends StatefulWidget {
   const ListingFormScreen({super.key, this.listingId});
 
@@ -32,6 +38,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   List<Category> _categories = const [];
   String _type = 'funding';
   bool _typeLocked = false; // only drafts may change type
+  bool _isDraft = true;
+  final List<String> _newPhotos = []; // picked on a new listing, uploaded after it is created
   String? _categoryId;
   String? _stage;
   List<String> _techStack = [];
@@ -57,6 +65,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     final l = detail.listing;
     _type = l.listingType;
     _typeLocked = l.status != 'draft';
+    _isDraft = l.status == 'draft';
     _categoryId = l.categoryId;
     _stage = l.projectStage;
     _techStack = [...l.techStack];
@@ -94,7 +103,13 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     },
   };
 
-  Future<void> _save() async {
+  Future<void> _pickPhoto() async {
+    final choice = await pickImage(context, canRemove: false);
+    if (choice is PickedImage && mounted) setState(() => _newPhotos.add(choice.path));
+  }
+
+  // Photos are uploaded before publishing, so adding them does not send a just-published listing back to review.
+  Future<void> _save({bool publish = false}) async {
     setState(() => _serverErrors = const {});
     if (!_form.currentState!.validate()) {
       showInfoSnack(context, 'Please correct the highlighted fields');
@@ -102,13 +117,31 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
     setState(() => _saving = true);
     final api = context.read<ListingApi>();
+    String? id = widget.listingId;
     try {
-      final saved = _editing ? await api.update(widget.listingId!, _body()) : await api.create(_body());
+      id = (_editing ? await api.update(id!, _body()) : await api.create(_body())).listing.id;
+      for (final path in _newPhotos) {
+        await api.addPhoto(id, path);
+      }
+      if (publish) await api.changeStatus(id, 'publish');
       if (!mounted) return;
-      showInfoSnack(context, _editing ? 'Listing saved' : 'Draft created. Add a cover image and publish when ready.');
-      _editing ? context.pop(true) : context.pushReplacement(Routes.listing(saved.listing.id));
+      showInfoSnack(
+        context,
+        publish
+            ? 'Listing published. It is visible to others once an admin approves it.'
+            : _editing
+            ? 'Listing saved'
+            : 'Draft saved. You can publish it from the listing page.',
+      );
+      _editing ? context.pop(true) : context.pushReplacement(Routes.listing(id));
     } on ApiException catch (e) {
       if (!mounted) return;
+      // the listing was created but a photo or publishing failed: show it, so nothing is created twice
+      if (!_editing && id != null) {
+        showErrorSnack(context, e);
+        context.pushReplacement(Routes.listing(id));
+        return;
+      }
       if (e.fieldErrors.isNotEmpty) {
         // "confidential.fullDescription" → "fullDescription"
         setState(
@@ -184,6 +217,26 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     if (n <= 0) return 'Equity must be more than 0%';
     if (n > 100) return 'Equity cannot be more than 100%';
     return null;
+  }
+
+  // Drafts: "Save as draft" and "Save & publish". A published listing: "Save changes" (it goes back to review).
+  List<Widget> _buttons() {
+    if (!_isDraft) return [LoadingButton(label: 'Save changes', loading: _saving, onPressed: _save)];
+    final approved = context.watch<SessionController>().user?.isApproved ?? false;
+    return [
+      LoadingButton(label: 'Save & publish', loading: _saving, onPressed: approved ? () => _save(publish: true) : null),
+      if (!approved)
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            'You can publish once an admin approves your account. Save it as a draft for now.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      const SizedBox(height: 8),
+      OutlinedButton(onPressed: _saving ? null : _save, child: const Text('Save as draft')),
+    ];
   }
 
   @override
@@ -285,6 +338,25 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     serverError: _serverErrors['techStack'],
                   ),
                   const SizedBox(height: 16),
+                  Text('Photos (optional)', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Up to $maxListingPhotos photos of the device, hardware or app screens.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  if (_editing)
+                    Text(
+                      'Add or remove photos on the listing page.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.primary),
+                    )
+                  else
+                    PhotoStrip(
+                      images: [for (final p in _newPhotos) FileImage(File(p))],
+                      onAdd: _saving ? null : _pickPhoto,
+                      onRemove: _saving ? null : (i) => setState(() => _newPhotos.removeAt(i)),
+                    ),
+                  const SizedBox(height: 20),
                   _text(
                     'askingAmount',
                     _funding ? 'Funding needed (PKR)' : 'Asking price (PKR)',
@@ -343,28 +415,40 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     maxLength: 5000,
                     validator: Validators.requiredText('Full description', min: 20, max: 5000),
                   ),
-                  _text('problemStatement', 'Problem statement (optional)', maxLines: 3, maxLength: 2000),
-                  _text('solutionDetails', 'Solution details (optional)', maxLines: 3, maxLength: 3000),
-                  _text('businessModel', 'Business model (optional)', maxLines: 3, maxLength: 2000),
                   _text(
-                    'traction',
-                    'Traction (optional)',
-                    maxLines: 2,
+                    'problemStatement',
+                    'Problem statement',
+                    maxLines: 3,
                     maxLength: 2000,
-                    hint: 'e.g. 300 beta users, 2 paying clients',
+                    hint: 'What problem does the project solve, and for whom?',
+                    validator: Validators.requiredText('Problem statement', min: 10, max: 2000),
                   ),
-                  _text('financialSummary', 'Financial summary (optional)', maxLines: 3, maxLength: 2000),
-                  _text('roadmap', 'Roadmap (optional)', maxLines: 3, maxLength: 2000),
-                  _text('teamDetails', 'Team (optional)', maxLines: 3, maxLength: 2000),
+                  _text(
+                    'businessModel',
+                    'Business model',
+                    maxLines: 3,
+                    maxLength: 2000,
+                    hint: 'How does it earn money? e.g. subscription, one-time sale, commission',
+                    validator: Validators.requiredText('Business model', min: 10, max: 2000),
+                  ),
+                  _text(
+                    'financialSummary',
+                    'Financial summary',
+                    maxLines: 3,
+                    maxLength: 2000,
+                    hint: 'Running costs, revenue so far, or expected costs',
+                    validator: Validators.requiredText('Financial summary', min: 10, max: 2000),
+                  ),
                   _text(
                     'ipOwnershipNotes',
-                    'Ownership notes (optional)',
+                    'Ownership notes',
                     maxLines: 2,
                     maxLength: 1000,
                     hint: 'Who owns the code and design?',
+                    validator: Validators.requiredText('Ownership notes', min: 10, max: 1000),
                   ),
                   const SizedBox(height: 8),
-                  LoadingButton(label: _editing ? 'Save changes' : 'Save as draft', loading: _saving, onPressed: _save),
+                  ..._buttons(),
                 ],
               ),
             ),

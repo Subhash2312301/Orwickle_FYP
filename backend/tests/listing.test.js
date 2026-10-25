@@ -14,6 +14,14 @@ const api = request(app);
 // smallest valid PNG (1×1 pixel)
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const SECRET_TEXT = 'Our secret revenue figures and full technical design';
+// confidential fields every listing needs
+const DETAILS = {
+  fullDescription: SECRET_TEXT,
+  problemStatement: 'Students cannot get quick feedback on past papers.',
+  businessModel: 'Monthly subscription for students and schools.',
+  financialSummary: 'Costs 20,000 PKR a month to run; break-even at 400 users.',
+  ipOwnershipNotes: 'All code was written by the owner.',
+};
 
 let owner, otherOwner, investor, categoryId;
 
@@ -27,6 +35,7 @@ const as = token => ({
   put: (url, body) => api.put(url).set('Authorization', `Bearer ${token}`).send(body),
   del: url => api.delete(url).set('Authorization', `Bearer ${token}`),
   upload: (url, buffer, name) => api.put(url).set('Authorization', `Bearer ${token}`).attach('image', buffer, name),
+  addFile: (url, buffer, name) => api.post(url).set('Authorization', `Bearer ${token}`).attach('image', buffer, name),
 });
 
 const fundingListing = overrides => ({
@@ -37,13 +46,13 @@ const fundingListing = overrides => ({
   techStack: ['Flutter', 'Node.js', 'Flutter'],
   projectStage: 'mvp',
   askingAmount: 1500000,
-  confidential: { fullDescription: SECRET_TEXT, equityOfferedPercent: 10, traction: '300 beta users' },
+  confidential: { ...DETAILS, equityOfferedPercent: 10 },
   ...overrides,
 });
 const saleListing = overrides => fundingListing({
   listingType: 'sale',
   title: 'Inventory app for small shops',
-  confidential: { fullDescription: SECRET_TEXT, transferDetails: 'Full source code, database schema and one month of support.' },
+  confidential: { ...DETAILS, transferDetails: 'Full source code, database schema and one month of support.' },
   ...overrides,
 });
 const pathOf = url => { const u = new URL(url); return u.pathname + u.search; };
@@ -75,11 +84,11 @@ test('an owner creates a funding draft; preview and confidential parts come back
 });
 
 test('listing rules depend on the type', async () => {
-  const noEquity = await owner.post('/api/listings', fundingListing({ confidential: { fullDescription: SECRET_TEXT } }));
+  const noEquity = await owner.post('/api/listings', fundingListing({ confidential: { ...DETAILS } }));
   assert.equal(noEquity.status, 400);
   assert.equal(noEquity.body.error.details['confidential.equityOfferedPercent'], 'Equity offered is required for funding listings');
 
-  const saleNoTransfer = await owner.post('/api/listings', saleListing({ confidential: { fullDescription: SECRET_TEXT, equityOfferedPercent: 5 } }));
+  const saleNoTransfer = await owner.post('/api/listings', saleListing({ confidential: { ...DETAILS, equityOfferedPercent: 5 } }));
   assert.equal(saleNoTransfer.body.error.details['confidential.transferDetails'], 'Describe what the buyer will receive');
   assert.equal(saleNoTransfer.body.error.details['confidential.equityOfferedPercent'], 'Equity applies only to funding listings');
 
@@ -87,6 +96,15 @@ test('listing rules depend on the type', async () => {
   assert.equal(shortFields.body.error.details.title, 'Title must be at least 3 characters');
   assert.equal(shortFields.body.error.details.shortDescription, 'Short description must be at least 10 characters');
   assert.equal(shortFields.body.error.details.askingAmount, 'Amount must be greater than 0');
+
+  const missingDetails = await owner.post('/api/listings', fundingListing({
+    confidential: { fullDescription: SECRET_TEXT, equityOfferedPercent: 10 },
+  }));
+  const missing = missingDetails.body.error.details;
+  assert.equal(missing['confidential.problemStatement'], 'Problem statement is required');
+  assert.equal(missing['confidential.businessModel'], 'Business model is required');
+  assert.equal(missing['confidential.financialSummary'], 'Financial summary is required');
+  assert.equal(missing['confidential.ipOwnershipNotes'], 'Ownership notes is required');
 
   const badCategory = await owner.post('/api/listings', fundingListing({ categoryId: '00000000-0000-4000-8000-000000000000' }));
   assert.equal(badCategory.body.error.details.categoryId, 'This category no longer exists');
@@ -191,6 +209,31 @@ test('a cover image is stored privately and served through an expiring signed li
 
   assert.equal((await otherOwner.upload(`/api/listings/${draft}/cover`, PNG, 'x.png')).status, 404);
   assert.equal((await owner.del(`/api/listings/${draft}/cover`)).body.listing.coverUrl, null);
+});
+
+test('a listing takes up to 6 extra photos; changing them on a live listing sends it back for review', async () => {
+  const id = (await owner.post('/api/listings', saleListing())).body.listing.id;
+  const add = () => owner.addFile(`/api/listings/${id}/photos`, PNG, 'photo.png');
+
+  const first = await add();
+  assert.equal(first.status, 201);
+  assert.equal(first.body.listing.photos.length, 1);
+  assert.match(first.body.listing.photos[0].url, /\/api\/files\/listings\/.+\?expires=\d+&sig=/);
+  for (let i = 0; i < 5; i++) assert.equal((await add()).status, 201);
+  const seventh = await add();
+  assert.equal(seventh.status, 409);
+  assert.equal(seventh.body.error.code, 'TOO_MANY_PHOTOS');
+
+  await owner.post(`/api/listings/${id}/publish`);
+  await pool.query("UPDATE listings SET review_status = 'approved' WHERE id = $1", [id]);
+  assert.equal((await investor.get(`/api/listings/${id}`)).body.listing.photos.length, 6, 'others see the photos');
+
+  const photoId = first.body.listing.photos[0].id;
+  assert.equal((await otherOwner.del(`/api/listings/${id}/photos/${photoId}`)).status, 404);
+  const removed = await owner.del(`/api/listings/${id}/photos/${photoId}`);
+  assert.equal(removed.body.listing.photos.length, 5);
+  assert.equal(removed.body.listing.reviewStatus, 'pending');
+  assert.equal((await owner.del(`/api/listings/${id}/photos/${photoId}`)).status, 404);
 });
 
 test('profile photo can be set and removed', async () => {

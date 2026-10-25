@@ -41,6 +41,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   String? _type; // investorType / buyerType
   String? _experience; // investor
   String? _affiliation; // buyer: university | company
+  String? _ownerKind; // owner: student | independent
   AmountRange? _range; // investor ticket size
   Map<String, ProfileDocument> _documents = {};
   bool _saving = false;
@@ -50,6 +51,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   String get _role => context.read<SessionController>().user!.role;
   bool get _isFirm => _type == 'firm';
+  bool get _isStudent => _ownerKind == 'student';
 
   TextEditingController _ctl(String key) => _c.putIfAbsent(key, TextEditingController.new);
 
@@ -84,8 +86,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       _ctl(key).text = profile.detailText(key) ?? '';
     }
     _ctl('cnicNumber').text = formatCnic(profile.detailText('cnicNumber'));
-    final year = profile.detailNumber('graduationYear');
-    _ctl('graduationYear').text = year == null ? '' : '${year.toInt()}';
+    final isStudent = profile.details['isStudent'] as bool?;
+    // a new owner has not chosen yet
+    _ownerKind = !profile.completed || isStudent == null ? null : (isStudent ? 'student' : 'independent');
     _skills = profile.skills;
     _interests = profile.interestIds;
     _type = profile.detailText(_role == 'investor' ? 'investorType' : 'buyerType');
@@ -115,9 +118,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       'linkedinUrl': _t('linkedinUrl'),
       'websiteUrl': _t('websiteUrl'),
       'details': {
-        'university': _t('university'),
-        'degreeProgram': _t('degreeProgram'),
-        'graduationYear': int.tryParse(_t('graduationYear')),
+        'isStudent': _ownerKind == null ? null : _isStudent,
+        'university': _isStudent ? _t('university') : null,
+        'degreeProgram': _isStudent ? _t('degreeProgram') : null,
         'skills': _skills,
         'githubUrl': _t('githubUrl'),
         'portfolioUrl': _t('portfolioUrl'),
@@ -295,11 +298,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _text('bio', 'Bio (optional)', maxLines: 4, validator: Validators.optionalText('Bio', max: 2000)),
     _text(
       'linkedinUrl',
-      'LinkedIn (optional)',
+      'LinkedIn profile',
       icon: Icons.link,
       keyboard: TextInputType.url,
       hint: 'https://www.linkedin.com/in/...',
-      validator: Validators.optionalUrl('LinkedIn URL'),
+      validator: Validators.requiredUrl('LinkedIn profile'),
     ),
     _text(
       'websiteUrl',
@@ -308,28 +311,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       keyboard: TextInputType.url,
       validator: Validators.optionalUrl('website URL'),
     ),
-    const SectionTitle('Education & skills', subtitle: 'Helps investors and buyers trust your work'),
-    _text(
-      'university',
-      'University',
-      icon: Icons.school_outlined,
-      validator: Validators.requiredText('University', max: 150),
+    const SectionTitle('About you', subtitle: 'Anyone can list a project, at a university or self-taught'),
+    _choice(
+      _ownerKind,
+      ownerKinds,
+      const {'student': Icons.school_outlined, 'independent': Icons.laptop_outlined},
+      (v) => _ownerKind = v,
+      'Choose whether you are a university student',
+      errorKey: 'isStudent',
     ),
-    _text(
-      'degreeProgram',
-      'Degree program',
-      icon: Icons.menu_book_outlined,
-      hint: 'e.g. BS Computer Science',
-      validator: Validators.requiredText('Degree program', max: 100),
-    ),
-    _text(
-      'graduationYear',
-      'Graduation year (optional)',
-      icon: Icons.event_outlined,
-      keyboard: TextInputType.number,
-      formatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
-      validator: Validators.graduationYear,
-    ),
+    if (_isStudent) ...[
+      _text(
+        'university',
+        'University',
+        icon: Icons.school_outlined,
+        validator: Validators.requiredText('University', max: 150),
+      ),
+      _text(
+        'degreeProgram',
+        'Degree program',
+        icon: Icons.menu_book_outlined,
+        hint: 'e.g. BS Computer Science',
+        validator: Validators.requiredText('Degree program', max: 100),
+      ),
+    ],
+    const SectionTitle('Skills & work', subtitle: 'Helps investors and buyers trust your work'),
     TagsField(
       initial: _skills,
       onChanged: (s) => _skills = s,
@@ -344,25 +350,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     const SizedBox(height: 16),
     _text(
       'githubUrl',
-      'GitHub (optional)',
+      'GitHub profile',
       icon: Icons.code,
       keyboard: TextInputType.url,
       hint: 'https://github.com/username',
-      validator: Validators.optionalUrl('GitHub URL'),
+      validator: Validators.requiredUrl('GitHub profile'),
     ),
     _text(
       'portfolioUrl',
-      'Portfolio (optional)',
+      'Portfolio link',
       icon: Icons.web_outlined,
       keyboard: TextInputType.url,
-      validator: Validators.optionalUrl('portfolio URL'),
+      hint: 'Your portfolio site, Behance or a project demo',
+      validator: Validators.requiredUrl('Portfolio link'),
     ),
-    const SectionTitle('Verification'),
-    const PrivacyNote(
-      'Your university ID card is used only to verify you are a student. Only Orwickle admins can see it.',
-    ),
-    _document('university_id_front', 'the front of your university ID card'),
-    _document('university_id_back', 'the back of your university ID card'),
+    if (_isStudent) ...[
+      const SectionTitle('Verification'),
+      const PrivacyNote(
+        'Your university ID card is used only to verify you are a student. Only Orwickle admins can see it.',
+      ),
+      _document('university_id_front', 'the front of your university ID card'),
+      _document('university_id_back', 'the back of your university ID card'),
+    ],
   ];
 
   List<Widget> _investorSection() => [
@@ -380,8 +389,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       icon: Icons.link,
       keyboard: TextInputType.url,
       hint: 'https://www.linkedin.com/in/...',
-      validator: (v) =>
-          (v?.trim().isEmpty ?? true) ? 'LinkedIn profile is required' : Validators.optionalUrl('LinkedIn URL')(v),
+      validator: Validators.requiredUrl('LinkedIn profile'),
     ),
     const SectionTitle('Investor details'),
     _dropdown(
@@ -454,6 +462,48 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     if (_isFirm) _document('company_certificate', 'your company registration certificate'),
   ];
 
+  /// Two or more mutually exclusive options as a segmented button that takes part in form validation.
+  Widget _choice(
+    String? value,
+    Map<String, String> options,
+    Map<String, IconData> icons,
+    ValueChanged<String?> onChanged,
+    String requiredError, {
+    required String errorKey,
+  }) => FormField<String>(
+    initialValue: value,
+    validator: (_) => value == null ? requiredError : null,
+    forceErrorText: _serverErrors[errorKey],
+    builder: (state) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SegmentedButton<String>(
+          emptySelectionAllowed: true,
+          segments: [
+            for (final e in options.entries)
+              ButtonSegment(
+                value: e.key,
+                label: Text(e.value, textAlign: TextAlign.center),
+                icon: Icon(icons[e.key]),
+              ),
+          ],
+          selected: {?value},
+          onSelectionChanged: (s) {
+            final picked = s.isEmpty ? null : s.first;
+            setState(() => onChanged(picked));
+            state.didChange(picked);
+          },
+        ),
+        if (state.hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 12),
+            child: Text(state.errorText!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12)),
+          ),
+        const SizedBox(height: 16),
+      ],
+    ),
+  );
+
   List<Widget> _buyerSection() => [
     const SectionTitle('Buyer details'),
     _dropdown(
@@ -466,36 +516,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ),
     Text('Are you buying as a student or for a company?', style: Theme.of(context).textTheme.bodyMedium),
     const SizedBox(height: 8),
-    FormField<String>(
-      initialValue: _affiliation,
-      validator: (_) => _affiliation == null ? 'Choose University or Company' : null,
-      builder: (state) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SegmentedButton<String>(
-            emptySelectionAllowed: true,
-            segments: [
-              for (final e in affiliations.entries)
-                ButtonSegment(
-                  value: e.key,
-                  label: Text(e.value),
-                  icon: Icon(e.key == 'university' ? Icons.school_outlined : Icons.business_outlined),
-                ),
-            ],
-            selected: {?_affiliation},
-            onSelectionChanged: (s) {
-              setState(() => _affiliation = s.isEmpty ? null : s.first);
-              state.didChange(_affiliation);
-            },
-          ),
-          if (state.hasError)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, left: 12),
-              child: Text(state.errorText!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12)),
-            ),
-          const SizedBox(height: 16),
-        ],
-      ),
+    _choice(
+      _affiliation,
+      affiliations,
+      const {'university': Icons.school_outlined, 'company': Icons.business_outlined},
+      (v) => _affiliation = v,
+      'Choose University or Company',
+      errorKey: 'affiliation',
     ),
     if (_affiliation == 'company')
       _text(

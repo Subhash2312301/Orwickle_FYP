@@ -22,5 +22,7 @@ router.post('/:id/close', ownerOnly, controller.close);
 router.delete('/:id', ownerOnly, controller.remove);
 router.put('/:id/cover', ownerOnly, imageUpload, controller.setCover);
 router.delete('/:id/cover', ownerOnly, controller.removeCover);
+router.post('/:id/photos', ownerOnly, imageUpload, controller.addPhoto);
+router.delete('/:id/photos/:photoId', ownerOnly, controller.removePhoto);
 
 module.exports = router;

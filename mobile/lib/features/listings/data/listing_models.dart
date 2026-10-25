@@ -12,6 +12,7 @@ class Listing {
     required this.askingAmount,
     required this.currency,
     required this.coverUrl,
+    this.photos = const [],
     required this.status,
     required this.reviewStatus,
     this.reviewNote,
@@ -31,6 +32,9 @@ class Listing {
     askingAmount: j['askingAmount'] as num?,
     currency: j['currency'] as String? ?? 'PKR',
     coverUrl: j['coverUrl'] as String?,
+    photos: [
+      for (final p in j['photos'] as List? ?? const []) ListingPhoto.fromJson(Map<String, dynamic>.from(p as Map)),
+    ],
     status: j['status'] as String,
     reviewStatus: j['reviewStatus'] as String,
     reviewNote: j['reviewNote'] as String?,
@@ -49,6 +53,7 @@ class Listing {
   final num? askingAmount;
   final String currency;
   final String? coverUrl;
+  final List<ListingPhoto> photos; // extra project photos, part of the public preview
   final String status; // draft | published | closed | suspended
   final String reviewStatus; // unreviewed | pending | approved | rejected | needs_evidence
   final String? reviewNote; // admin's reason for a rejection (owner only)
@@ -57,7 +62,22 @@ class Listing {
   final bool isSample; // demonstration data, shown with a "Sample" badge
 
   bool get isFunding => listingType == 'funding';
+
+  /// Visible to investors and buyers right now; changing it sends it back to admin review.
+  bool get isLive => status == 'published' && reviewStatus == 'approved';
 }
+
+class ListingPhoto {
+  const ListingPhoto({required this.id, required this.url});
+
+  factory ListingPhoto.fromJson(Map<String, dynamic> j) =>
+      ListingPhoto(id: j['id'] as String, url: j['url'] as String?);
+
+  final String id;
+  final String? url; // short-lived link
+}
+
+const maxListingPhotos = 6;
 
 /// Confidential details — returned only to the owner (and, later, to approved requesters).
 class ListingConfidential {
@@ -108,12 +128,8 @@ const reviewLabels = {
 const confidentialLabels = {
   'fullDescription': 'Full description',
   'problemStatement': 'Problem statement',
-  'solutionDetails': 'Solution details',
   'businessModel': 'Business model',
-  'traction': 'Traction',
   'financialSummary': 'Financial summary',
-  'roadmap': 'Roadmap',
-  'teamDetails': 'Team',
   'ipOwnershipNotes': 'Ownership notes',
   'transferDetails': 'What the buyer receives',
 };

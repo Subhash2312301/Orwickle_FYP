@@ -34,14 +34,10 @@ const listingSchema = z.object({
   currency: z.literal('PKR', { error: 'Amounts are in PKR' }).default('PKR'),   // Karachi pilot
   confidential: z.object({
     fullDescription: text('Full description', 5000, 20),
-    problemStatement: optionalText('Problem statement', 2000),
-    solutionDetails: optionalText('Solution details', 3000),
-    businessModel: optionalText('Business model', 2000),
-    traction: optionalText('Traction', 2000),
-    financialSummary: optionalText('Financial summary', 2000),
-    roadmap: optionalText('Roadmap', 2000),
-    teamDetails: optionalText('Team details', 2000),
-    ipOwnershipNotes: optionalText('Ownership notes', 1000),
+    problemStatement: text('Problem statement', 2000, 10),
+    businessModel: text('Business model', 2000, 10),
+    financialSummary: text('Financial summary', 2000, 10),
+    ipOwnershipNotes: text('Ownership notes', 1000, 10),
     equityOfferedPercent: z.number({ error: 'Equity must be a number' })
       .gt(0, 'Equity must be more than 0%')
       .max(100, 'Equity cannot be more than 100%')

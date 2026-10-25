@@ -111,8 +111,12 @@ void main() {
     );
     expect(Validators.optionalUrl('LinkedIn URL')('https://www.linkedin.com/in/x'), isNull);
     expect(Validators.optionalUrl('LinkedIn URL')(''), isNull);
-    expect(Validators.graduationYear('1800'), 'Enter a valid graduation year');
-    expect(Validators.graduationYear('2027'), isNull);
+    expect(Validators.requiredUrl('GitHub profile')(''), 'GitHub profile is required');
+    expect(
+      Validators.requiredUrl('GitHub profile')('github.com/x'),
+      'Enter a full GitHub profile starting with https://',
+    );
+    expect(Validators.requiredUrl('GitHub profile')('https://github.com/x'), isNull);
     expect(
       Validators.rangeMax('Maximum budget', () => '500', 'budget')('100'),
       'Maximum budget must be greater than or equal to the minimum',
@@ -120,18 +124,22 @@ void main() {
     expect(Validators.rangeMax('Maximum budget', () => '500', 'budget')('900'), isNull);
   });
 
-  testWidgets('owner form lists every missing required field, including the university ID', (tester) async {
+  testWidgets('owner form lists every missing required field; LinkedIn, GitHub and portfolio are required', (
+    tester,
+  ) async {
     final api = await _pump(tester, 'owner');
+    expect(find.text('Graduation year (optional)', skipOffstage: false), findsNothing);
+    expect(find.text('Website (optional)', skipOffstage: false), findsOneWidget);
     await _tapSave(tester);
 
     for (final message in [
       'Headline is required',
       'City is required',
-      'University is required',
-      'Degree program is required',
+      'LinkedIn profile is required',
+      'Choose whether you are a university student',
       'Add at least one skill',
-      'Upload the front of your university ID card',
-      'Upload the back of your university ID card',
+      'GitHub profile is required',
+      'Portfolio link is required',
     ]) {
       expect(find.text(message, skipOffstage: false), findsOneWidget, reason: message);
     }
@@ -139,22 +147,55 @@ void main() {
     await _finish(tester);
   });
 
-  testWidgets('owner with uploaded ID card can add skills and save', (tester) async {
-    final api = await _pump(tester, 'owner', documents: ['university_id_front', 'university_id_back']);
-    await tester.enterText(find.widgetWithText(TextFormField, 'City'), 'Karachi');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Headline'), 'CS student building apps');
+  testWidgets('a student owner must give university, degree and the university ID card', (tester) async {
+    await _pump(tester, 'owner');
     final scrollable = find.byType(Scrollable).first;
-    await tester.scrollUntilVisible(find.widgetWithText(TextFormField, 'University'), 300, scrollable: scrollable);
-    await tester.enterText(find.widgetWithText(TextFormField, 'University'), 'SZABIST');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Degree program'), 'BS CS');
+    expect(find.text('University', skipOffstage: false), findsNothing, reason: 'asked only from students');
+    await tester.scrollUntilVisible(find.text('University student'), 300, scrollable: scrollable);
+    await tester.tap(find.text('University student'));
+    await tester.pumpAndSettle();
+    await _tapSave(tester);
+
+    for (final message in [
+      'University is required',
+      'Degree program is required',
+      'Upload the front of your university ID card',
+      'Upload the back of your university ID card',
+    ]) {
+      expect(find.text(message, skipOffstage: false), findsOneWidget, reason: message);
+    }
+    await _finish(tester);
+  });
+
+  testWidgets('an independent developer saves without university details or ID card', (tester) async {
+    final api = await _pump(tester, 'owner');
+    final scrollable = find.byType(Scrollable).first;
+    await tester.enterText(find.widgetWithText(TextFormField, 'City'), 'Karachi');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Headline'), 'Self-taught developer');
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'LinkedIn profile'),
+      300,
+      scrollable: scrollable,
+    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'LinkedIn profile'), 'https://linkedin.com/in/a');
+    await tester.scrollUntilVisible(find.text('Independent developer'), 300, scrollable: scrollable);
+    await tester.tap(find.text('Independent developer'));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.widgetWithText(TextField, 'Skills'), 300, scrollable: scrollable);
     await tester.enterText(find.widgetWithText(TextField, 'Skills'), 'Flutter');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
+    await tester.scrollUntilVisible(find.widgetWithText(TextFormField, 'GitHub profile'), 300, scrollable: scrollable);
+    await tester.enterText(find.widgetWithText(TextFormField, 'GitHub profile'), 'https://github.com/a');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Portfolio link'), 'https://a.dev');
+    expect(find.textContaining('university ID card', skipOffstage: false), findsNothing);
 
     await _tapSave(tester);
     expect(api.savedBody, isNotNull);
-    expect((api.savedBody!['details'] as Map)['skills'], ['Flutter']);
+    final details = api.savedBody!['details'] as Map;
+    expect(details['isStudent'], false);
+    expect(details['university'], isNull);
+    expect(details['skills'], ['Flutter']);
     await _finish(tester);
   });
 

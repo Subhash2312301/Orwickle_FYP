@@ -31,7 +31,15 @@ const ownerProfile = {
   fullName: 'Sara Ahmed',
   headline: 'Student building a school app',
   city: 'Karachi',
-  details: { university: 'SZABIST', degreeProgram: 'BS CS', skills: ['Flutter'] },
+  linkedinUrl: 'https://www.linkedin.com/in/sara',
+  details: {
+    isStudent: true,
+    university: 'SZABIST',
+    degreeProgram: 'BS CS',
+    skills: ['Flutter'],
+    githubUrl: 'https://github.com/sara-ahmed',
+    portfolioUrl: 'https://sara.dev',
+  },
 };
 const listing = () => ({
   listingType: 'sale',
@@ -40,7 +48,14 @@ const listing = () => ({
   shortDescription: 'Track school fees and send reminders to parents automatically.',
   projectStage: 'launched',
   askingAmount: 250000,
-  confidential: { fullDescription: 'Complete app with admin panel and SMS reminders.', transferDetails: 'Source code and setup help.' },
+  confidential: {
+    fullDescription: 'Complete app with admin panel and SMS reminders.',
+    problemStatement: 'Schools track fees on paper.',
+    businessModel: 'One-time sale of the source code.',
+    financialSummary: 'Hosting costs 3,000 PKR a month.',
+    ipOwnershipNotes: 'Written entirely by the owner.',
+    transferDetails: 'Source code and setup help.',
+  },
 });
 
 before(async () => {

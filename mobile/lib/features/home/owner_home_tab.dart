@@ -7,6 +7,7 @@ import '../auth/session/session_controller.dart';
 import '../listings/data/listing_api.dart';
 import '../listings/data/listing_models.dart';
 import '../shell/approval_banner.dart';
+import '../shell/coming_soon.dart';
 
 /// Owner's home: approval status, a summary of their listings and how listing works.
 class OwnerHomeTab extends StatefulWidget {
@@ -48,7 +49,7 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
     final firstName = user.fullName.split(' ').first;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Orwickle')),
+      appBar: AppBar(title: const Text('Orwickle'), actions: const [NotificationsButton()]),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -79,8 +80,12 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
             const SizedBox(height: 24),
             Text('How it works', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
-            const _Step(1, 'Create a draft', 'Public preview for everyone, confidential details only for you.'),
-            const _Step(2, 'Publish', 'Once your account is approved, publish the listing for review.'),
+            const _Step(
+              1,
+              'Create a listing',
+              'Public preview for everyone, confidential details only for you. Save it as a draft or publish it.',
+            ),
+            const _Step(2, 'Publish', 'Once your account is approved, "Save & publish" sends the listing for review.'),
             const _Step(
               3,
               'Admin review',

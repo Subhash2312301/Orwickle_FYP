@@ -21,4 +21,8 @@ module.exports = {
   },
   setCover: async (req, res) => res.json(await service.setCover(req.params.id, owner(req), req.image, context(req))),
   removeCover: async (req, res) => res.json(await service.removeCover(req.params.id, owner(req), context(req))),
+  addPhoto: async (req, res) =>
+    res.status(201).json(await service.addPhoto(req.params.id, owner(req), req.image, context(req))),
+  removePhoto: async (req, res) =>
+    res.json(await service.removePhoto(req.params.id, req.params.photoId, owner(req), context(req))),
 };

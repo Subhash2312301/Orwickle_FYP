@@ -94,3 +94,98 @@ class ListingChips extends StatelessWidget {
     );
   }
 }
+
+/// Horizontal strip of project photos (hardware, screenshots). Tapping a photo opens it full screen.
+/// With [onAdd] and [onRemove] the owner can manage them; [onAdd] is hidden once the limit is reached.
+class PhotoStrip extends StatelessWidget {
+  const PhotoStrip({super.key, required this.images, this.onAdd, this.onRemove});
+
+  final List<ImageProvider> images;
+  final VoidCallback? onAdd;
+  final void Function(int index)? onRemove;
+
+  static const double _size = 96;
+
+  void _open(BuildContext context, ImageProvider image) => showDialog<void>(
+    context: context,
+    builder: (context) => Dialog(
+      insetPadding: const EdgeInsets.all(12),
+      child: InteractiveViewer(
+        child: Image(image: image, fit: BoxFit.contain),
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final canAdd = onAdd != null && images.length < maxListingPhotos;
+    return SizedBox(
+      height: _size,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (var i = 0; i < images.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () => _open(context, images[i]),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image(
+                        image: images[i],
+                        width: _size,
+                        height: _size,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          width: _size,
+                          height: _size,
+                          color: colors.surfaceContainerHighest,
+                          child: Icon(Icons.broken_image_outlined, color: colors.outline),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (onRemove != null)
+                    Positioned(
+                      top: 2,
+                      right: 2,
+                      child: IconButton.filledTonal(
+                        tooltip: 'Remove photo',
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 16,
+                        onPressed: () => onRemove!(i),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          if (canAdd)
+            InkWell(
+              onTap: onAdd,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: _size,
+                height: _size,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: colors.outlineVariant),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_a_photo_outlined, color: colors.primary),
+                    const SizedBox(height: 4),
+                    Text('Add photo', style: TextStyle(color: colors.primary, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

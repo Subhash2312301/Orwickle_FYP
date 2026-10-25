@@ -11,8 +11,9 @@ const DOMAIN = '@demo.orwickle.app';
 const PASSWORD = 'Demo#Orwickle26';
 
 const owners = [
-  { key: 'ayesha', name: 'Ayesha Khan', headline: 'Final-year CS student building EdTech apps', university: 'SZABIST Karachi', degree: 'BS Computer Science', year: 2027, skills: ['Flutter', 'Node.js', 'PostgreSQL'] },
-  { key: 'hamza', name: 'Hamza Siddiqui', headline: 'Software engineer shipping small business tools', university: 'NED University', degree: 'BE Software Engineering', year: 2026, skills: ['React', 'Express', 'UI/UX'] },
+  { key: 'ayesha', name: 'Ayesha Khan', headline: 'Final-year CS student building EdTech apps', student: true, university: 'SZABIST Karachi', degree: 'BS Computer Science', skills: ['Flutter', 'Node.js', 'PostgreSQL'] },
+  // self-taught developer, not at a university
+  { key: 'hamza', name: 'Hamza Siddiqui', headline: 'Self-taught developer shipping small business tools', student: false, skills: ['React', 'Express', 'UI/UX'] },
 ];
 const investors = [
   { key: 'farhan', name: 'Farhan Malik', type: 'angel', experience: '4_10', min: 500000, max: 2000000, cats: ['edtech', 'fintech', 'healthtech'] },
@@ -79,10 +80,13 @@ async function main() {
 
     for (const o of owners) {
       ids[o.key] = await createUser(client, o.key, 'owner', o.name, hash);
-      await client.query('UPDATE profiles SET headline = $2 WHERE user_id = $1', [ids[o.key], o.headline]);
+      await client.query('UPDATE profiles SET headline = $2, linkedin_url = $3 WHERE user_id = $1',
+        [ids[o.key], o.headline, `https://www.linkedin.com/in/sample-${o.key}`]);
       await client.query(
-        `INSERT INTO owner_profiles (user_id, university, degree_program, graduation_year, skills) VALUES ($1, $2, $3, $4, $5)`,
-        [ids[o.key], o.university, o.degree, o.year, o.skills]);
+        `INSERT INTO owner_profiles (user_id, is_student, university, degree_program, skills, github_url, portfolio_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [ids[o.key], o.student, o.university ?? null, o.degree ?? null, o.skills,
+          `https://github.com/sample-${o.key}`, `https://sample-${o.key}.example.com`]);
     }
     for (const i of investors) {
       const id = await createUser(client, i.key, 'investor', i.name, hash);
@@ -112,8 +116,10 @@ async function main() {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'published', 'approved', now(), now(), true) RETURNING id`,
         [ids[l.owner], l.type, cat[l.cat], l.title, l.short, l.tech, l.stage, l.amount]);
       await client.query(
-        `INSERT INTO listing_confidential (listing_id, full_description, equity_offered_percent, transfer_details)
-         VALUES ($1, $2, $3, $4)`,
+        `INSERT INTO listing_confidential (listing_id, full_description, problem_statement, business_model,
+           financial_summary, ip_ownership_notes, equity_offered_percent, transfer_details)
+         VALUES ($1, $2, 'Sample problem statement for demonstration.', 'Sample business model for demonstration.',
+           'Sample financial summary for demonstration.', 'All code is written and owned by the project owner.', $3, $4)`,
         [listing.id, `Sample listing for demonstration. ${l.short} Full details are shared with approved requesters.`,
           l.type === 'funding' ? l.equity : null,
           l.type === 'sale' ? 'Full source code, database schema, deployment guide and one month of support.' : null]);

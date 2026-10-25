@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../auth/session/session_controller.dart';
 import '../shell/approval_banner.dart';
+import '../shell/coming_soon.dart';
 
 /// Investors and buyers: browsing approved listings arrives in the discovery phase.
 class DiscoverTab extends StatelessWidget {
@@ -15,7 +16,10 @@ class DiscoverTab extends StatelessWidget {
     final investor = user.role == 'investor';
 
     return Scaffold(
-      appBar: AppBar(title: Text(investor ? 'Funding opportunities' : 'Projects for sale')),
+      appBar: AppBar(
+        title: Text(investor ? 'Funding opportunities' : 'Projects for sale'),
+        actions: const [NotificationsButton()],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
