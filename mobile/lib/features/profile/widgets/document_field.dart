@@ -41,7 +41,7 @@ class _DocumentTileState extends State<_DocumentTile> {
   bool _busy = false;
 
   Future<void> _pick() async {
-    final choice = await pickImage(context, canRemove: widget.state.value != null);
+    final choice = await pickImage(context, canRemove: widget.state.value != null, allowPdf: true);
     if (choice == null || !mounted) return;
     setState(() => _busy = true);
     try {
@@ -95,7 +95,7 @@ class _DocumentTileState extends State<_DocumentTile> {
               onTap: _busy ? null : _pick,
               leading: SizedBox(width: 56, child: Center(child: preview)),
               title: Text(widget.label),
-              subtitle: Text(doc == null ? 'Tap to upload a photo' : 'Uploaded · tap to replace'),
+              subtitle: Text(doc == null ? 'Tap to upload a photo or PDF' : 'Uploaded · tap to replace'),
               trailing: _busy
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : Icon(

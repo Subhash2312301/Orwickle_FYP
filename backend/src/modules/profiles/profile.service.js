@@ -136,7 +136,7 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
           SET full_name = $2, city = $3,
               headline = CASE WHEN $8 THEN $4 ELSE headline END,
               bio = CASE WHEN $8 THEN $5 ELSE bio END,
-              website_url = CASE WHEN $8 THEN $7 ELSE website_url END,
+              website_url = CASE WHEN $9 THEN $7 ELSE website_url END,
               linkedin_url = CASE WHEN $9 THEN $6 ELSE linkedin_url END,
               phone = CASE WHEN $10 THEN $11 ELSE phone END,
               profile_completed_at = coalesce(profile_completed_at, now()),
@@ -158,7 +158,6 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
           d.githubUrl, d.portfolioUrl]);
       if (!d.isStudent) await removeDocumentRows(client, userId, ['university_id_front', 'university_id_back']);
     } else if (role === 'investor') {
-      const firm = d.investorType === 'firm';
       await client.query(
         `UPDATE investor_profiles
             SET investor_type = $2, cnic_number = $3, organization_name = $4, company_website = $5,
@@ -166,7 +165,10 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
           WHERE user_id = $1`,
         [userId, d.investorType, d.cnicNumber, d.companyName, d.companyWebsite, d.companyEmail,
           d.investmentExperience, d.minTicket, d.maxTicket]);
-      if (!firm) await removeDocumentRows(client, userId, ['company_certificate']);
+      // e.g. a firm no longer needs proof of funds; a first-time investor has no past investment to prove
+      const needed = requiredDocuments(role, d);
+      await removeDocumentRows(client, userId,
+        ['company_certificate', 'funds_proof', 'investment_proof'].filter(kind => !needed.includes(kind)));
       await saveInterests(client, userId, d.interests);
     } else if (role === 'buyer') {
       await client.query(

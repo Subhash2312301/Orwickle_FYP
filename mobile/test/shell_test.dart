@@ -97,6 +97,30 @@ void main() {
     session.dispose();
   });
 
+  testWidgets('logging out asks for confirmation first', (tester) async {
+    final session = await _pump(tester, 'investor');
+    await tester.tap(find.widgetWithText(NavigationDestination, 'Profile'));
+    await tester.pumpAndSettle();
+    final logout = find.widgetWithText(OutlinedButton, 'Log out');
+    await tester.scrollUntilVisible(logout, 200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(logout);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Are you sure you want to log out? You will need your email and password to log in again.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(session.user, isNotNull, reason: 'Cancel keeps the user logged in');
+
+    await tester.tap(logout);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Log out'));
+    await tester.pumpAndSettle();
+    expect(session.user, isNull);
+    session.dispose();
+  });
+
   testWidgets('later-phase features say "Coming soon" when opened', (tester) async {
     final session = await _pump(tester, 'buyer');
     await tester.tap(find.widgetWithText(NavigationDestination, 'Messages'));

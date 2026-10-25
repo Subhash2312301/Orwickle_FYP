@@ -131,6 +131,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       'city': _t('city'),
       'phone': Validators.normalizePhone(_t('phone')),
       'linkedinUrl': _t('linkedinUrl'),
+      'websiteUrl': _t('websiteUrl'),
       'details': {
         'investorType': _type,
         'cnicNumber': _t('cnicNumber'),
@@ -391,6 +392,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       hint: 'https://www.linkedin.com/in/...',
       validator: Validators.requiredUrl('LinkedIn profile'),
     ),
+    _text(
+      'websiteUrl',
+      'Website (optional)',
+      icon: Icons.language,
+      keyboard: TextInputType.url,
+      hint: 'Your personal or professional website',
+      validator: Validators.optionalUrl('website URL'),
+    ),
     const SectionTitle('Investor details'),
     _dropdown(
       'Investor type',
@@ -459,7 +468,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ),
     _document('cnic_front', 'the front of your CNIC'),
     _document('cnic_back', 'the back of your CNIC'),
-    if (_isFirm) _document('company_certificate', 'your company registration certificate'),
+    if (_type != null) ...[
+      SectionTitle(
+        _isFirm ? 'Company verification' : 'Proof of funds',
+        subtitle: _isFirm
+            ? 'Shows that the company is registered'
+            : 'Shows that you can invest the amount you chose. You may cover account numbers.',
+      ),
+      if (_isFirm)
+        _document('company_certificate', 'your company registration certificate')
+      else
+        _document('funds_proof', 'proof of funds (bank statement, bank letter or tax return)'),
+    ],
+    if (_experience != null && _experience != 'first_time') ...[
+      const SectionTitle(
+        'Investment experience proof',
+        subtitle: 'One past investment: share certificate, investment agreement or a letter from the startup',
+      ),
+      _document('investment_proof', 'proof of a past investment'),
+    ],
   ];
 
   /// Two or more mutually exclusive options as a segmented button that takes part in form validation.
@@ -549,7 +576,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         title: Text(widget.setup ? 'Complete your profile' : 'Edit profile'),
         actions: [
           if (widget.setup)
-            IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout), onPressed: () => session.logout()),
+            IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout), onPressed: () => confirmLogout(context)),
         ],
       ),
       body: FutureBuilder<void>(

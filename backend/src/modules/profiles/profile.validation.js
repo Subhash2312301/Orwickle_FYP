@@ -87,6 +87,7 @@ const investor = z.object({
   city,
   phone,
   linkedinUrl: requiredUrl('LinkedIn profile'),
+  websiteUrl: optionalUrl('website URL'),
   details: z.object({
     investorType: z.enum(['individual', 'angel', 'firm', 'other'], { error: 'Choose an investor type' }),
     cnicNumber: cnic,
@@ -131,10 +132,16 @@ const buyer = z.object({
 const profileSchemas = { owner, investor, buyer };
 
 // Documents each role must upload before the profile can be submitted for review.
+// Investors: a firm proves the company; anyone else proves they have the money to invest.
+// Anyone who has invested before also proves one past investment.
 function requiredDocuments(role, details) {
   if (role === 'owner') return details.isStudent ? ['university_id_front', 'university_id_back'] : [];
   if (role === 'investor') {
-    return ['cnic_front', 'cnic_back', ...(details.investorType === 'firm' ? ['company_certificate'] : [])];
+    return [
+      'cnic_front', 'cnic_back',
+      details.investorType === 'firm' ? 'company_certificate' : 'funds_proof',
+      ...(details.investmentExperience === 'first_time' ? [] : ['investment_proof']),
+    ];
   }
   if (role === 'buyer') return details.affiliation === 'university' ? ['university_id_front', 'university_id_back'] : [];
   return [];
@@ -146,12 +153,14 @@ const DOCUMENT_LABELS = {
   university_id_front: 'the front of your university ID card',
   university_id_back: 'the back of your university ID card',
   company_certificate: 'your company registration certificate',
+  funds_proof: 'proof of funds (bank statement, bank letter or tax return)',
+  investment_proof: 'proof of a past investment (share certificate, investment agreement or letter from the startup)',
 };
 
 // Which document kinds each role may upload at all.
 const ALLOWED_DOCUMENTS = {
   owner: ['university_id_front', 'university_id_back'],
-  investor: ['cnic_front', 'cnic_back', 'company_certificate'],
+  investor: ['cnic_front', 'cnic_back', 'company_certificate', 'funds_proof', 'investment_proof'],
   buyer: ['university_id_front', 'university_id_back'],
 };
 
