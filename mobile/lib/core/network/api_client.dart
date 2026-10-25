@@ -1,7 +1,18 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
 import 'api_exception.dart';
+
+/// A picked file ready to upload. Bytes instead of a file path, because the browser
+/// (used for testing on localhost) has no file paths.
+class UploadFile {
+  const UploadFile(this.name, this.bytes);
+
+  final String name;
+  final Uint8List bytes;
+}
 
 /// Returns a valid access token, refreshing the session first when needed.
 /// Returns null when the user is not logged in.
@@ -44,7 +55,7 @@ class ApiClient {
   /// Sends one file as multipart form data: PUT replaces a single image, [post] adds one to a list.
   Future<Map<String, dynamic>> uploadImage(
     String path,
-    String filePath, {
+    UploadFile file, {
     bool auth = true,
     String field = 'image',
     bool post = false,
@@ -52,7 +63,7 @@ class ApiClient {
     auth,
     // a fresh FormData per attempt, because a sent one cannot be sent again on retry
     (options) async {
-      final data = FormData.fromMap({field: await MultipartFile.fromFile(filePath)});
+      final data = FormData.fromMap({field: MultipartFile.fromBytes(file.bytes, filename: file.name)});
       return post
           ? _dio.post<dynamic>(path, data: data, options: options)
           : _dio.put<dynamic>(path, data: data, options: options);

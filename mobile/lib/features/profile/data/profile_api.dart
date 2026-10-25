@@ -15,8 +15,8 @@ class ProfileApi {
     Map<String, dynamic>.from((await _api.put('/profile/me', auth: true, body: body))['profile'] as Map),
   );
 
-  Future<MyProfile> setAvatar(String filePath) async => MyProfile.fromJson(
-    Map<String, dynamic>.from((await _api.uploadImage('/profile/me/avatar', filePath))['profile'] as Map),
+  Future<MyProfile> setAvatar(UploadFile file) async => MyProfile.fromJson(
+    Map<String, dynamic>.from((await _api.uploadImage('/profile/me/avatar', file))['profile'] as Map),
   );
 
   Future<MyProfile> removeAvatar() async => MyProfile.fromJson(
@@ -24,9 +24,9 @@ class ProfileApi {
   );
 
   /// [kind]: cnic_front, cnic_back, university_id_front, university_id_back or company_certificate.
-  Future<MyProfile> uploadDocument(String kind, String filePath) async => MyProfile.fromJson(
+  Future<MyProfile> uploadDocument(String kind, UploadFile file) async => MyProfile.fromJson(
     Map<String, dynamic>.from(
-      (await _api.uploadImage('/profile/me/documents/$kind', filePath, field: 'file'))['profile'] as Map,
+      (await _api.uploadImage('/profile/me/documents/$kind', file, field: 'file'))['profile'] as Map,
     ),
   );
 

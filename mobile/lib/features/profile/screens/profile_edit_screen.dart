@@ -207,7 +207,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     setState(() => _avatarBusy = true);
     try {
       final profile = switch (choice) {
-        PickedImage(:final path) => await api.setAvatar(path),
+        PickedImage(:final file) => await api.setAvatar(file),
         RemoveImage() => await api.removeAvatar(),
       };
       if (mounted) setState(() => _avatarUrl = profile.avatarUrl);
@@ -270,8 +270,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     initial: _documents[kind],
     required: required,
     serverError: _serverErrors[kind],
-    onUpload: (path) async {
-      final profile = await context.read<ProfileApi>().uploadDocument(kind, path);
+    onUpload: (file) async {
+      final profile = await context.read<ProfileApi>().uploadDocument(kind, file);
       _documents = {for (final d in profile.documents) d.kind: d};
       return _documents[kind];
     },
