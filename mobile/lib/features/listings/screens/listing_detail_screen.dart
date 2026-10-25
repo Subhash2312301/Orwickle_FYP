@@ -76,7 +76,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     if (choice == null || !mounted) return;
     await _run(
       () => switch (choice) {
-        PickedImage(:final path) => _api.setCover(listing.id, path),
+        PickedImage(:final file) => _api.setCover(listing.id, file),
         RemoveImage() => _api.removeCover(listing.id),
       },
       choice is RemoveImage ? 'Cover image removed' : 'Cover image updated',
@@ -87,7 +87,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     if (!await _confirmLiveChange(listing, 'add a photo') || !mounted) return;
     final choice = await pickImage(context, canRemove: false);
     if (choice is! PickedImage || !mounted) return;
-    await _run(() => _api.addPhoto(listing.id, choice.path), 'Photo added');
+    await _run(() => _api.addPhoto(listing.id, choice.file), 'Photo added');
   }
 
   Future<void> _removePhoto(Listing listing, ListingPhoto photo) async {

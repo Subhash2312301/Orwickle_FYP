@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/image_widgets.dart';
 import '../../auth/widgets/form_widgets.dart';
@@ -13,7 +14,7 @@ class DocumentField extends FormField<ProfileDocument?> {
     super.key,
     required String label,
     required ProfileDocument? initial,
-    required Future<ProfileDocument?> Function(String filePath) onUpload,
+    required Future<ProfileDocument?> Function(UploadFile file) onUpload,
     required Future<void> Function() onRemove,
     bool required = true,
     String? serverError,
@@ -30,7 +31,7 @@ class _DocumentTile extends StatefulWidget {
 
   final FormFieldState<ProfileDocument?> state;
   final String label;
-  final Future<ProfileDocument?> Function(String filePath) onUpload;
+  final Future<ProfileDocument?> Function(UploadFile file) onUpload;
   final Future<void> Function() onRemove;
 
   @override
@@ -46,8 +47,8 @@ class _DocumentTileState extends State<_DocumentTile> {
     setState(() => _busy = true);
     try {
       switch (choice) {
-        case PickedImage(:final path):
-          widget.state.didChange(await widget.onUpload(path));
+        case PickedImage(:final file):
+          widget.state.didChange(await widget.onUpload(file));
         case RemoveImage():
           await widget.onRemove();
           widget.state.didChange(null);

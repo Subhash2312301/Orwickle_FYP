@@ -1,10 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/validation/validators.dart';
@@ -39,7 +38,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   String _type = 'funding';
   bool _typeLocked = false; // only drafts may change type
   bool _isDraft = true;
-  final List<String> _newPhotos = []; // picked on a new listing, uploaded after it is created
+  final List<UploadFile> _newPhotos = []; // picked on a new listing, uploaded after it is created
   String? _categoryId;
   String? _stage;
   List<String> _techStack = [];
@@ -105,7 +104,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
 
   Future<void> _pickPhoto() async {
     final choice = await pickImage(context, canRemove: false);
-    if (choice is PickedImage && mounted) setState(() => _newPhotos.add(choice.path));
+    if (choice is PickedImage && mounted) setState(() => _newPhotos.add(choice.file));
   }
 
   // Photos are uploaded before publishing, so adding them does not send a just-published listing back to review.
@@ -120,8 +119,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     String? id = widget.listingId;
     try {
       id = (_editing ? await api.update(id!, _body()) : await api.create(_body())).listing.id;
-      for (final path in _newPhotos) {
-        await api.addPhoto(id, path);
+      for (final photo in _newPhotos) {
+        await api.addPhoto(id, photo);
       }
       if (publish) await api.changeStatus(id, 'publish');
       if (!mounted) return;
@@ -352,7 +351,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     )
                   else
                     PhotoStrip(
-                      images: [for (final p in _newPhotos) FileImage(File(p))],
+                      images: [for (final p in _newPhotos) MemoryImage(p.bytes)],
                       onAdd: _saving ? null : _pickPhoto,
                       onRemove: _saving ? null : (i) => setState(() => _newPhotos.removeAt(i)),
                     ),

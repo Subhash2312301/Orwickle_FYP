@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../network/api_client.dart';
+
 /// Profile photo, or the user's initials when there is none (or it fails to load).
 class UserAvatar extends StatelessWidget {
   const UserAvatar({super.key, required this.initials, this.url, this.radius = 24});
@@ -35,13 +37,13 @@ class UserAvatar extends StatelessWidget {
   }
 }
 
-/// Result of [pickImage]: a picked file path, or a request to remove the current image.
+/// Result of [pickImage]: a picked file, or a request to remove the current image.
 sealed class ImageChoice {}
 
 class PickedImage extends ImageChoice {
-  PickedImage(this.path);
+  PickedImage(this.file);
 
-  final String path;
+  final UploadFile file;
 }
 
 class RemoveImage extends ImageChoice {}
@@ -87,9 +89,9 @@ Future<ImageChoice?> pickImage(BuildContext context, {required bool canRemove, b
   if (source == 'remove') return RemoveImage();
   if (source == 'pdf') {
     final file = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: const ['pdf']);
-    return file?.path == null ? null : PickedImage(file!.path!);
+    return file == null ? null : PickedImage(UploadFile(file.name, await file.xFile.readAsBytes()));
   }
   if (source is! ImageSource) return null;
   final file = await ImagePicker().pickImage(source: source, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
-  return file == null ? null : PickedImage(file.path);
+  return file == null ? null : PickedImage(UploadFile(file.name, await file.readAsBytes()));
 }
