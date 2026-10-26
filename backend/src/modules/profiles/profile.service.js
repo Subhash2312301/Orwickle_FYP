@@ -81,6 +81,9 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
       companyWebsite: d.company_website,
       companyEmail: d.company_email,
       investmentExperience: d.investment_experience,
+      professionalAffiliation: d.professional_affiliation,
+      investmentHistory: d.investment_history,
+      portfolioUrl: d.portfolio_url,
       minTicket: toNumber(d.min_ticket),
       maxTicket: toNumber(d.max_ticket),
       interests: await loadInterests(db, userId),
@@ -164,10 +167,12 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
       await client.query(
         `UPDATE investor_profiles
             SET investor_type = $2, cnic_number = $3, organization_name = $4, company_website = $5,
-                company_email = $6, investment_experience = $7, min_ticket = $8, max_ticket = $9
+                company_email = $6, investment_experience = $7, min_ticket = $8, max_ticket = $9,
+                professional_affiliation = $10, investment_history = $11, portfolio_url = $12
           WHERE user_id = $1`,
         [userId, d.investorType, d.cnicNumber, d.companyName, d.companyWebsite, d.companyEmail,
-          d.investmentExperience, d.minTicket, d.maxTicket]);
+          d.investmentExperience, d.minTicket, d.maxTicket, d.professionalAffiliation,
+          d.investmentExperience === 'first_time' ? null : d.investmentHistory, d.portfolioUrl]);
       // e.g. a firm no longer needs proof of funds; a first-time investor has no past investment to prove
       const needed = requiredDocuments(role, d);
       await removeDocumentRows(client, userId,

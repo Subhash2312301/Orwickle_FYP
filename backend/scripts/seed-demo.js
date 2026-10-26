@@ -95,8 +95,10 @@ async function main() {
         [id, `https://www.linkedin.com/in/sample-${i.key}`]);
       await client.query(
         `INSERT INTO investor_profiles (user_id, investor_type, cnic_number, organization_name, company_website, company_email,
-                                        investment_experience, min_ticket, max_ticket)
-         VALUES ($1, $2, '4210100000000', $3, $4, $5, $6, $7, $8)`,
+                                        investment_experience, min_ticket, max_ticket,
+                                        professional_affiliation, investment_history)
+         VALUES ($1, $2, '4210100000000', $3, $4, $5, $6, $7, $8,
+                 'Sample affiliation for demonstration', 'Sample investment history for demonstration.')`,
         [id, i.type, i.company ?? null, i.company ? 'https://example.com' : null,
           i.company ? `invest${DOMAIN}` : null, i.experience, i.min, i.max]);
       for (const c of i.cats) await client.query('INSERT INTO user_category_interests VALUES ($1, $2)', [id, cat[c]]);

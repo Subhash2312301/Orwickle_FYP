@@ -212,6 +212,7 @@ void main() {
       'LinkedIn profile is required',
       'Choose an investor type',
       'Choose your investment experience',
+      'Professional affiliation is required',
       'Choose an investment range',
       'Choose at least one category',
       'CNIC number is required',
@@ -242,6 +243,7 @@ void main() {
     for (final message in [
       'Upload proof of funds (bank statement, bank letter or tax return)',
       'Upload proof of a past investment',
+      'Describe your past investments',
     ]) {
       expect(find.text(message, skipOffstage: false), findsOneWidget, reason: message);
     }
