@@ -16,7 +16,8 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
-app.use(helmet());
+// signed file links are loaded as images by the app and the admin dashboard, which run on other origins
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: env.corsOrigin === '*' ? '*' : env.corsOrigin.split(',').map(s => s.trim()) }));
 app.use(express.json({ limit: '1mb' }));
 if (!env.isTest) app.use(morgan(env.isProduction ? 'combined' : 'dev'));

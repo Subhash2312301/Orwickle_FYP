@@ -387,6 +387,7 @@ async function getMe(userId) {
 module.exports = {
   publicUser,
   findUserById,
+  revokeAllSessions,
   register,
   verifyEmail,
   sendOtpAgain,
