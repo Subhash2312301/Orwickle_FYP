@@ -51,6 +51,9 @@ const investorBody = overrides => ({
     investorType: 'angel',
     cnicNumber: '42101-1234567-1',
     investmentExperience: '1_3',
+    professionalAffiliation: 'Partner at Malik & Co; member of Karachi Angel Network',
+    investmentHistory: 'Invested in two Karachi EdTech startups in 2024 and 2025.',
+    portfolioUrl: 'https://angel.co/farhan',
     minTicket: 500000,
     maxTicket: 2000000,
     interests: [categories[0].id, categories[1].id],
@@ -202,11 +205,20 @@ test('an angel investor proves identity, funds and a past investment, but needs 
   assert.equal(p.websiteUrl, 'https://farhan.pk', 'investors may add a website');
   assert.equal(p.details.cnicNumber, '4210112345671', 'CNIC stored as 13 digits');
   assert.equal(p.details.maxTicket, 2000000);
+  assert.equal(p.details.professionalAffiliation, 'Partner at Malik & Co; member of Karachi Angel Network');
+  assert.equal(p.details.portfolioUrl, 'https://angel.co/farhan');
   assert.equal(p.reviewStatus, 'pending');
 
+  const noHistory = await putProfile(session.accessToken, investorBody({ investmentHistory: '' }));
+  assert.equal(noHistory.body.error.details['details.investmentHistory'], 'Describe your past investments');
+  const noAffiliation = await putProfile(session.accessToken, investorBody({ professionalAffiliation: undefined }));
+  assert.equal(noAffiliation.body.error.details['details.professionalAffiliation'], 'Professional affiliation is required');
+
   // first-time investors have no past investment to prove; the old proof is removed
-  const firstTime = await putProfile(session.accessToken, investorBody({ investmentExperience: 'first_time' }));
-  assert.equal(firstTime.status, 200);
+  const firstTime = await putProfile(session.accessToken,
+    investorBody({ investmentExperience: 'first_time', investmentHistory: '', portfolioUrl: '' }));
+  assert.equal(firstTime.status, 200, 'first-time investors have no history to describe');
+  assert.equal(firstTime.body.profile.details.investmentHistory, null);
   assert.deepEqual(firstTime.body.profile.documents.map(x => x.kind).sort(), ['cnic_back', 'cnic_front', 'funds_proof']);
 });
 

@@ -100,11 +100,17 @@ const investor = z.object({
     companyWebsite: optionalUrl('company website'),
     companyEmail,
     investmentExperience: z.enum(['first_time', '1_3', '4_10', '10_plus'], { error: 'Choose your investment experience' }),
+    professionalAffiliation: text('Professional affiliation', 300),
+    investmentHistory: optionalText('Investment history', 2000),
+    portfolioUrl: optionalUrl('portfolio URL'),
     // ranges come from preset chips; a missing maximum means "and above" (1 crore+)
     minTicket: z.number({ error: 'Choose an investment range' }).min(0).max(1e12),
     maxTicket: z.number().min(0).max(1e12).nullable().optional().transform(v => v ?? null),
     interests,
   }, required('Details')).superRefine((d, ctx) => {
+    if (d.investmentExperience !== 'first_time' && (d.investmentHistory ?? '').length < 10) {
+      ctx.addIssue({ code: 'custom', path: ['investmentHistory'], message: 'Describe your past investments' });
+    }
     if (d.maxTicket != null && d.maxTicket < d.minTicket) {
       ctx.addIssue({ code: 'custom', path: ['maxTicket'], message: 'Maximum investment must be greater than or equal to the minimum' });
     }

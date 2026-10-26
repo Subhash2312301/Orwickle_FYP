@@ -56,6 +56,8 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
    Any other type: proof of funds (bank statement, bank letter or tax return) is required instead.
    Experience other than "first investment": proof of a past investment is required.
    Documents can be a photo or a PDF. Website is optional.
+   Professional affiliation is required; investment history is required unless it is the first investment;
+   investment portfolio link is optional.
 3. Profile tab shows the CNIC masked (`*****-*******-1`).
 4. Buyer: phone and LinkedIn required; University or Company; Company → company name and company email;
    University → university ID front + back. No headline, website or budget.

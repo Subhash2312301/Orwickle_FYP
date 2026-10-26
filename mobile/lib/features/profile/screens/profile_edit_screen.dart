@@ -82,6 +82,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       'companyName',
       'companyWebsite',
       'companyEmail',
+      'professionalAffiliation',
+      'investmentHistory',
     ]) {
       _ctl(key).text = profile.detailText(key) ?? '';
     }
@@ -138,6 +140,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         'companyWebsite': _t('companyWebsite'),
         'companyEmail': _t('companyEmail'),
         'investmentExperience': _experience,
+        'professionalAffiliation': _t('professionalAffiliation'),
+        'investmentHistory': _experience == 'first_time' ? null : _t('investmentHistory'),
+        'portfolioUrl': _t('portfolioUrl'),
         'minTicket': _range?.min,
         'maxTicket': _range?.max,
         'interests': _interests.toList(),
@@ -437,6 +442,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       errorKey: 'investmentExperience',
       requiredError: 'Choose your investment experience',
       icon: Icons.timeline,
+    ),
+    _text(
+      'professionalAffiliation',
+      'Professional affiliation',
+      icon: Icons.work_outline,
+      hint: 'e.g. Manager at HBL; member of an angel network',
+      validator: Validators.requiredText('Professional affiliation', max: 300),
+    ),
+    if (_experience != null && _experience != 'first_time')
+      _text(
+        'investmentHistory',
+        'Investment history',
+        maxLines: 4,
+        hint: 'Which startups did you invest in, when, and how much (roughly)?',
+        validator: (v) => (v?.trim().length ?? 0) < 10
+            ? 'Describe your past investments'
+            : Validators.optionalText('Investment history', max: 2000)(v),
+      ),
+    _text(
+      'portfolioUrl',
+      'Investment portfolio (optional)',
+      icon: Icons.pie_chart_outline,
+      keyboard: TextInputType.url,
+      hint: 'Link to your portfolio, e.g. AngelList or a website',
+      validator: Validators.optionalUrl('portfolio URL'),
     ),
     RangeChipsField(
       label: 'How much do you usually invest in one startup? (PKR)',
