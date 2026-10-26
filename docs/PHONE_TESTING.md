@@ -1,7 +1,7 @@
 # Testing Orwickle on a real Android phone
 
 ## Prepare the laptop (every time)
-1. `ipconfig` → Wi-Fi IPv4 must match the IP the APK was built with (currently `192.168.18.247`).
+1. `ipconfig` → Wi-Fi IPv4 must match the IP the APK was built with (currently `192.168.18.203`).
    If it changed, rebuild: `flutter build apk --debug --dart-define=API_BASE_URL=http://<ip>:4000/api`.
 2. `cd backend && npm run dev` — keep this terminal open (OTP emails are also printed here).
 3. Once, in PowerShell **as Administrator**:
