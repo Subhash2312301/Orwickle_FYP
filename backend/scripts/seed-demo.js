@@ -80,8 +80,8 @@ async function main() {
 
     for (const o of owners) {
       ids[o.key] = await createUser(client, o.key, 'owner', o.name, hash);
-      await client.query('UPDATE profiles SET headline = $2, linkedin_url = $3 WHERE user_id = $1',
-        [ids[o.key], o.headline, `https://www.linkedin.com/in/sample-${o.key}`]);
+      await client.query('UPDATE profiles SET headline = $2, bio = $3, linkedin_url = $4, city = NULL WHERE user_id = $1',
+        [ids[o.key], o.headline, `Sample bio for demonstration. ${o.headline}.`, `https://www.linkedin.com/in/sample-${o.key}`]);
       await client.query(
         `INSERT INTO owner_profiles (user_id, is_student, university, degree_program, skills, github_url, portfolio_url)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -104,8 +104,11 @@ async function main() {
     for (const b of buyers) {
       const id = await createUser(client, b.key, 'buyer', b.name, hash);
       await client.query(
-        `INSERT INTO buyer_profiles (user_id, buyer_type, affiliation, company_name) VALUES ($1, $2, $3, $4)`,
-        [id, b.type, b.affiliation, b.company ?? null]);
+        `UPDATE profiles SET phone = '03001234567', linkedin_url = $2 WHERE user_id = $1`,
+        [id, `https://www.linkedin.com/in/sample-${b.key}`]);
+      await client.query(
+        `INSERT INTO buyer_profiles (user_id, buyer_type, affiliation, company_name, company_email) VALUES ($1, $2, $3, $4, $5)`,
+        [id, b.type, b.affiliation, b.company ?? null, b.company ? `buy${DOMAIN}` : null]);
       for (const c of b.cats) await client.query('INSERT INTO user_category_interests VALUES ($1, $2)', [id, cat[c]]);
     }
 

@@ -86,10 +86,14 @@ class Validators {
     return digits.length == 13 ? null : 'Enter the 13-digit CNIC number, e.g. 42101-1234567-1';
   }
 
-  /// Company email: required for investment firms ([required]), otherwise only the format is checked.
-  static String? Function(String?) companyEmail({required bool Function() required}) => (value) {
+  /// Company email: required when [required] says so (investment firms, company buyers),
+  /// otherwise only the format is checked.
+  static String? Function(String?) companyEmail({
+    required bool Function() required,
+    String requiredMessage = 'Company email is required for investment firms',
+  }) => (value) {
     final v = value?.trim() ?? '';
-    if (v.isEmpty) return required() ? 'Company email is required for investment firms' : null;
+    if (v.isEmpty) return required() ? requiredMessage : null;
     return _emailPattern.hasMatch(v) ? null : 'Enter a valid company email';
   };
 

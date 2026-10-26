@@ -30,7 +30,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 const ownerProfile = {
   fullName: 'Sara Ahmed',
   headline: 'Student building a school app',
-  city: 'Karachi',
+  bio: 'I build apps for schools in Karachi.',
   linkedinUrl: 'https://www.linkedin.com/in/sara',
   details: {
     isStudent: true,

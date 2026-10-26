@@ -91,6 +91,7 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
       buyerType: d.buyer_type,
       affiliation: d.affiliation,
       companyName: d.company_name,
+      companyEmail: d.company_email,
       interests: await loadInterests(db, userId),
     };
   }
@@ -131,22 +132,23 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
     await assertDocuments(client, userId, role, d);
 
     // fields a role does not have are left untouched
+    // ($8 owner: headline, bio; $9 owner/investor: website; $10 investor/buyer: phone)
     await client.query(
       `UPDATE profiles
           SET full_name = $2, city = $3,
               headline = CASE WHEN $8 THEN $4 ELSE headline END,
               bio = CASE WHEN $8 THEN $5 ELSE bio END,
               website_url = CASE WHEN $9 THEN $7 ELSE website_url END,
-              linkedin_url = CASE WHEN $9 THEN $6 ELSE linkedin_url END,
+              linkedin_url = $6,
               phone = CASE WHEN $10 THEN $11 ELSE phone END,
               profile_completed_at = coalesce(profile_completed_at, now()),
               -- a first save, or a save after a rejection / request for more information, goes to the admin
               review_status = CASE WHEN review_status IN ('unreviewed', 'rejected', 'needs_evidence')
                                    THEN 'pending'::review_status ELSE review_status END
         WHERE user_id = $1`,
-      [userId, body.fullName, body.city, body.headline ?? null, body.bio ?? null, body.linkedinUrl ?? null,
+      [userId, body.fullName, body.city ?? null, body.headline ?? null, body.bio ?? null, body.linkedinUrl ?? null,
         body.websiteUrl ?? null, role === 'owner', role === 'owner' || role === 'investor',
-        role === 'investor', body.phone ?? null]);
+        role === 'investor' || role === 'buyer', body.phone ?? null]);
 
     if (role === 'owner') {
       await client.query(
@@ -156,7 +158,8 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
           WHERE user_id = $1`,
         [userId, d.isStudent, d.isStudent ? d.university : null, d.isStudent ? d.degreeProgram : null, d.skills,
           d.githubUrl, d.portfolioUrl]);
-      if (!d.isStudent) await removeDocumentRows(client, userId, ['university_id_front', 'university_id_back']);
+      await removeDocumentRows(client, userId,
+        d.isStudent ? ['cnic_front', 'cnic_back'] : ['university_id_front', 'university_id_back']);
     } else if (role === 'investor') {
       await client.query(
         `UPDATE investor_profiles
@@ -172,8 +175,9 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
       await saveInterests(client, userId, d.interests);
     } else if (role === 'buyer') {
       await client.query(
-        `UPDATE buyer_profiles SET buyer_type = $2, affiliation = $3, company_name = $4 WHERE user_id = $1`,
-        [userId, d.buyerType, d.affiliation, d.affiliation === 'company' ? d.companyName : null]);
+        `UPDATE buyer_profiles SET buyer_type = $2, affiliation = $3, company_name = $4, company_email = $5
+          WHERE user_id = $1`,
+        [userId, d.buyerType, d.affiliation, ...(d.affiliation === 'company' ? [d.companyName, d.companyEmail] : [null, null])]);
       if (d.affiliation === 'company') {
         await removeDocumentRows(client, userId, ['university_id_front', 'university_id_back']);
       }

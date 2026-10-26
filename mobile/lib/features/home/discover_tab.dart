@@ -32,7 +32,7 @@ class DiscoverTab extends StatelessWidget {
           Text(
             investor
                 ? 'You will browse startups seeking funding here, filter by category and request access to their details.'
-                : 'You will browse software projects for sale here, filter by category and request access to their details.',
+                : 'You will browse projects for sale here, filter by category and request access to their details.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
           ),

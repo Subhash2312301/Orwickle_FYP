@@ -156,7 +156,7 @@ Future<void> confirmLogout(BuildContext context) async {
     builder: (context) => AlertDialog(
       icon: const Icon(Icons.logout),
       title: const Text('Log out?'),
-      content: const Text('Are you sure you want to log out? You will need your email and password to log in again.'),
+      content: const Text('Are you sure you want to log out?'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
         FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Log out')),

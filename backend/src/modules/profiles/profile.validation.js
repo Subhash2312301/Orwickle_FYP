@@ -49,16 +49,21 @@ const cnic = z.string(required('CNIC number'))
   .transform(v => v.replace(/[\s-]/g, ''))
   .refine(v => /^[0-9]{13}$/.test(v), 'Enter the 13-digit CNIC number, e.g. 42101-1234567-1');
 
+// format only; required for investment firms and company buyers
+const companyEmail = z.string().trim().toLowerCase().max(254)
+  .refine(v => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Enter a valid company email')
+  .nullable().optional().transform(v => v || null);
+
 const fullName = text('Full name', 100);
 const city = text('City', 80);
 
 // Owners may be university students or independent (self-taught) developers;
-// university and degree are asked only from students.
+// students give university, degree and university ID card, independent owners their CNIC.
+// Owners have no city.
 const owner = z.object({
   fullName,
   headline: text('Headline', 150),
-  city,
-  bio: optionalText('Bio', 2000),
+  bio: text('Bio', 2000, 10),
   linkedinUrl: requiredUrl('LinkedIn profile'),
   websiteUrl: optionalUrl('website URL'),
   details: z.object({
@@ -93,9 +98,7 @@ const investor = z.object({
     cnicNumber: cnic,
     companyName: optionalText('Company name', 150),
     companyWebsite: optionalUrl('company website'),
-    companyEmail: z.string().trim().toLowerCase().max(254)
-      .refine(v => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Enter a valid company email')
-      .nullable().optional().transform(v => v || null),
+    companyEmail,
     investmentExperience: z.enum(['first_time', '1_3', '4_10', '10_plus'], { error: 'Choose your investment experience' }),
     // ranges come from preset chips; a missing maximum means "and above" (1 crore+)
     minTicket: z.number({ error: 'Choose an investment range' }).min(0).max(1e12),
@@ -117,15 +120,18 @@ const investor = z.object({
 const buyer = z.object({
   fullName,
   city,
+  phone,
+  linkedinUrl: requiredUrl('LinkedIn profile'),
   details: z.object({
     buyerType: z.enum(['individual', 'small_business', 'agency', 'other'], { error: 'Choose a buyer type' }),
     affiliation: z.enum(['university', 'company'], { error: 'Choose University or Company' }),
     companyName: optionalText('Company name', 150),
+    companyEmail,
     interests,
   }, required('Details')).superRefine((d, ctx) => {
-    if (d.affiliation === 'company' && !d.companyName) {
-      ctx.addIssue({ code: 'custom', path: ['companyName'], message: 'Company name is required' });
-    }
+    if (d.affiliation !== 'company') return;
+    if (!d.companyName) ctx.addIssue({ code: 'custom', path: ['companyName'], message: 'Company name is required' });
+    if (!d.companyEmail) ctx.addIssue({ code: 'custom', path: ['companyEmail'], message: 'Company email is required' });
   }),
 });
 
@@ -135,7 +141,7 @@ const profileSchemas = { owner, investor, buyer };
 // Investors: a firm proves the company; anyone else proves they have the money to invest.
 // Anyone who has invested before also proves one past investment.
 function requiredDocuments(role, details) {
-  if (role === 'owner') return details.isStudent ? ['university_id_front', 'university_id_back'] : [];
+  if (role === 'owner') return details.isStudent ? ['university_id_front', 'university_id_back'] : ['cnic_front', 'cnic_back'];
   if (role === 'investor') {
     return [
       'cnic_front', 'cnic_back',
@@ -159,7 +165,7 @@ const DOCUMENT_LABELS = {
 
 // Which document kinds each role may upload at all.
 const ALLOWED_DOCUMENTS = {
-  owner: ['university_id_front', 'university_id_back'],
+  owner: ['university_id_front', 'university_id_back', 'cnic_front', 'cnic_back'],
   investor: ['cnic_front', 'cnic_back', 'company_certificate', 'funds_proof', 'investment_proof'],
   buyer: ['university_id_front', 'university_id_back'],
 };

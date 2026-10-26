@@ -31,7 +31,7 @@ const upload = (token, kind, file = PNG, name = 'doc.png') =>
 const ownerBody = {
   fullName: 'Ayesha Khan',
   headline: 'Final-year CS student building EdTech apps',
-  city: 'Karachi',
+  bio: 'I build learning apps for O Level students.',
   linkedinUrl: 'https://www.linkedin.com/in/ayesha',
   details: {
     isStudent: true,
@@ -60,7 +60,12 @@ const investorBody = overrides => ({
 const buyerBody = overrides => ({
   fullName: 'Imran Sheikh',
   city: 'Karachi',
-  details: { buyerType: 'small_business', affiliation: 'company', companyName: 'Sheikh Traders', interests: [categories[2].id], ...overrides },
+  phone: '03211234567',
+  linkedinUrl: 'https://www.linkedin.com/in/imran',
+  details: {
+    buyerType: 'small_business', affiliation: 'company', companyName: 'Sheikh Traders', companyEmail: 'Imran@Sheikh.pk',
+    interests: [categories[2].id], ...overrides,
+  },
 });
 
 before(async () => {
@@ -101,7 +106,8 @@ test('owner fields are validated one by one', async () => {
   assert.equal(res.status, 400);
   const d = res.body.error.details;
   assert.equal(d.headline, 'Headline is required');
-  assert.equal(d.city, 'City is required');
+  assert.equal(d.bio, 'Bio is required');
+  assert.equal(d.city, undefined, 'owners have no city');
   assert.equal(d.linkedinUrl, 'Enter a full LinkedIn profile starting with https://');
   assert.equal(d['details.isStudent'], 'Choose whether you are a university student');
   assert.equal(d['details.skills'], 'Add at least one skill');
@@ -112,9 +118,16 @@ test('owner fields are validated one by one', async () => {
   assert.equal(student.body.error.details['details.university'], 'University is required for students');
 });
 
-test('an independent developer needs no university, degree or university ID', async () => {
+test('an independent developer gives the CNIC instead of university, degree and university ID', async () => {
   const session = await loginAs('owner');
   const independent = { ...ownerBody, details: { ...ownerBody.details, isStudent: false, university: '', degreeProgram: '' } };
+  const missing = await putProfile(session.accessToken, independent);
+  assert.equal(missing.body.error.details['documents.cnic_front'], 'Upload the front of your CNIC');
+  assert.equal(missing.body.error.details['documents.cnic_back'], 'Upload the back of your CNIC');
+  assert.equal(missing.body.error.details['documents.university_id_front'], undefined);
+
+  await upload(session.accessToken, 'cnic_front');
+  await upload(session.accessToken, 'cnic_back');
   const saved = await putProfile(session.accessToken, independent);
   assert.equal(saved.status, 200);
   assert.equal(saved.body.profile.reviewStatus, 'pending');
@@ -143,7 +156,7 @@ test('an owner must upload both sides of the university ID card', async () => {
 
 test('documents are checked: right kind for the role, image or PDF only', async () => {
   const owner = await loginAs('owner');
-  const wrongKind = await upload(owner.accessToken, 'cnic_front');
+  const wrongKind = await upload(owner.accessToken, 'company_certificate');
   assert.equal(wrongKind.body.error.details.kind, 'This document is not needed for your role');
 
   const investor = await loginAs('investor');
@@ -221,15 +234,25 @@ test('an investment firm must give company details and the registration certific
   assert.equal(saved.body.profile.details.companyEmail, 'deals@ksv.pk');
 });
 
-test('a buyer from a company gives the company name; no budget, headline or website', async () => {
+test('a buyer from a company gives phone, LinkedIn, company name and email; no budget, headline or website', async () => {
   const session = await loginAs('buyer');
-  const missing = await putProfile(session.accessToken, buyerBody({ companyName: '' }));
-  assert.equal(missing.body.error.details['details.companyName'], 'Company name is required');
+  const missing = await putProfile(session.accessToken, {
+    fullName: 'Imran Sheikh', city: 'Karachi',
+    details: { ...buyerBody().details, companyName: '', companyEmail: '' },
+  });
+  const d = missing.body.error.details;
+  assert.equal(d['details.companyName'], 'Company name is required');
+  assert.equal(d['details.companyEmail'], 'Company email is required');
+  assert.equal(d.phone, 'Phone number is required');
+  assert.equal(d.linkedinUrl, 'LinkedIn profile is required');
 
   const saved = await putProfile(session.accessToken, { ...buyerBody(), headline: 'ignored', websiteUrl: 'https://ignored.pk' });
   assert.equal(saved.status, 200);
   const p = saved.body.profile;
   assert.equal(p.details.companyName, 'Sheikh Traders');
+  assert.equal(p.details.companyEmail, 'imran@sheikh.pk');
+  assert.equal(p.phone, '03211234567');
+  assert.equal(p.linkedinUrl, 'https://www.linkedin.com/in/imran');
   assert.equal(p.details.budgetMin, undefined);
   assert.equal(p.headline, null);
   assert.equal(p.websiteUrl, null);
@@ -237,7 +260,7 @@ test('a buyer from a company gives the company name; no budget, headline or webs
 
 test('a buyer from a university uploads the university ID card instead', async () => {
   const session = await loginAs('buyer');
-  const body = buyerBody({ affiliation: 'university', companyName: null });
+  const body = buyerBody({ affiliation: 'university', companyName: null, companyEmail: null });
   const missing = await putProfile(session.accessToken, body);
   assert.equal(missing.body.error.details['documents.university_id_front'], 'Upload the front of your university ID card');
 
