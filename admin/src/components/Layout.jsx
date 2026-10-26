@@ -8,6 +8,7 @@ import HowToRegIcon from '@mui/icons-material/HowToReg';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import PeopleIcon from '@mui/icons-material/People';
 import HistoryIcon from '@mui/icons-material/History';
+import KeyIcon from '@mui/icons-material/Key';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth';
@@ -20,6 +21,7 @@ const LINKS = [
   { to: '/reviews/listings', label: 'Listing reviews', icon: <FactCheckIcon /> },
   { to: '/users', label: 'Users', icon: <PeopleIcon /> },
   { to: '/audit', label: 'Audit log', icon: <HistoryIcon /> },
+  { to: '/password', label: 'Change password', icon: <KeyIcon /> },
 ];
 
 export default function Layout() {

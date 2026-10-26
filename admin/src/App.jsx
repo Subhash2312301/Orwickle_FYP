@@ -3,6 +3,7 @@ import { useAuth } from './auth';
 import Layout from './components/Layout';
 import AccountReviewsPage from './pages/AccountReviewsPage';
 import AuditPage from './pages/AuditPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import ListingReviewsPage from './pages/ListingReviewsPage';
 import LoginPage from './pages/LoginPage';
 import OverviewPage from './pages/OverviewPage';
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="audit" element={<AuditPage />} />
+        <Route path="password" element={<ChangePasswordPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

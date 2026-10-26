@@ -105,6 +105,12 @@ export async function login(email, password) {
   return data.user;
 }
 
+/** Changing the password ends every other session; the server returns a fresh one for this tab. */
+export async function changePassword(currentPassword, newPassword) {
+  const data = await api('/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } });
+  saveSession({ ...session, accessToken: data.accessToken, refreshToken: data.refreshToken, refreshedAt: Date.now() });
+}
+
 export async function logout() {
   const refreshToken = session?.refreshToken;
   saveSession(null);
