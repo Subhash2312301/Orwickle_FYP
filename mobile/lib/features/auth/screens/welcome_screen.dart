@@ -21,7 +21,8 @@ class WelcomeScreen extends StatelessWidget {
     return AuthScaffold(
       showBack: false,
       title: 'Welcome to Orwickle',
-      subtitle: 'A trusted marketplace for student and developer projects. How will you use Orwickle?',
+      subtitle:
+          'Build · Bid · Grow — a verified marketplace for projects, investors and buyers. How will you use Orwickle?',
       children: [
         for (final role in UserRole.values)
           Card(

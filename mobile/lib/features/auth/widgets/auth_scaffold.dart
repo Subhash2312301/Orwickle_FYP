@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/brand_logo.dart';
+
 /// Common layout for the auth screens: logo, title, subtitle and a scrollable form area.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({super.key, required this.title, this.subtitle, required this.children, this.showBack = true});
@@ -23,7 +25,7 @@ class AuthScaffold extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.storefront_rounded, size: 48, color: theme.colorScheme.primary),
+                  const Center(child: BrandLogo(size: 64)),
                   const SizedBox(height: 16),
                   Text(title, textAlign: TextAlign.center, style: theme.textTheme.headlineSmall),
                   if (subtitle != null) ...[

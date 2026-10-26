@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/router/routes.dart';
+import '../../core/theme/app_theme.dart';
 import '../auth/session/session_controller.dart';
 import '../listings/data/listing_api.dart';
 import '../listings/data/listing_models.dart';
@@ -56,9 +57,21 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
           padding: const EdgeInsets.all(20),
           children: [
             const ApprovalBanner(),
-            Text('Hi, $firstName', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 4),
-            Text('Here is how your projects are doing.', style: theme.textTheme.bodyMedium),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(gradient: AppTheme.gradient, borderRadius: BorderRadius.circular(20)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Hi, $firstName', style: theme.textTheme.headlineSmall?.copyWith(color: Colors.white)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Turn your ideas into real projects. Here is how they are doing.',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9)),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
