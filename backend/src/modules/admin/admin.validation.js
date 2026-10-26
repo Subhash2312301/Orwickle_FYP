@@ -23,4 +23,9 @@ const listingReviewSchema = z.object({
   checklist,
 }).refine(needsReason, reasonError);
 
-module.exports = { userReviewSchema, listingReviewSchema };
+// Suspending or reinstating an account always needs a reason (stored and emailed).
+const accountStatusSchema = z.object({
+  reason: z.string({ error: 'Give a reason' }).trim().min(3, 'Give a reason').max(1000, 'Reason must be at most 1000 characters'),
+});
+
+module.exports = { userReviewSchema, listingReviewSchema, accountStatusSchema };

@@ -160,3 +160,60 @@ test('every decision is recorded with the reviewer and reason', async () => {
   const audit = await pool.query(`SELECT action FROM audit_logs WHERE action LIKE 'admin.%' AND entity_id = $1`, [ownerId]);
   assert.deepEqual(audit.rows.map(r => r.action).sort(), ['admin.user_approved', 'admin.user_needs_evidence']);
 });
+
+test('the overview counts users and listings', async () => {
+  const res = await admin.get('/api/admin/stats');
+  assert.equal(res.status, 200);
+  assert.ok(res.body.users.owners >= 1);
+  assert.ok(res.body.users.investors >= 1);
+  assert.equal(typeof res.body.users.newToday, 'number');
+  assert.equal(typeof res.body.listings.live, 'number');
+  assert.equal((await owner.get('/api/admin/stats')).status, 403);
+});
+
+test('admins search users and open one with documents, listings and past decisions', async () => {
+  const found = await admin.get(`/api/admin/users?search=${encodeURIComponent(ownerEmail)}`);
+  assert.equal(found.status, 200);
+  assert.deepEqual(found.body.users.map(u => u.email), [ownerEmail]);
+  assert.equal(found.body.users[0].reviewStatus, 'approved');
+
+  const owners = await admin.get('/api/admin/users?role=owner');
+  assert.ok(owners.body.users.every(u => u.role === 'owner'));
+  assert.ok(!owners.body.users.some(u => u.role === 'admin'), 'admins are never listed');
+
+  const detail = await admin.get(`/api/admin/users/${ownerId}`);
+  assert.equal(detail.body.user.email, ownerEmail);
+  assert.equal(detail.body.profile.documents.length, 2);
+  assert.ok(detail.body.listings.length >= 1);
+  assert.deepEqual(detail.body.decisions.map(d => d.decision), ['approve', 'request_more']);
+});
+
+test('suspending needs a reason, logs the user out and blocks login until reinstated', async () => {
+  const creds = await createVerifiedUser('buyer', 'Bad Actor');
+  const login = (await api.post('/api/auth/login').send(creds)).body;
+
+  const noReason = await admin.post(`/api/admin/users/${login.user.id}/suspend`, {});
+  assert.equal(noReason.status, 400);
+  assert.equal(noReason.body.error.details.reason, 'Give a reason');
+
+  const suspended = await admin.post(`/api/admin/users/${login.user.id}/suspend`, { reason: 'Fake company details' });
+  assert.equal(suspended.body.status, 'suspended');
+  assert.equal(lastMailTo(creds.email).subject, 'Your Orwickle account has been suspended');
+  assert.equal((await api.post('/api/auth/refresh').send({ refreshToken: login.refreshToken })).status, 401,
+    'existing sessions end');
+  const blocked = await api.post('/api/auth/login').send(creds);
+  assert.equal(blocked.body.error.code, 'ACCOUNT_SUSPENDED');
+  assert.equal((await admin.post(`/api/admin/users/${login.user.id}/suspend`, { reason: 'again' })).status, 409);
+
+  await admin.post(`/api/admin/users/${login.user.id}/reinstate`, { reason: 'Documents checked again' });
+  assert.equal((await api.post('/api/auth/login').send(creds)).status, 200);
+});
+
+test('the audit log lists admin actions with the actor', async () => {
+  const res = await admin.get('/api/admin/audit?action=admin.user_&limit=20');
+  assert.equal(res.status, 200);
+  const actions = res.body.entries.map(e => e.action);
+  assert.ok(actions.includes('admin.user_suspended'));
+  assert.ok(actions.includes('admin.user_reinstated'));
+  assert.equal(res.body.entries[0].actor.role, 'admin');
+});

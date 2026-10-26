@@ -5,7 +5,7 @@ const validate = require('../../middleware/validate');
 const { requireAuth, requireRole } = require('../../middleware/auth');
 const baseUrl = require('../../utils/baseUrl');
 const HttpError = require('../../utils/httpError');
-const { userReviewSchema, listingReviewSchema } = require('./admin.validation');
+const { userReviewSchema, listingReviewSchema, accountStatusSchema } = require('./admin.validation');
 const service = require('./admin.service');
 
 const USER_QUEUES = ['pending', 'approved', 'rejected', 'needs_evidence'];
@@ -21,6 +21,20 @@ function queue(allowed) {
 
 const router = Router();
 router.use(requireAuth, requireRole('admin'));
+
+router.get('/stats', async (req, res) => res.json(await service.stats()));
+
+router.get('/users', async (req, res) => res.json(await service.listUsers(req.query)));
+
+router.get('/users/:id', async (req, res) => res.json(await service.getUser(req.params.id, req.user, baseUrl(req))));
+
+router.post('/users/:id/suspend', validate(accountStatusSchema), async (req, res) =>
+  res.json(await service.setAccountStatus(req.user.id, req.params.id, 'suspend', req.body.reason, { ip: req.ip })));
+
+router.post('/users/:id/reinstate', validate(accountStatusSchema), async (req, res) =>
+  res.json(await service.setAccountStatus(req.user.id, req.params.id, 'reinstate', req.body.reason, { ip: req.ip })));
+
+router.get('/audit', async (req, res) => res.json(await service.auditLog(req.query)));
 
 router.get('/reviews/users', queue(USER_QUEUES), async (req, res) =>
   res.json(await service.listUserReviews(req.queue, baseUrl(req))));

@@ -35,6 +35,8 @@ const REVIEW_TEXT = {
     approve: { subject: 'Your Orwickle account is approved', line: 'Good news — your account has been approved. You now have full access to Orwickle.' },
     reject: { subject: 'Your Orwickle account was not approved', line: 'Your account was not approved. Please update your profile and it will be reviewed again.' },
     request_more: { subject: 'More information needed for your Orwickle account', line: 'An administrator needs more information before approving your account. Please update your profile.' },
+    suspend: { subject: 'Your Orwickle account has been suspended', line: 'Your account has been suspended by an administrator. You cannot log in until it is reinstated.' },
+    reinstate: { subject: 'Your Orwickle account is active again', line: 'Your account has been reinstated. You can log in again.' },
   },
   listing: {
     approve: { subject: 'Your listing is live on Orwickle', line: 'Your listing has been approved and is now visible to investors and buyers.' },
