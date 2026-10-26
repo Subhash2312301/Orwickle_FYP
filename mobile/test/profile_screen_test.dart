@@ -130,11 +130,12 @@ void main() {
     final api = await _pump(tester, 'owner');
     expect(find.text('Graduation year (optional)', skipOffstage: false), findsNothing);
     expect(find.text('Website (optional)', skipOffstage: false), findsOneWidget);
+    expect(find.text('City', skipOffstage: false), findsNothing, reason: 'owners have no city');
     await _tapSave(tester);
 
     for (final message in [
       'Headline is required',
-      'City is required',
+      'Bio is required',
       'LinkedIn profile is required',
       'Choose whether you are a university student',
       'Add at least one skill',
@@ -167,11 +168,11 @@ void main() {
     await _finish(tester);
   });
 
-  testWidgets('an independent developer saves without university details or ID card', (tester) async {
-    final api = await _pump(tester, 'owner');
+  testWidgets('an independent developer gives the CNIC instead of university details', (tester) async {
+    final api = await _pump(tester, 'owner', documents: ['cnic_front', 'cnic_back']);
     final scrollable = find.byType(Scrollable).first;
-    await tester.enterText(find.widgetWithText(TextFormField, 'City'), 'Karachi');
     await tester.enterText(find.widgetWithText(TextFormField, 'Headline'), 'Self-taught developer');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Bio'), 'I build apps for small shops.');
     await tester.scrollUntilVisible(
       find.widgetWithText(TextFormField, 'LinkedIn profile'),
       300,
@@ -189,6 +190,7 @@ void main() {
     await tester.enterText(find.widgetWithText(TextFormField, 'GitHub profile'), 'https://github.com/a');
     await tester.enterText(find.widgetWithText(TextFormField, 'Portfolio link'), 'https://a.dev');
     expect(find.textContaining('university ID card', skipOffstage: false), findsNothing);
+    expect(find.text('the front of your CNIC', skipOffstage: false), findsOneWidget);
 
     await _tapSave(tester);
     expect(api.savedBody, isNotNull);
@@ -277,18 +279,23 @@ void main() {
     await _finish(tester);
   });
 
-  testWidgets('buyer chooses University or Company; no budget, headline or website', (tester) async {
+  testWidgets('buyer gives phone and LinkedIn, chooses University or Company; no budget, headline or website', (
+    tester,
+  ) async {
     await _pump(tester, 'buyer');
     expect(find.text('Headline'), findsNothing);
     expect(find.textContaining('budget'), findsNothing);
     await _tapSave(tester);
     expect(find.text('Choose University or Company', skipOffstage: false), findsOneWidget);
+    expect(find.text('Phone number is required', skipOffstage: false), findsOneWidget);
+    expect(find.text('LinkedIn profile is required', skipOffstage: false), findsOneWidget);
 
     await tester.ensureVisible(find.text('Company'));
     await tester.tap(find.text('Company'));
     await tester.pumpAndSettle();
     await _tapSave(tester);
     expect(find.text('Company name is required', skipOffstage: false), findsOneWidget);
+    expect(find.text('Company email is required', skipOffstage: false), findsOneWidget);
 
     await tester.ensureVisible(find.text('University'));
     await tester.tap(find.text('University'));

@@ -105,10 +105,7 @@ void main() {
     await tester.scrollUntilVisible(logout, 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(logout);
     await tester.pumpAndSettle();
-    expect(
-      find.text('Are you sure you want to log out? You will need your email and password to log in again.'),
-      findsOneWidget,
-    );
+    expect(find.text('Are you sure you want to log out?'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(session.user, isNotNull, reason: 'Cancel keeps the user logged in');

@@ -112,7 +112,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Map<String, dynamic> _body() => switch (_role) {
     'owner' => {
       'fullName': _t('fullName'),
-      'city': _t('city'),
       'headline': _t('headline'),
       'bio': _t('bio'),
       'linkedinUrl': _t('linkedinUrl'),
@@ -147,10 +146,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _ => {
       'fullName': _t('fullName'),
       'city': _t('city'),
+      'phone': Validators.normalizePhone(_t('phone')),
+      'linkedinUrl': _t('linkedinUrl'),
       'details': {
         'buyerType': _type,
         'affiliation': _affiliation,
         'companyName': _affiliation == 'company' ? _t('companyName') : null,
+        'companyEmail': _affiliation == 'company' ? _t('companyEmail') : null,
         'interests': _interests.toList(),
       },
     },
@@ -296,7 +298,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       hint: 'e.g. CS student building EdTech apps',
       validator: Validators.requiredText('Headline', max: 150),
     ),
-    _text('bio', 'Bio (optional)', maxLines: 4, validator: Validators.optionalText('Bio', max: 2000)),
+    _text(
+      'bio',
+      'Bio',
+      maxLines: 4,
+      hint: 'A few lines about you and what you build',
+      validator: Validators.requiredText('Bio', min: 10, max: 2000),
+    ),
     _text(
       'linkedinUrl',
       'LinkedIn profile',
@@ -312,7 +320,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       keyboard: TextInputType.url,
       validator: Validators.optionalUrl('website URL'),
     ),
-    const SectionTitle('About you', subtitle: 'Anyone can list a project, at a university or self-taught'),
+    const SectionTitle('Your background', subtitle: 'Anyone can list a project, at a university or self-taught'),
     _choice(
       _ownerKind,
       ownerKinds,
@@ -372,10 +380,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       ),
       _document('university_id_front', 'the front of your university ID card'),
       _document('university_id_back', 'the back of your university ID card'),
+    ] else if (_ownerKind == 'independent') ...[
+      const SectionTitle('Verification'),
+      const PrivacyNote(
+        'Your CNIC is used only to verify your identity. It is stored privately and only Orwickle admins can see it.',
+      ),
+      _document('cnic_front', 'the front of your CNIC'),
+      _document('cnic_back', 'the back of your CNIC'),
     ],
   ];
 
-  List<Widget> _investorSection() => [
+  // investors and buyers
+  List<Widget> _contactFields() => [
     _text(
       'phone',
       'Phone number',
@@ -392,6 +408,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       hint: 'https://www.linkedin.com/in/...',
       validator: Validators.requiredUrl('LinkedIn profile'),
     ),
+  ];
+
+  List<Widget> _investorSection() => [
+    ..._contactFields(),
     _text(
       'websiteUrl',
       'Website (optional)',
@@ -532,6 +552,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   );
 
   List<Widget> _buyerSection() => [
+    ..._contactFields(),
     const SectionTitle('Buyer details'),
     _dropdown(
       'Buyer type',
@@ -551,13 +572,21 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       'Choose University or Company',
       errorKey: 'affiliation',
     ),
-    if (_affiliation == 'company')
+    if (_affiliation == 'company') ...[
       _text(
         'companyName',
         'Company name',
         icon: Icons.business_outlined,
         validator: (v) => (v?.trim().isEmpty ?? true) ? 'Company name is required' : null,
       ),
+      _text(
+        'companyEmail',
+        'Company email',
+        icon: Icons.alternate_email,
+        keyboard: TextInputType.emailAddress,
+        validator: Validators.companyEmail(required: () => true, requiredMessage: 'Company email is required'),
+      ),
+    ],
     if (_affiliation == 'university') ...[
       const PrivacyNote('Your university ID card is used only to verify you. Only Orwickle admins can see it.'),
       _document('university_id_front', 'the front of your university ID card'),
@@ -648,12 +677,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     icon: Icons.person_outline,
                     validator: Validators.requiredText('Full name', max: 100),
                   ),
-                  _text(
-                    'city',
-                    'City',
-                    icon: Icons.location_city_outlined,
-                    validator: Validators.requiredText('City', max: 80),
-                  ),
+                  if (_role != 'owner')
+                    _text(
+                      'city',
+                      'City',
+                      icon: Icons.location_city_outlined,
+                      validator: Validators.requiredText('City', max: 80),
+                    ),
                   ...switch (_role) {
                     'owner' => _ownerSection(),
                     'investor' => _investorSection(),

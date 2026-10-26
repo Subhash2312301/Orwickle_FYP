@@ -2,7 +2,7 @@
 enum UserRole {
   owner('Project Owner', 'List your project for funding or sale'),
   investor('Investor', 'Discover startups seeking funding'),
-  buyer('Buyer', 'Buy ready-made software projects');
+  buyer('Buyer', 'Buy ready-made projects');
 
   const UserRole(this.label, this.description);
 

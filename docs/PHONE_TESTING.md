@@ -30,9 +30,9 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 1. Register; a weak password (`Pakistan@123`) is refused.
 2. "Create account" without ticking the terms shows an error.
 3. OTP arrives by email; a wrong code shows "4 attempts left"; the right code continues.
-4. Profile setup: LinkedIn, GitHub and portfolio are required, website optional, no graduation year.
-   "University student" → university, degree and ID card front + back required;
-   "Independent developer" → none of these. Then "Submit for review".
+4. Profile setup: bio, LinkedIn, GitHub and portfolio are required, website optional, no city, no graduation year.
+   "University student" → university, degree and university ID card front + back required;
+   "Independent developer" → CNIC front + back required instead. Then "Submit for review".
 5. Tabs Home / My Listings / Requests / Messages / Profile, and the "Account under review" banner.
    Requests, Messages and the bell show "Coming soon".
 6. New funding listing: equity %, full description, problem statement, business model, financial summary and
@@ -57,8 +57,9 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
    Experience other than "first investment": proof of a past investment is required.
    Documents can be a photo or a PDF. Website is optional.
 3. Profile tab shows the CNIC masked (`*****-*******-1`).
-4. Buyer: University or Company; Company → company name; University → university ID front + back.
-   No headline, website or budget.
+4. Buyer: phone and LinkedIn required; University or Company; Company → company name and company email;
+   University → university ID front + back. No headline, website or budget.
+   Discover says "projects", not "software projects".
 5. Replacing a document after approval puts the account back "Under review".
 6. Requests and Messages tabs show "Coming soon".
 
@@ -71,7 +72,7 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 2. Forgot password: OTP by email, new password works.
 3. 15 minutes without touching the app → back to login with the inactivity message.
 4. Profile → Change password works.
-5. Log out asks "Are you sure?"; Cancel keeps you logged in.
+5. Log out asks "Are you sure you want to log out?"; Cancel keeps you logged in.
 
 ## Reporting a problem
 Send the checklist number (e.g. "A-5"), a screenshot, and the last 10–15 lines of the backend terminal.
