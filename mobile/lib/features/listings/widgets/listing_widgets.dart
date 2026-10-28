@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../data/listing_models.dart';
 
 /// Cover image with a placeholder when there is none.
@@ -12,12 +13,23 @@ class ListingCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    // no photo yet: a soft brand gradient (purple for funding, teal for sale) with the type icon
     final placeholder = Container(
       height: height,
-      color: colors.primaryContainer,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isFunding ? [AppTheme.brand, AppTheme.brandSecondary] : [AppTheme.accentText, AppTheme.brand],
+        ),
+      ),
       alignment: Alignment.center,
-      child: Icon(isFunding ? Icons.trending_up : Icons.sell_outlined, size: height / 3, color: colors.primary),
+      child: Icon(
+        isFunding ? Icons.trending_up : Icons.sell_outlined,
+        size: height / 3,
+        color: Colors.white.withValues(alpha: 0.9),
+      ),
     );
     if (url == null) return placeholder;
     return Image.network(
@@ -26,6 +38,51 @@ class ListingCover extends StatelessWidget {
       width: double.infinity,
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => placeholder,
+    );
+  }
+}
+
+/// Grey outline of a listing card, shown while the listings load.
+class ListingCardSkeleton extends StatelessWidget {
+  const ListingCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final block = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08);
+    Widget bar(double width, double height) => Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(color: block, borderRadius: BorderRadius.circular(Radii.sm)),
+    );
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(height: 120, color: block),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    bar(90, 22),
+                    const SizedBox(width: Gaps.sm),
+                    bar(60, 22),
+                  ],
+                ),
+                const SizedBox(height: Gaps.md),
+                bar(220, 16),
+                const SizedBox(height: Gaps.sm),
+                bar(160, 12),
+                const SizedBox(height: Gaps.md),
+                bar(110, 18),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -66,11 +123,12 @@ class ListingChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final status = StatusColors.of(context);
     final statusColor = switch (listing.status) {
-      'published' => Colors.green.shade700,
+      'published' => status.success,
       'closed' => colors.outline,
-      'suspended' => colors.error,
-      _ => Colors.orange.shade800,
+      'suspended' => status.danger,
+      _ => status.warning,
     };
     final review = reviewLabels[listing.reviewStatus];
     return Wrap(
@@ -87,7 +145,7 @@ class ListingChips extends StatelessWidget {
         if (review != null && listing.status == 'published')
           StatusChip(
             review,
-            color: listing.reviewStatus == 'approved' ? Colors.green.shade700 : colors.tertiary,
+            color: listing.reviewStatus == 'approved' ? status.success : status.info,
             icon: listing.reviewStatus == 'approved' ? Icons.verified_outlined : Icons.hourglass_top,
           ),
       ],

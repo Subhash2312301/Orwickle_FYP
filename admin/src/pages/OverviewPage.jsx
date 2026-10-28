@@ -7,11 +7,11 @@ function Stat({ label, value, color = 'text.primary', to }) {
   const content = (
     <CardContent>
       <Typography variant="body2" color="text.secondary">{label}</Typography>
-      <Typography variant="h4" fontWeight={700} color={color}>{value}</Typography>
+      <Typography variant="h4" color={color}>{value}</Typography>
     </CardContent>
   );
   return (
-    <Card sx={to ? { '&:hover': { borderColor: 'primary.main' } } : undefined}>
+    <Card sx={to ? { transition: 'border-color .15s, box-shadow .15s', '&:hover': { borderColor: 'primary.main', boxShadow: '0 4px 14px rgba(79,70,229,.12)' } } : undefined}>
       {to ? <Box component={Link} to={to} sx={{ textDecoration: 'none', color: 'inherit' }}>{content}</Box> : content}
     </Card>
   );

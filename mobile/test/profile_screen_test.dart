@@ -76,7 +76,12 @@ Future<void> _finish(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 5));
 }
 
-Future<FakeProfileApi> _pump(WidgetTester tester, String role, {List<String> documents = const []}) async {
+Future<FakeProfileApi> _pump(
+  WidgetTester tester,
+  String role, {
+  List<String> documents = const [],
+  bool setup = false,
+}) async {
   final profiles = FakeProfileApi(role, documents: documents);
   final session = _session = await _sessionAs(role);
   await tester.pumpWidget(
@@ -85,11 +90,17 @@ Future<FakeProfileApi> _pump(WidgetTester tester, String role, {List<String> doc
         Provider<ProfileApi>.value(value: profiles),
         ChangeNotifierProvider.value(value: session),
       ],
-      child: const MaterialApp(home: ProfileEditScreen()),
+      child: MaterialApp(home: ProfileEditScreen(setup: setup)),
     ),
   );
   await tester.pumpAndSettle();
   return profiles;
+}
+
+/// Opens one of the four profile steps by tapping its name in the step header.
+Future<void> _step(WidgetTester tester, String title) async {
+  await tester.tap(find.text(title).first); // the header comes before the step's own section title
+  await tester.pumpAndSettle();
 }
 
 Future<void> _tapSave(WidgetTester tester) async {
@@ -124,6 +135,29 @@ void main() {
     expect(Validators.rangeMax('Maximum budget', () => '500', 'budget')('900'), isNull);
   });
 
+  testWidgets('first-time setup goes step by step; Next checks only the current step', (tester) async {
+    final api = await _pump(tester, 'buyer', setup: true);
+    expect(find.text('Step 1 of 4'), findsOneWidget);
+    expect(find.text('Submit for review'), findsNothing, reason: 'submit only on the last step');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Step 1 of 4'), findsOneWidget, reason: 'step 1 has missing fields');
+    expect(find.text('Phone number is required'), findsOneWidget);
+    expect(find.text('Choose University or Company', skipOffstage: false), findsNothing, reason: 'step 2 not checked');
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'City'), 'Karachi');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Phone number'), '03001234567');
+    await tester.enterText(find.widgetWithText(TextFormField, 'LinkedIn profile'), 'https://linkedin.com/in/a');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.tap(find.widgetWithText(FilledButton, 'Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Step 2 of 4'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Back'), findsOneWidget);
+    expect(api.savedBody, isNull);
+    await _finish(tester);
+  });
+
   testWidgets('owner form lists every missing required field; LinkedIn, GitHub and portfolio are required', (
     tester,
   ) async {
@@ -150,9 +184,8 @@ void main() {
 
   testWidgets('a student owner must give university, degree and the university ID card', (tester) async {
     await _pump(tester, 'owner');
-    final scrollable = find.byType(Scrollable).first;
     expect(find.text('University', skipOffstage: false), findsNothing, reason: 'asked only from students');
-    await tester.scrollUntilVisible(find.text('University student'), 300, scrollable: scrollable);
+    await _step(tester, 'Background');
     await tester.tap(find.text('University student'));
     await tester.pumpAndSettle();
     await _tapSave(tester);
@@ -170,27 +203,25 @@ void main() {
 
   testWidgets('an independent developer gives the CNIC instead of university details', (tester) async {
     final api = await _pump(tester, 'owner', documents: ['cnic_front', 'cnic_back']);
-    final scrollable = find.byType(Scrollable).first;
     await tester.enterText(find.widgetWithText(TextFormField, 'Headline'), 'Self-taught developer');
     await tester.enterText(find.widgetWithText(TextFormField, 'Bio'), 'I build apps for small shops.');
     await tester.scrollUntilVisible(
       find.widgetWithText(TextFormField, 'LinkedIn profile'),
       300,
-      scrollable: scrollable,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.enterText(find.widgetWithText(TextFormField, 'LinkedIn profile'), 'https://linkedin.com/in/a');
-    await tester.scrollUntilVisible(find.text('Independent developer'), 300, scrollable: scrollable);
+    await _step(tester, 'Background');
     await tester.tap(find.text('Independent developer'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.widgetWithText(TextField, 'Skills'), 300, scrollable: scrollable);
+    await _step(tester, 'Skills & work');
     await tester.enterText(find.widgetWithText(TextField, 'Skills'), 'Flutter');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
-    await tester.scrollUntilVisible(find.widgetWithText(TextFormField, 'GitHub profile'), 300, scrollable: scrollable);
     await tester.enterText(find.widgetWithText(TextFormField, 'GitHub profile'), 'https://github.com/a');
     await tester.enterText(find.widgetWithText(TextFormField, 'Portfolio link'), 'https://a.dev');
     expect(find.textContaining('university ID card', skipOffstage: false), findsNothing);
-    expect(find.text('the front of your CNIC', skipOffstage: false), findsOneWidget);
+    expect(find.text('The front of your CNIC', skipOffstage: false), findsOneWidget);
 
     await _tapSave(tester);
     expect(api.savedBody, isNotNull);
@@ -228,8 +259,7 @@ void main() {
 
   testWidgets('an individual investor proves funds; past investments need proof too', (tester) async {
     await _pump(tester, 'investor');
-    final scrollable = find.byType(Scrollable).first;
-    await tester.scrollUntilVisible(find.text('Investor type'), 200, scrollable: scrollable);
+    await _step(tester, 'Investing');
     await tester.tap(find.text('Investor type'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Individual investor').last);
@@ -253,7 +283,7 @@ void main() {
 
   testWidgets('choosing "Investment firm" asks for company details and the certificate', (tester) async {
     await _pump(tester, 'investor');
-    await tester.scrollUntilVisible(find.text('Investor type'), 200, scrollable: find.byType(Scrollable).first);
+    await _step(tester, 'Investing');
     await tester.tap(find.text('Investor type'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Investment firm / VC').last);
@@ -271,7 +301,7 @@ void main() {
     await _pump(tester, 'investor');
     await tester.enterText(find.widgetWithText(TextFormField, 'Phone number'), '12345');
     final cnic = find.widgetWithText(TextFormField, 'CNIC number');
-    await tester.scrollUntilVisible(cnic, 300, scrollable: find.byType(Scrollable).first);
+    await _step(tester, 'Verification');
     await tester.enterText(cnic, '4210112345671');
     final typed = tester.widget<EditableText>(find.descendant(of: cnic, matching: find.byType(EditableText)));
     expect(typed.controller.text, '42101-1234567-1');
@@ -292,14 +322,14 @@ void main() {
     expect(find.text('Phone number is required', skipOffstage: false), findsOneWidget);
     expect(find.text('LinkedIn profile is required', skipOffstage: false), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Company'));
+    await _step(tester, 'Buyer details');
     await tester.tap(find.text('Company'));
     await tester.pumpAndSettle();
     await _tapSave(tester);
     expect(find.text('Company name is required', skipOffstage: false), findsOneWidget);
     expect(find.text('Company email is required', skipOffstage: false), findsOneWidget);
 
-    await tester.ensureVisible(find.text('University'));
+    await _step(tester, 'Buyer details');
     await tester.tap(find.text('University'));
     await tester.pumpAndSettle();
     await _tapSave(tester);

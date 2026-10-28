@@ -47,6 +47,7 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
   Widget build(BuildContext context) {
     final user = context.watch<SessionController>().user!;
     final theme = Theme.of(context);
+    final status = StatusColors.of(context);
     final firstName = user.fullName.split(' ').first;
 
     return Scaffold(
@@ -75,17 +76,9 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
             const SizedBox(height: 16),
             Row(
               children: [
-                _Stat(
-                  'Live',
-                  _count((l) => l.status == 'published' && l.reviewStatus == 'approved'),
-                  Colors.green.shade700,
-                ),
-                _Stat(
-                  'In review',
-                  _count((l) => l.status == 'published' && l.reviewStatus == 'pending'),
-                  theme.colorScheme.tertiary,
-                ),
-                _Stat('Drafts', _count((l) => l.status == 'draft'), Colors.orange.shade800),
+                _Stat('Live', _count((l) => l.status == 'published' && l.reviewStatus == 'approved'), status.success),
+                _Stat('In review', _count((l) => l.status == 'published' && l.reviewStatus == 'pending'), status.info),
+                _Stat('Drafts', _count((l) => l.status == 'draft'), status.warning),
               ],
             ),
             const SizedBox(height: 16),

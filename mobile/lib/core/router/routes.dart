@@ -3,6 +3,7 @@ class Routes {
   const Routes._();
 
   static const splash = '/splash';
+  static const onboarding = '/onboarding'; // intro slides, first start only
   static const welcome = '/welcome';
   static const register = '/register'; // ?role=owner|investor|buyer
   static const verifyEmail = '/verify-email'; // ?email=

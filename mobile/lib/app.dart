@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'core/network/api_client.dart';
 import 'core/router/app_router.dart';
+import 'core/storage/onboarding_state.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/data/auth_api.dart';
 import 'features/auth/session/session_controller.dart';
@@ -18,6 +19,7 @@ class OrwickleApp extends StatefulWidget {
     required this.profileApi,
     required this.listingApi,
     required this.session,
+    required this.onboarding,
   });
 
   final ApiClient apiClient;
@@ -25,6 +27,7 @@ class OrwickleApp extends StatefulWidget {
   final ProfileApi profileApi;
   final ListingApi listingApi;
   final SessionController session;
+  final OnboardingState onboarding;
 
   @override
   State<OrwickleApp> createState() => _OrwickleAppState();
@@ -32,7 +35,7 @@ class OrwickleApp extends StatefulWidget {
 
 class _OrwickleAppState extends State<OrwickleApp> {
   // created once so hot reload keeps the current screen
-  late final GoRouter _router = buildRouter(widget.session);
+  late final GoRouter _router = buildRouter(widget.session, widget.onboarding);
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +46,7 @@ class _OrwickleAppState extends State<OrwickleApp> {
         Provider.value(value: widget.profileApi),
         Provider.value(value: widget.listingApi),
         ChangeNotifierProvider.value(value: widget.session),
+        ChangeNotifierProvider.value(value: widget.onboarding),
       ],
       child: MaterialApp.router(
         title: 'Orwickle',

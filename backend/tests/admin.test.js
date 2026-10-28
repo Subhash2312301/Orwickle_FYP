@@ -18,6 +18,7 @@ const as = token => ({
   get: url => api.get(url).set('Authorization', `Bearer ${token}`),
   post: (url, body) => api.post(url).set('Authorization', `Bearer ${token}`).send(body),
   put: (url, body) => api.put(url).set('Authorization', `Bearer ${token}`).send(body),
+  del: url => api.delete(url).set('Authorization', `Bearer ${token}`),
 });
 const loginAs = async (role, name) => {
   const creds = await createVerifiedUser(role, name);
@@ -139,6 +140,9 @@ test('admins review published listings; rejection sends the listing back to draf
   assert.equal(rejected.body.listing.status, 'draft');
   assert.equal(rejected.body.listing.reviewStatus, 'rejected');
   assert.match(lastMailTo(ownerEmail).text, /Add a screenshot/);
+  const kept = await owner.del(`/api/listings/${id}`);
+  assert.equal(kept.status, 409, 'a reviewed listing cannot be deleted: its review history is kept');
+  assert.equal(kept.body.error.code, 'LISTING_HAS_HISTORY');
   assert.equal((await owner.get(`/api/listings/${id}`)).body.listing.reviewNote,
     'Add a screenshot of the admin panel as the cover.');
 

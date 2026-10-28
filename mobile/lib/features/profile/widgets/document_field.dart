@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_widgets.dart';
 import '../../auth/widgets/form_widgets.dart';
 import '../data/profile_models.dart';
@@ -95,13 +96,14 @@ class _DocumentTileState extends State<_DocumentTile> {
             child: ListTile(
               onTap: _busy ? null : _pick,
               leading: SizedBox(width: 56, child: Center(child: preview)),
-              title: Text(widget.label),
+              // labels are written to follow "Upload …", so start the title with a capital
+              title: Text(widget.label[0].toUpperCase() + widget.label.substring(1)),
               subtitle: Text(doc == null ? 'Tap to upload a photo or PDF' : 'Uploaded · tap to replace'),
               trailing: _busy
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : Icon(
                       doc == null ? Icons.upload_outlined : Icons.check_circle,
-                      color: doc == null ? null : Colors.green,
+                      color: doc == null ? null : StatusColors.of(context).success,
                     ),
             ),
           ),

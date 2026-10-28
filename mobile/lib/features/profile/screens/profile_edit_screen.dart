@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
 import '../../../core/widgets/image_widgets.dart';
 import '../../auth/session/session_controller.dart';
@@ -14,7 +15,8 @@ import '../data/profile_models.dart';
 import '../widgets/document_field.dart';
 import '../widgets/profile_fields.dart';
 
-/// Profile form for owners, investors and buyers. The fields follow
+/// Profile form for owners, investors and buyers, in four steps (about you, role details,
+/// skills or interests, verification). The fields follow
 /// backend/src/modules/profiles/profile.validation.js:
 ///  - owner: headline, bio, links, education, skills + university ID card
 ///  - investor: phone, LinkedIn, CNIC (+ photos), type, experience, range, interests; company details for firms
@@ -31,7 +33,9 @@ class ProfileEditScreen extends StatefulWidget {
 }
 
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
-  final _form = GlobalKey<FormState>();
+  final _forms = List.generate(4, (_) => GlobalKey<FormState>()); // one form per step
+  final _scroll = ScrollController();
+  int _step = 0;
   final _c = <String, TextEditingController>{}; // one controller per text field, keyed by API name
 
   late Future<void> _loading;
@@ -106,7 +110,27 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     for (final c in _c.values) {
       c.dispose();
     }
+    _scroll.dispose();
     super.dispose();
+  }
+
+  void _goTo(int step) {
+    setState(() => _step = step);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
+
+  void _next() {
+    if (_forms[_step].currentState!.validate()) _goTo(_step + 1);
+  }
+
+  /// Checks every step and opens the first one with a problem; null when all are fine.
+  int? _firstInvalidStep() {
+    int? first;
+    for (var i = 0; i < _forms.length; i++) {
+      final valid = _forms[i].currentState?.validate() ?? true; // validate all so every error shows
+      if (!valid) first ??= i;
+    }
+    return first;
   }
 
   String _t(String key) => _ctl(key).text.trim();
@@ -165,7 +189,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   Future<void> _save() async {
     setState(() => _serverErrors = const {});
-    if (!_form.currentState!.validate()) {
+    final invalid = _firstInvalidStep();
+    if (invalid != null) {
+      _goTo(invalid);
       showInfoSnack(context, 'Please correct the highlighted fields');
       return;
     }
@@ -197,6 +223,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               entry.key.replaceFirst('details.', '').replaceFirst('documents.', ''): entry.value,
           },
         );
+        // once the fields show the server's messages, open the first step that has one
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final invalid = mounted ? _firstInvalidStep() : null;
+          if (invalid != null) _goTo(invalid);
+        });
         showInfoSnack(context, e.message);
       } else {
         showErrorSnack(context, e);
@@ -295,7 +326,81 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     serverError: _serverErrors['interests'],
   );
 
-  List<Widget> _ownerSection() => [
+  // ---------- steps ----------
+
+  /// The four steps for the user's role. Every step is its own form, so "Next" checks one step
+  /// and saving checks them all.
+  List<_ProfileStep> _steps() => switch (_role) {
+    'owner' => [
+      _ProfileStep('About you', [..._aboutYou(), ..._ownerAbout()]),
+      _ProfileStep('Background', _ownerBackground()),
+      _ProfileStep('Skills & work', _ownerWork()),
+      _ProfileStep('Verification', _ownerVerification()),
+    ],
+    'investor' => [
+      _ProfileStep('About you', [..._aboutYou(), ..._contactFields(), _investorWebsite()]),
+      _ProfileStep('Investing', _investorDetails()),
+      _ProfileStep('Interests', _interestsStep()),
+      _ProfileStep('Verification', _investorVerification()),
+    ],
+    _ => [
+      _ProfileStep('About you', [..._aboutYou(), ..._contactFields()]),
+      _ProfileStep('Buyer details', _buyerDetails()),
+      _ProfileStep('Interests', _interestsStep()),
+      _ProfileStep('Verification', _buyerVerification()),
+    ],
+  };
+
+  /// Photo, name and (for investors and buyers) city: the start of every role's first step.
+  List<Widget> _aboutYou() {
+    final session = context.watch<SessionController>();
+    return [
+      if (widget.setup)
+        InfoBanner(
+          icon: Icons.waving_hand_outlined,
+          message:
+              'Welcome, ${session.user?.fullName ?? ''}! Complete your profile in four short steps — an admin '
+              'reviews it before you get full access.',
+        ),
+      Center(
+        child: Stack(
+          children: [
+            UserAvatar(radius: 48, url: _avatarUrl, initials: session.user?.initials ?? '?'),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: IconButton.filled(
+                tooltip: 'Change photo',
+                onPressed: _avatarBusy ? null : _changeAvatar,
+                icon: _avatarBusy
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.photo_camera_outlined, size: 20),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: Gaps.xl),
+      _text(
+        'fullName',
+        'Full name',
+        icon: Icons.person_outline,
+        validator: Validators.requiredText('Full name', max: 100),
+      ),
+      if (_role != 'owner')
+        _text('city', 'City', icon: Icons.location_city_outlined, validator: Validators.requiredText('City', max: 80)),
+    ];
+  }
+
+  List<Widget> _interestsStep() => [
+    const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
+    _interestsField(),
+  ];
+
+  /// Shown on the last step while the documents depend on a choice made in an earlier step.
+  Widget _chooseFirst(String text) => InfoBanner(icon: Icons.arrow_back, message: text);
+
+  List<Widget> _ownerAbout() => [
     _text(
       'headline',
       'Headline',
@@ -325,6 +430,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       keyboard: TextInputType.url,
       validator: Validators.optionalUrl('website URL'),
     ),
+  ];
+
+  List<Widget> _ownerBackground() => [
     const SectionTitle('Your background', subtitle: 'Anyone can list a project, at a university or self-taught'),
     _choice(
       _ownerKind,
@@ -349,6 +457,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         validator: Validators.requiredText('Degree program', max: 100),
       ),
     ],
+  ];
+
+  List<Widget> _ownerWork() => [
     const SectionTitle('Skills & work', subtitle: 'Helps investors and buyers trust your work'),
     TagsField(
       initial: _skills,
@@ -378,21 +489,27 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       hint: 'Your portfolio site, Behance or a project demo',
       validator: Validators.requiredUrl('Portfolio link'),
     ),
+  ];
+
+  List<Widget> _ownerVerification() => [
+    const SectionTitle('Verification'),
     if (_isStudent) ...[
-      const SectionTitle('Verification'),
       const PrivacyNote(
         'Your university ID card is used only to verify you are a student. Only Orwickle admins can see it.',
       ),
       _document('university_id_front', 'the front of your university ID card'),
       _document('university_id_back', 'the back of your university ID card'),
     ] else if (_ownerKind == 'independent') ...[
-      const SectionTitle('Verification'),
       const PrivacyNote(
         'Your CNIC is used only to verify your identity. It is stored privately and only Orwickle admins can see it.',
       ),
       _document('cnic_front', 'the front of your CNIC'),
       _document('cnic_back', 'the back of your CNIC'),
-    ],
+    ] else
+      _chooseFirst(
+        'Choose your background in step 2 first. Students upload their university ID card, '
+        'independent developers their CNIC.',
+      ),
   ];
 
   // investors and buyers
@@ -415,16 +532,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ),
   ];
 
-  List<Widget> _investorSection() => [
-    ..._contactFields(),
-    _text(
-      'websiteUrl',
-      'Website (optional)',
-      icon: Icons.language,
-      keyboard: TextInputType.url,
-      hint: 'Your personal or professional website',
-      validator: Validators.optionalUrl('website URL'),
-    ),
+  Widget _investorWebsite() => _text(
+    'websiteUrl',
+    'Website (optional)',
+    icon: Icons.language,
+    keyboard: TextInputType.url,
+    hint: 'Your personal or professional website',
+    validator: Validators.optionalUrl('website URL'),
+  );
+
+  List<Widget> _investorDetails() => [
     const SectionTitle('Investor details'),
     _dropdown(
       'Investor type',
@@ -469,15 +586,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       validator: Validators.optionalUrl('portfolio URL'),
     ),
     RangeChipsField(
-      label: 'How much do you usually invest in one startup? (PKR)',
+      label: 'How much do you usually invest in one project? (PKR)',
       initial: _range,
       required: true,
       requiredError: 'Choose an investment range',
       onChanged: (r) => _range = r,
       serverError: _serverErrors['minTicket'] ?? _serverErrors['maxTicket'],
     ),
-    const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
-    _interestsField(),
     if (_isFirm) ...[
       const SectionTitle('Company', subtitle: 'Required for investment firms'),
       _text(
@@ -503,6 +618,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         validator: Validators.companyEmail(required: () => _isFirm),
       ),
     ],
+  ];
+
+  List<Widget> _investorVerification() => [
     const SectionTitle('Identity verification'),
     const PrivacyNote(
       'Your CNIC is used only to verify your identity. It is stored privately and only Orwickle admins can see it.',
@@ -537,6 +655,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       ),
       _document('investment_proof', 'proof of a past investment'),
     ],
+    if (_type == null) _chooseFirst('Choose your investor type in step 2 to see which other documents you need.'),
   ];
 
   /// Two or more mutually exclusive options as a segmented button that takes part in form validation.
@@ -581,8 +700,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ),
   );
 
-  List<Widget> _buyerSection() => [
-    ..._contactFields(),
+  List<Widget> _buyerDetails() => [
     const SectionTitle('Buyer details'),
     _dropdown(
       'Buyer type',
@@ -617,18 +735,22 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         validator: Validators.companyEmail(required: () => true, requiredMessage: 'Company email is required'),
       ),
     ],
+  ];
+
+  List<Widget> _buyerVerification() => [
+    const SectionTitle('Verification'),
     if (_affiliation == 'university') ...[
       const PrivacyNote('Your university ID card is used only to verify you. Only Orwickle admins can see it.'),
       _document('university_id_front', 'the front of your university ID card'),
       _document('university_id_back', 'the back of your university ID card'),
-    ],
-    const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
-    _interestsField(),
+    ] else if (_affiliation == 'company')
+      const InfoBanner(icon: Icons.check_circle_outline, message: 'No documents are needed when you buy for a company.')
+    else
+      _chooseFirst('Choose University or Company in step 2 first.'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final session = context.watch<SessionController>();
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !widget.setup,
@@ -662,70 +784,158 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
             );
           }
-          // SingleChildScrollView (not ListView) keeps every field built, so validate() checks
-          // fields that are scrolled out of view too
-          return Form(
-            key: _form,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.setup)
-                    InfoBanner(
-                      icon: Icons.waving_hand_outlined,
-                      message:
-                          'Welcome, ${session.user?.fullName ?? ''}! Complete your profile — an admin reviews it '
-                          'before you get full access.',
-                    ),
-                  Center(
-                    child: Stack(
-                      children: [
-                        UserAvatar(radius: 48, url: _avatarUrl, initials: session.user?.initials ?? '?'),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: IconButton.filled(
-                            tooltip: 'Change photo',
-                            onPressed: _avatarBusy ? null : _changeAvatar,
-                            icon: _avatarBusy
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Icon(Icons.photo_camera_outlined, size: 20),
-                          ),
-                        ),
-                      ],
+          final steps = _steps();
+          final isLast = _step == steps.length - 1;
+          return Column(
+            children: [
+              _StepHeader(steps: steps, current: _step, onTap: _goTo),
+              Expanded(
+                // every step stays built (only the current one is visible), so saving can check them all
+                child: SingleChildScrollView(
+                  controller: _scroll,
+                  padding: const EdgeInsets.fromLTRB(Gaps.xl, Gaps.sm, Gaps.xl, Gaps.xl),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 0; i < steps.length; i++)
+                            Visibility(
+                              visible: i == _step,
+                              maintainState: true,
+                              child: Form(
+                                key: _forms[i],
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: steps[i].fields,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SectionTitle('About you'),
-                  _text(
-                    'fullName',
-                    'Full name',
-                    icon: Icons.person_outline,
-                    validator: Validators.requiredText('Full name', max: 100),
-                  ),
-                  if (_role != 'owner')
-                    _text(
-                      'city',
-                      'City',
-                      icon: Icons.location_city_outlined,
-                      validator: Validators.requiredText('City', max: 80),
-                    ),
-                  ...switch (_role) {
-                    'owner' => _ownerSection(),
-                    'investor' => _investorSection(),
-                    _ => _buyerSection(),
-                  },
-                  const SizedBox(height: 24),
-                  LoadingButton(label: widget.setup ? 'Submit for review' : 'Save', loading: _saving, onPressed: _save),
-                ],
+                ),
               ),
-            ),
+              _bottomBar(isLast),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  /// Setup: Back + Next, and "Submit for review" on the last step.
+  /// Editing: Save is always there, so a small change does not need all four steps.
+  Widget _bottomBar(bool isLast) {
+    final saveLabel = widget.setup ? 'Submit for review' : 'Save';
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: 3,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Gaps.lg, Gaps.md, Gaps.lg, Gaps.md),
+          child: Row(
+            children: [
+              if (_step > 0) ...[
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                    onPressed: () => _goTo(_step - 1),
+                    child: const Text('Back'),
+                  ),
+                ),
+                const SizedBox(width: Gaps.md),
+              ],
+              if (!widget.setup && !isLast) ...[
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                    onPressed: _next,
+                    child: const Text('Next'),
+                  ),
+                ),
+                const SizedBox(width: Gaps.md),
+              ],
+              Expanded(
+                flex: 2,
+                child: widget.setup && !isLast
+                    ? FilledButton(onPressed: _next, child: const Text('Next'))
+                    : LoadingButton(label: saveLabel, loading: _saving, onPressed: _save),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileStep {
+  const _ProfileStep(this.title, this.fields);
+
+  final String title;
+  final List<Widget> fields;
+}
+
+/// "Step 2 of 4", a progress bar and the step names; tapping a name opens that step.
+class _StepHeader extends StatelessWidget {
+  const _StepHeader({required this.steps, required this.current, required this.onTap});
+
+  final List<_ProfileStep> steps;
+  final int current;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Gaps.xl, 0, Gaps.xl, Gaps.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Step ${current + 1} of ${steps.length}',
+            style: theme.textTheme.labelLarge?.copyWith(color: colors.primary),
+          ),
+          const SizedBox(height: Gaps.sm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(Radii.sm),
+            child: LinearProgressIndicator(
+              value: (current + 1) / steps.length,
+              minHeight: 6,
+              backgroundColor: colors.primary.withValues(alpha: 0.15),
+            ),
+          ),
+          const SizedBox(height: Gaps.xs),
+          Row(
+            children: [
+              for (var i = 0; i < steps.length; i++)
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                    onTap: () => onTap(i),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: Gaps.sm),
+                      child: Text(
+                        steps[i].title,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: i == current ? colors.primary : colors.onSurfaceVariant,
+                          fontWeight: i == current ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

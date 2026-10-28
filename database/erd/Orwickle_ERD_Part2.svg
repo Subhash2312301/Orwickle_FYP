@@ -1,0 +1,713 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2598" height="1862" viewBox="0 0 2598 1862" font-family="Segoe UI, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#F8FAFC"/>
+<text x="40" y="50" font-size="30" font-weight="800" fill="#0F2557">Orwickle ERD, Part 2: Access Requests, Bidding, Documents, Chat &amp; Agreements</text>
+<text x="40" y="80" font-size="15" fill="#475569">Orwickle: verified marketplace for projects with investor and buyer bidding and agreement management · PostgreSQL (Supabase)</text>
+<path d="M223,446 L251,446 L251,563 L325,563" fill="none" stroke="#0E7490" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="440" x2="229" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<line x1="233" y1="440" x2="233" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M314,563 L325,557 M314,563 L325,569" fill="none" stroke="#0E7490" stroke-width="1.5"/>
+<circle cx="309" cy="563" r="3.6" fill="#fff" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M223,1266 L233,1266 L233,620 L325,620" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M314,620 L325,614 M314,620 L325,626" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="309" cy="620" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M676,542 L690,542 L690,533 L780,533" fill="none" stroke="#7C3AED" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="682" y1="536" x2="682" y2="548" stroke="#7C3AED" stroke-width="1.5"/>
+<line x1="686" y1="536" x2="686" y2="548" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M769,533 L780,527 M769,533 L780,539" fill="none" stroke="#7C3AED" stroke-width="1.5"/>
+<circle cx="764" cy="533" r="3.6" fill="#fff" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M223,446 L251,446 L251,485 L699,485 L699,552 L780,552" fill="none" stroke="#0E7490" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="440" x2="229" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<line x1="233" y1="440" x2="233" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M769,552 L780,546 M769,552 L780,558" fill="none" stroke="#0E7490" stroke-width="1.5"/>
+<circle cx="764" cy="552" r="3.6" fill="#fff" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M680,850 L699,850 L699,647 L780,647" fill="none" stroke="#7C3AED" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="686" y1="844" x2="686" y2="856" stroke="#7C3AED" stroke-width="1.5"/>
+<line x1="690" y1="844" x2="690" y2="856" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M769,647 L780,641 M769,647 L780,653" fill="none" stroke="#7C3AED" stroke-width="1.5"/>
+<circle cx="764" cy="647" r="3.6" fill="#fff" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M1091,512 L1101,512 L1101,456 L242,456 L242,871 L323,871" fill="none" stroke="#7C3AED" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="1097" y1="506" x2="1097" y2="518" stroke="#7C3AED" stroke-width="1.5"/>
+<line x1="1101" y1="506" x2="1101" y2="518" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M312,871 L323,865 M312,871 L323,877" fill="none" stroke="#7C3AED" stroke-width="1.5"/>
+<circle cx="307" cy="871" r="3.6" fill="#fff" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M223,1266 L233,1266 L233,928 L323,928" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M312,928 L323,922 M312,928 L323,934" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="307" cy="928" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M223,1266 L233,1266 L233,947 L323,947" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M312,947 L323,941 M312,947 L323,953" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="307" cy="947" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M223,446 L1110,446 L1110,551 L1269.5,551" fill="none" stroke="#0E7490" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="440" x2="229" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<line x1="233" y1="440" x2="233" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M1258.5,551 L1269.5,545 M1258.5,551 L1269.5,557" fill="none" stroke="#0E7490" stroke-width="1.5"/>
+<circle cx="1253.5" cy="551" r="3.6" fill="#fff" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M1537.5,530 L1635,530 L1635,715 L1716,715" fill="none" stroke="#0F766E" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="1543.5" y1="524" x2="1543.5" y2="536" stroke="#0F766E" stroke-width="1.5"/>
+<line x1="1547.5" y1="524" x2="1547.5" y2="536" stroke="#0F766E" stroke-width="1.5"/>
+<path d="M1705,715 L1716,709 M1705,715 L1716,721" fill="none" stroke="#0F766E" stroke-width="1.5"/>
+<circle cx="1700" cy="715" r="3.6" fill="#fff" stroke="#0F766E" stroke-width="1.5"/>
+<path d="M676,542 L690,542 L690,753 L1716,753" fill="none" stroke="#7C3AED" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="682" y1="536" x2="682" y2="548" stroke="#7C3AED" stroke-width="1.5"/>
+<line x1="686" y1="536" x2="686" y2="548" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M1705,753 L1716,747 M1705,753 L1716,759" fill="none" stroke="#7C3AED" stroke-width="1.5"/>
+<circle cx="1700" cy="753" r="3.6" fill="#fff" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M676,542 L690,542 L690,1256 L1110,1256 L1110,1102 L1233,1102" fill="none" stroke="#7C3AED" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="682" y1="536" x2="682" y2="548" stroke="#7C3AED" stroke-width="1.5"/>
+<line x1="686" y1="536" x2="686" y2="548" stroke="#7C3AED" stroke-width="1.5"/>
+<line x1="1226" y1="1096" x2="1226" y2="1108" stroke="#7C3AED" stroke-width="1.5"/>
+<circle cx="1217" cy="1102" r="3.6" fill="#fff" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M1574,1081 L1635,1081 L1635,1140 L1733.25,1140" fill="none" stroke="#0F766E" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="1580" y1="1075" x2="1580" y2="1087" stroke="#0F766E" stroke-width="1.5"/>
+<line x1="1584" y1="1075" x2="1584" y2="1087" stroke="#0F766E" stroke-width="1.5"/>
+<path d="M1722.25,1140 L1733.25,1134 M1722.25,1140 L1733.25,1146" fill="none" stroke="#0F766E" stroke-width="1.5"/>
+<circle cx="1717.25" cy="1140" r="3.6" fill="#fff" stroke="#0F766E" stroke-width="1.5"/>
+<path d="M223,1266 L1635,1266 L1635,1159 L1733.25,1159" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1722.25,1159 L1733.25,1153 M1722.25,1159 L1733.25,1165" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="1717.25" cy="1159" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M223,1266 L1635,1266 L1635,1216 L1733.25,1216" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1722.25,1216 L1733.25,1210 M1722.25,1216 L1733.25,1222" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="1717.25" cy="1216" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M223,1266 L233,1266 L233,436 L1101,436 L1101,299 L1191,299" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1180,299 L1191,293 M1180,299 L1191,305" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="1175" cy="299" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M680,850 L1191,850" fill="none" stroke="#7C3AED" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="686" y1="844" x2="686" y2="856" stroke="#7C3AED" stroke-width="1.5"/>
+<line x1="690" y1="844" x2="690" y2="856" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M1180,850 L1191,844 M1180,850 L1191,856" fill="none" stroke="#7C3AED" stroke-width="1.5"/>
+<circle cx="1175" cy="850" r="3.6" fill="#fff" stroke="#7C3AED" stroke-width="1.5"/>
+<path d="M223,446 L251,446 L251,1224 L699,1224 L699,869 L1191,869" fill="none" stroke="#0E7490" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="440" x2="229" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<line x1="233" y1="440" x2="233" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M1180,869 L1191,863 M1180,869 L1191,875" fill="none" stroke="#0E7490" stroke-width="1.5"/>
+<circle cx="1175" cy="869" r="3.6" fill="#fff" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M223,1266 L699,1266 L699,1246 L1101,1246 L1101,888 L1191,888" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1180,888 L1191,882 M1180,888 L1191,894" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="1175" cy="888" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M223,1266 L699,1266 L699,1246 L1101,1246 L1101,907 L1191,907" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1180,907 L1191,901 M1180,907 L1191,913" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="1175" cy="907" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1616,810 L1626,810 L1626,1344 L1748.3333333333333,1344" fill="none" stroke="#B45309" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="1622" y1="804" x2="1622" y2="816" stroke="#B45309" stroke-width="1.5"/>
+<line x1="1626" y1="804" x2="1626" y2="816" stroke="#B45309" stroke-width="1.5"/>
+<path d="M1737.3333333333333,1344 L1748.3333333333333,1338 M1737.3333333333333,1344 L1748.3333333333333,1350" fill="none" stroke="#B45309" stroke-width="1.5"/>
+<circle cx="1732.3333333333333" cy="1344" r="3.6" fill="#fff" stroke="#B45309" stroke-width="1.5"/>
+<path d="M223,1266 L1635,1266 L1635,1458 L1748.3333333333333,1458" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1737.3333333333333,1458 L1748.3333333333333,1452 M1737.3333333333333,1458 L1748.3333333333333,1464" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="1732.3333333333333" cy="1458" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1992.3333333333333,1323 L2085,1323 L2085,1470 L2157,1470" fill="none" stroke="#B45309" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="1998.3333333333333" y1="1317" x2="1998.3333333333333" y2="1329" stroke="#B45309" stroke-width="1.5"/>
+<line x1="2002.3333333333333" y1="1317" x2="2002.3333333333333" y2="1329" stroke="#B45309" stroke-width="1.5"/>
+<path d="M2146,1470 L2157,1464 M2146,1470 L2157,1476" fill="none" stroke="#B45309" stroke-width="1.5"/>
+<circle cx="2141" cy="1470" r="3.6" fill="#fff" stroke="#B45309" stroke-width="1.5"/>
+<path d="M223,1266 L1635,1266 L1635,1508 L2157,1508" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M2146,1508 L2157,1502 M2146,1508 L2157,1514" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="2141" cy="1508" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1992.3333333333333,1323 L2085,1323 L2085,1247 L2157,1247" fill="none" stroke="#B45309" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="1998.3333333333333" y1="1317" x2="1998.3333333333333" y2="1329" stroke="#B45309" stroke-width="1.5"/>
+<line x1="2002.3333333333333" y1="1317" x2="2002.3333333333333" y2="1329" stroke="#B45309" stroke-width="1.5"/>
+<path d="M2146,1247 L2157,1241 M2146,1247 L2157,1253" fill="none" stroke="#B45309" stroke-width="1.5"/>
+<circle cx="2141" cy="1247" r="3.6" fill="#fff" stroke="#B45309" stroke-width="1.5"/>
+<path d="M223,1266 L2157,1266" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M2146,1266 L2157,1260 M2146,1266 L2157,1272" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="2141" cy="1266" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M1992.3333333333333,1323 L2157,1323" fill="none" stroke="#B45309" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="1998.3333333333333" y1="1317" x2="1998.3333333333333" y2="1329" stroke="#B45309" stroke-width="1.5"/>
+<line x1="2002.3333333333333" y1="1317" x2="2002.3333333333333" y2="1329" stroke="#B45309" stroke-width="1.5"/>
+<path d="M2146,1323 L2157,1317 M2146,1323 L2157,1329" fill="none" stroke="#B45309" stroke-width="1.5"/>
+<circle cx="2141" cy="1323" r="3.6" fill="#fff" stroke="#B45309" stroke-width="1.5"/>
+<path d="M1616,810 L1626,810 L1626,202 L1716,202" fill="none" stroke="#B45309" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="1622" y1="804" x2="1622" y2="816" stroke="#B45309" stroke-width="1.5"/>
+<line x1="1626" y1="804" x2="1626" y2="816" stroke="#B45309" stroke-width="1.5"/>
+<line x1="1709" y1="196" x2="1709" y2="208" stroke="#B45309" stroke-width="1.5"/>
+<circle cx="1700" cy="202" r="3.6" fill="#fff" stroke="#B45309" stroke-width="1.5"/>
+<path d="M223,446 L251,446 L251,221 L1716,221" fill="none" stroke="#0E7490" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="440" x2="229" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<line x1="233" y1="440" x2="233" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M1705,221 L1716,215 M1705,221 L1716,227" fill="none" stroke="#0E7490" stroke-width="1.5"/>
+<circle cx="1700" cy="221" r="3.6" fill="#fff" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M223,1266 L233,1266 L233,124 L2067,124 L2067,347 L2157,347" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M2146,347 L2157,341 M2146,347 L2157,353" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="2141" cy="347" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M223,1266 L233,1266 L233,124 L2067,124 L2067,366 L2157,366" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M2146,366 L2157,360 M2146,366 L2157,372" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="2141" cy="366" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M223,446 L251,446 L251,221 L1635,221 L1635,385 L2157,385" fill="none" stroke="#0E7490" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="440" x2="229" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<line x1="233" y1="440" x2="233" y2="452" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M2146,385 L2157,379 M2146,385 L2157,391" fill="none" stroke="#0E7490" stroke-width="1.5"/>
+<circle cx="2141" cy="385" r="3.6" fill="#fff" stroke="#0E7490" stroke-width="1.5"/>
+<path d="M2005.25,1119 L2067,1119 L2067,404 L2157,404" fill="none" stroke="#0F766E" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="2011.25" y1="1113" x2="2011.25" y2="1125" stroke="#0F766E" stroke-width="1.5"/><circle cx="2020.25" cy="1119" r="3.6" fill="#fff" stroke="#0F766E" stroke-width="1.5"/>
+<path d="M2146,404 L2157,398 M2146,404 L2157,410" fill="none" stroke="#0F766E" stroke-width="1.5"/>
+<circle cx="2141" cy="404" r="3.6" fill="#fff" stroke="#0F766E" stroke-width="1.5"/>
+<path d="M223,1266 L2076,1266 L2076,480 L2157,480" fill="none" stroke="#3730A3" stroke-opacity="0.55" stroke-width="1.3"/>
+<line x1="229" y1="1260" x2="229" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<line x1="233" y1="1260" x2="233" y2="1272" stroke="#3730A3" stroke-width="1.5"/>
+<path d="M2146,480 L2157,474 M2146,480 L2157,486" fill="none" stroke="#3730A3" stroke-width="1.5"/>
+<circle cx="2141" cy="480" r="3.6" fill="#fff" stroke="#3730A3" stroke-width="1.5"/>
+<rect x="54" y="411" width="170" height="71" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="52" y="408" width="170" height="71" rx="7" fill="#fff"/>
+<path d="M52,438 V415 Q52,408 59,408 H215 Q222,408 222,415 V438 Z" fill="#ECF7FA"/>
+<text x="64" y="428" font-size="13.5" font-weight="700" fill="#0E7490">listings</text>
+<text x="60" y="451.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="92" y="451.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="212" y="451.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<line x1="52" y1="457" x2="222" y2="457" stroke="#E2E8F0"/>
+<text x="62" y="470" font-size="9.5" fill="#64748B" font-style="italic" font-weight="600">full table in Part 1</text>
+<rect x="52" y="408" width="170" height="71" rx="7" fill="none" stroke="#0E7490" stroke-width="1.3" stroke-dasharray="5 4"/>
+<rect x="54" y="1231" width="170" height="71" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="52" y="1228" width="170" height="71" rx="7" fill="#fff"/>
+<path d="M52,1258 V1235 Q52,1228 59,1228 H215 Q222,1228 222,1235 V1258 Z" fill="#EEF0FB"/>
+<text x="64" y="1248" font-size="13.5" font-weight="700" fill="#3730A3">users</text>
+<text x="60" y="1271.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="92" y="1271.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="212" y="1271.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<line x1="52" y1="1277" x2="222" y2="1277" stroke="#E2E8F0"/>
+<text x="62" y="1290" font-size="9.5" fill="#64748B" font-style="italic" font-weight="600">full table in Part 1</text>
+<rect x="52" y="1228" width="170" height="71" rx="7" fill="none" stroke="#3730A3" stroke-width="1.3" stroke-dasharray="5 4"/>
+<rect x="328" y="507" width="349" height="280" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="326" y="504" width="349" height="280" rx="7" fill="#fff"/>
+<path d="M326,534 V511 Q326,504 333,504 H668 Q675,504 675,511 V534 Z" fill="#7C3AED"/>
+<text x="338" y="524" font-size="13.5" font-weight="700" fill="#fff">access_requests</text>
+<text x="334" y="547.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="366" y="547.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="665" y="547.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="327" y="553" width="347" height="19" fill="#F4EFFD"/>
+<text x="334" y="566.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="366" y="566.5" font-size="11.5"  fill="#0F172A">listing_id</text>
+<text x="665" y="566.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="366" y="585.5" font-size="11.5"  fill="#0F172A">listing_type</text>
+<text x="665" y="585.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM(funding,sale)</text>
+<rect x="327" y="591" width="347" height="19" fill="#F4EFFD"/>
+<text x="366" y="604.5" font-size="11.5"  fill="#0F172A">owner_id</text>
+<text x="665" y="604.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="334" y="623.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="366" y="623.5" font-size="11.5"  fill="#0F172A">requester_id</text>
+<text x="665" y="623.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="327" y="629" width="347" height="19" fill="#F4EFFD"/>
+<text x="366" y="642.5" font-size="11.5"  fill="#0F172A">requester_role</text>
+<text x="665" y="642.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM(owner,investor,buyer,admin)</text>
+<text x="366" y="661.5" font-size="11.5"  fill="#0F172A">message</text>
+<text x="665" y="661.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="327" y="667" width="347" height="19" fill="#F4EFFD"/>
+<text x="366" y="680.5" font-size="11.5"  fill="#0F172A">status</text>
+<text x="665" y="680.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM ‹access_request_status›</text>
+<text x="366" y="699.5" font-size="11.5"  fill="#0F172A">decision_note</text>
+<text x="665" y="699.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="327" y="705" width="347" height="19" fill="#F4EFFD"/>
+<text x="366" y="718.5" font-size="11.5"  fill="#0F172A">decided_at</text>
+<text x="665" y="718.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="366" y="737.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="665" y="737.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="327" y="743" width="347" height="19" fill="#F4EFFD"/>
+<text x="366" y="756.5" font-size="11.5"  fill="#0F172A">updated_at</text>
+<text x="665" y="756.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<line x1="326" y1="762" x2="675" y2="762" stroke="#E2E8F0"/>
+<text x="336" y="775" font-size="9.5" fill="#7C3AED" font-style="normal" font-weight="600">one active request per listing and requester</text>
+<rect x="326" y="504" width="349" height="280" rx="7" fill="none" stroke="#7C3AED" stroke-width="2" />
+<rect x="783" y="477" width="309" height="261" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="781" y="474" width="309" height="261" rx="7" fill="#fff"/>
+<path d="M781,504 V481 Q781,474 788,474 H1083 Q1090,474 1090,481 V504 Z" fill="#7C3AED"/>
+<text x="793" y="494" font-size="13.5" font-weight="700" fill="#fff">offers</text>
+<text x="789" y="517.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="821" y="517.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="1080" y="517.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="782" y="523" width="307" height="19" fill="#F4EFFD"/>
+<text x="789" y="536.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="821" y="536.5" font-size="11.5"  fill="#0F172A">access_request_id</text>
+<text x="1080" y="536.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="789" y="555.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="821" y="555.5" font-size="11.5"  fill="#0F172A">listing_id</text>
+<text x="1080" y="555.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="782" y="561" width="307" height="19" fill="#F4EFFD"/>
+<text x="821" y="574.5" font-size="11.5"  fill="#0F172A">owner_id</text>
+<text x="1080" y="574.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="821" y="593.5" font-size="11.5"  fill="#0F172A">bidder_id</text>
+<text x="1080" y="593.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="782" y="599" width="307" height="19" fill="#F4EFFD"/>
+<text x="821" y="612.5" font-size="11.5"  fill="#0F172A">offer_type</text>
+<text x="1080" y="612.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM(funding,sale)</text>
+<text x="821" y="631.5" font-size="11.5"  fill="#0F172A">status</text>
+<text x="1080" y="631.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM ‹offer_status›</text>
+<rect x="782" y="637" width="307" height="19" fill="#F4EFFD"/>
+<text x="789" y="650.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="821" y="650.5" font-size="11.5"  fill="#0F172A">accepted_version_id</text>
+<text x="1080" y="650.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="821" y="669.5" font-size="11.5"  fill="#0F172A">closed_at</text>
+<text x="1080" y="669.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="782" y="675" width="307" height="19" fill="#F4EFFD"/>
+<text x="821" y="688.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="1080" y="688.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<text x="821" y="707.5" font-size="11.5"  fill="#0F172A">updated_at</text>
+<text x="1080" y="707.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<line x1="781" y1="713" x2="1090" y2="713" stroke="#E2E8F0"/>
+<text x="791" y="726" font-size="9.5" fill="#7C3AED" font-style="normal" font-weight="600">one open offer per listing and bidder</text>
+<rect x="781" y="474" width="309" height="261" rx="7" fill="none" stroke="#7C3AED" stroke-width="2" />
+<rect x="326" y="815" width="355" height="394" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="324" y="812" width="355" height="394" rx="7" fill="#fff"/>
+<path d="M324,842 V819 Q324,812 331,812 H672 Q679,812 679,819 V842 Z" fill="#7C3AED"/>
+<text x="336" y="832" font-size="13.5" font-weight="700" fill="#fff">offer_versions</text>
+<text x="332" y="855.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="364" y="855.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="669" y="855.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="325" y="861" width="353" height="19" fill="#F4EFFD"/>
+<text x="332" y="874.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="364" y="874.5" font-size="11.5"  fill="#0F172A">offer_id</text>
+<text x="669" y="874.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="364" y="893.5" font-size="11.5"  fill="#0F172A">offer_type</text>
+<text x="669" y="893.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM(funding,sale)</text>
+<rect x="325" y="899" width="353" height="19" fill="#F4EFFD"/>
+<text x="364" y="912.5" font-size="11.5"  fill="#0F172A">version_no</text>
+<text x="669" y="912.5" font-size="9.5" text-anchor="end" fill="#64748B">INT</text>
+<text x="332" y="931.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="364" y="931.5" font-size="11.5"  fill="#0F172A">proposed_by</text>
+<text x="669" y="931.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="325" y="937" width="353" height="19" fill="#F4EFFD"/>
+<text x="332" y="950.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="364" y="950.5" font-size="11.5"  fill="#0F172A">recipient_id</text>
+<text x="669" y="950.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="364" y="969.5" font-size="11.5"  fill="#0F172A">amount</text>
+<text x="669" y="969.5" font-size="9.5" text-anchor="end" fill="#64748B">NUMERIC(14,2)</text>
+<rect x="325" y="975" width="353" height="19" fill="#F4EFFD"/>
+<text x="364" y="988.5" font-size="11.5"  fill="#0F172A">currency</text>
+<text x="669" y="988.5" font-size="9.5" text-anchor="end" fill="#64748B">CHAR(3)</text>
+<text x="364" y="1007.5" font-size="11.5"  fill="#0F172A">equity_percent</text>
+<text x="669" y="1007.5" font-size="9.5" text-anchor="end" fill="#64748B">NUMERIC(5,2) <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="325" y="1013" width="353" height="19" fill="#F4EFFD"/>
+<text x="364" y="1026.5" font-size="11.5"  fill="#0F172A">deliverables</text>
+<text x="669" y="1026.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="364" y="1045.5" font-size="11.5"  fill="#0F172A">transfer_conditions</text>
+<text x="669" y="1045.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="325" y="1051" width="353" height="19" fill="#F4EFFD"/>
+<text x="364" y="1064.5" font-size="11.5"  fill="#0F172A">conditions</text>
+<text x="669" y="1064.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="364" y="1083.5" font-size="11.5"  fill="#0F172A">message</text>
+<text x="669" y="1083.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="325" y="1089" width="353" height="19" fill="#F4EFFD"/>
+<text x="364" y="1102.5" font-size="11.5"  fill="#0F172A">expires_at</text>
+<text x="669" y="1102.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<text x="364" y="1121.5" font-size="11.5"  fill="#0F172A">status</text>
+<text x="669" y="1121.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM ‹offer_version_status›</text>
+<rect x="325" y="1127" width="353" height="19" fill="#F4EFFD"/>
+<text x="364" y="1140.5" font-size="11.5"  fill="#0F172A">responded_at</text>
+<text x="669" y="1140.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="364" y="1159.5" font-size="11.5"  fill="#0F172A">response_note</text>
+<text x="669" y="1159.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="325" y="1165" width="353" height="19" fill="#F4EFFD"/>
+<text x="364" y="1178.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="669" y="1178.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<line x1="324" y1="1184" x2="679" y2="1184" stroke="#E2E8F0"/>
+<text x="334" y="1197" font-size="9.5" fill="#7C3AED" font-style="normal" font-weight="600">one pending version per offer</text>
+<rect x="324" y="812" width="355" height="394" rx="7" fill="none" stroke="#7C3AED" stroke-width="2" />
+<rect x="1272.5" y="495" width="266" height="243" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="1270.5" y="492" width="266" height="243" rx="7" fill="#fff"/>
+<path d="M1270.5,522 V499 Q1270.5,492 1277.5,492 H1529.5 Q1536.5,492 1536.5,499 V522 Z" fill="#0F766E"/>
+<text x="1282.5" y="512" font-size="13.5" font-weight="700" fill="#fff">documents</text>
+<text x="1278.5" y="535.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="1310.5" y="535.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="1526.5" y="535.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1271.5" y="541" width="264" height="19" fill="#ECF7F5"/>
+<text x="1278.5" y="554.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1310.5" y="554.5" font-size="11.5"  fill="#0F172A">listing_id</text>
+<text x="1526.5" y="554.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1310.5" y="573.5" font-size="11.5"  fill="#0F172A">owner_id</text>
+<text x="1526.5" y="573.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1271.5" y="579" width="264" height="19" fill="#ECF7F5"/>
+<text x="1310.5" y="592.5" font-size="11.5"  fill="#0F172A">kind</text>
+<text x="1526.5" y="592.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM ‹document_kind›</text>
+<text x="1310.5" y="611.5" font-size="11.5"  fill="#0F172A">title</text>
+<text x="1526.5" y="611.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<rect x="1271.5" y="617" width="264" height="19" fill="#ECF7F5"/>
+<text x="1278.5" y="630.5" font-size="9" font-weight="800" fill="#7C3AED">UK</text>
+<text x="1310.5" y="630.5" font-size="11.5"  fill="#0F172A">storage_path</text>
+<text x="1526.5" y="630.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<text x="1310.5" y="649.5" font-size="11.5"  fill="#0F172A">file_name</text>
+<text x="1526.5" y="649.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<rect x="1271.5" y="655" width="264" height="19" fill="#ECF7F5"/>
+<text x="1310.5" y="668.5" font-size="11.5"  fill="#0F172A">mime_type</text>
+<text x="1526.5" y="668.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<text x="1310.5" y="687.5" font-size="11.5"  fill="#0F172A">size_bytes</text>
+<text x="1526.5" y="687.5" font-size="9.5" text-anchor="end" fill="#64748B">BIGINT</text>
+<rect x="1271.5" y="693" width="264" height="19" fill="#ECF7F5"/>
+<text x="1310.5" y="706.5" font-size="11.5"  fill="#0F172A">deleted_at</text>
+<text x="1526.5" y="706.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="1310.5" y="725.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="1526.5" y="725.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="1270.5" y="492" width="266" height="243" rx="7" fill="none" stroke="#0F766E" stroke-width="2" />
+<rect x="1719" y="659" width="284" height="166" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="1717" y="656" width="284" height="166" rx="7" fill="#fff"/>
+<path d="M1717,686 V663 Q1717,656 1724,656 H1994 Q2001,656 2001,663 V686 Z" fill="#0F766E"/>
+<text x="1729" y="676" font-size="13.5" font-weight="700" fill="#fff">document_grants</text>
+<text x="1725" y="699.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="1757" y="699.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="1991" y="699.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1718" y="705" width="282" height="19" fill="#ECF7F5"/>
+<text x="1725" y="718.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1757" y="718.5" font-size="11.5"  fill="#0F172A">document_id</text>
+<text x="1991" y="718.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1757" y="737.5" font-size="11.5"  fill="#0F172A">listing_id</text>
+<text x="1991" y="737.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1718" y="743" width="282" height="19" fill="#ECF7F5"/>
+<text x="1725" y="756.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1757" y="756.5" font-size="11.5"  fill="#0F172A">access_request_id</text>
+<text x="1991" y="756.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1757" y="775.5" font-size="11.5"  fill="#0F172A">granted_at</text>
+<text x="1991" y="775.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="1718" y="781" width="282" height="19" fill="#ECF7F5"/>
+<text x="1757" y="794.5" font-size="11.5"  fill="#0F172A">revoked_at</text>
+<text x="1991" y="794.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<line x1="1717" y1="800" x2="2001" y2="800" stroke="#E2E8F0"/>
+<text x="1727" y="813" font-size="9.5" fill="#7C3AED" font-style="normal" font-weight="600">one active grant per document and request</text>
+<rect x="1717" y="656" width="284" height="166" rx="7" fill="none" stroke="#0F766E" stroke-width="2" />
+<rect x="1236" y="1046" width="339" height="205" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="1234" y="1043" width="339" height="205" rx="7" fill="#fff"/>
+<path d="M1234,1073 V1050 Q1234,1043 1241,1043 H1566 Q1573,1043 1573,1050 V1073 Z" fill="#0F766E"/>
+<text x="1246" y="1063" font-size="13.5" font-weight="700" fill="#fff">conversations</text>
+<text x="1242" y="1086.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="1274" y="1086.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="1563" y="1086.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1235" y="1092" width="337" height="19" fill="#ECF7F5"/>
+<text x="1242" y="1105.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1257" y="1105.5" font-size="9" font-weight="800" fill="#7C3AED">UK</text>
+<text x="1274" y="1105.5" font-size="11.5"  fill="#0F172A">access_request_id</text>
+<text x="1563" y="1105.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1274" y="1124.5" font-size="11.5"  fill="#0F172A">listing_id</text>
+<text x="1563" y="1124.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1235" y="1130" width="337" height="19" fill="#ECF7F5"/>
+<text x="1274" y="1143.5" font-size="11.5"  fill="#0F172A">owner_id</text>
+<text x="1563" y="1143.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1274" y="1162.5" font-size="11.5"  fill="#0F172A">counterparty_id</text>
+<text x="1563" y="1162.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1235" y="1168" width="337" height="19" fill="#ECF7F5"/>
+<text x="1274" y="1181.5" font-size="11.5"  fill="#0F172A">owner_last_read_at</text>
+<text x="1563" y="1181.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="1274" y="1200.5" font-size="11.5"  fill="#0F172A">counterparty_last_read_at</text>
+<text x="1563" y="1200.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1235" y="1206" width="337" height="19" fill="#ECF7F5"/>
+<text x="1274" y="1219.5" font-size="11.5"  fill="#0F172A">last_message_at</text>
+<text x="1563" y="1219.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="1274" y="1238.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="1563" y="1238.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="1234" y="1043" width="339" height="205" rx="7" fill="none" stroke="#0F766E" stroke-width="2" />
+<rect x="1736.25" y="1084" width="270" height="167" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="1734.25" y="1081" width="270" height="167" rx="7" fill="#fff"/>
+<path d="M1734.25,1111 V1088 Q1734.25,1081 1741.25,1081 H1997.25 Q2004.25,1081 2004.25,1088 V1111 Z" fill="#0F766E"/>
+<text x="1746.25" y="1101" font-size="13.5" font-weight="700" fill="#fff">messages</text>
+<text x="1742.25" y="1124.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="1774.25" y="1124.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="1994.25" y="1124.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1735.25" y="1130" width="268" height="19" fill="#ECF7F5"/>
+<text x="1742.25" y="1143.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1774.25" y="1143.5" font-size="11.5"  fill="#0F172A">conversation_id</text>
+<text x="1994.25" y="1143.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1742.25" y="1162.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1774.25" y="1162.5" font-size="11.5"  fill="#0F172A">sender_id</text>
+<text x="1994.25" y="1162.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1735.25" y="1168" width="268" height="19" fill="#ECF7F5"/>
+<text x="1774.25" y="1181.5" font-size="11.5"  fill="#0F172A">body</text>
+<text x="1994.25" y="1181.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<text x="1774.25" y="1200.5" font-size="11.5"  fill="#0F172A">hidden_at</text>
+<text x="1994.25" y="1200.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1735.25" y="1206" width="268" height="19" fill="#ECF7F5"/>
+<text x="1742.25" y="1219.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1774.25" y="1219.5" font-size="11.5"  fill="#0F172A">hidden_by</text>
+<text x="1994.25" y="1219.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="1774.25" y="1238.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="1994.25" y="1238.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="1734.25" y="1081" width="270" height="167" rx="7" fill="none" stroke="#0F766E" stroke-width="2" />
+<rect x="1194" y="243" width="242" height="224" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="1192" y="240" width="242" height="224" rx="7" fill="#fff"/>
+<path d="M1192,270 V247 Q1192,240 1199,240 H1427 Q1434,240 1434,247 V270 Z" fill="#0F766E"/>
+<text x="1204" y="260" font-size="13.5" font-weight="700" fill="#fff">notifications</text>
+<text x="1200" y="283.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="1232" y="283.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="1424" y="283.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1193" y="289" width="240" height="19" fill="#ECF7F5"/>
+<text x="1200" y="302.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1232" y="302.5" font-size="11.5"  fill="#0F172A">user_id</text>
+<text x="1424" y="302.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1232" y="321.5" font-size="11.5"  fill="#0F172A">type</text>
+<text x="1424" y="321.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<rect x="1193" y="327" width="240" height="19" fill="#ECF7F5"/>
+<text x="1232" y="340.5" font-size="11.5"  fill="#0F172A">title</text>
+<text x="1424" y="340.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<text x="1232" y="359.5" font-size="11.5"  fill="#0F172A">body</text>
+<text x="1424" y="359.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1193" y="365" width="240" height="19" fill="#ECF7F5"/>
+<text x="1232" y="378.5" font-size="11.5"  fill="#0F172A">entity_type</text>
+<text x="1424" y="378.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="1232" y="397.5" font-size="11.5"  fill="#0F172A">entity_id</text>
+<text x="1424" y="397.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1193" y="403" width="240" height="19" fill="#ECF7F5"/>
+<text x="1232" y="416.5" font-size="11.5"  fill="#0F172A">data</text>
+<text x="1424" y="416.5" font-size="9.5" text-anchor="end" fill="#64748B">JSONB</text>
+<text x="1232" y="435.5" font-size="11.5"  fill="#0F172A">read_at</text>
+<text x="1424" y="435.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1193" y="441" width="240" height="19" fill="#ECF7F5"/>
+<text x="1232" y="454.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="1424" y="454.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="1192" y="240" width="242" height="224" rx="7" fill="none" stroke="#0F766E" stroke-width="2" />
+<rect x="1194" y="775" width="423" height="243" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="1192" y="772" width="423" height="243" rx="7" fill="#fff"/>
+<path d="M1192,802 V779 Q1192,772 1199,772 H1608 Q1615,772 1615,779 V802 Z" fill="#B45309"/>
+<text x="1204" y="792" font-size="13.5" font-weight="700" fill="#fff">agreements</text>
+<text x="1200" y="815.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="1232" y="815.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="1605" y="815.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1193" y="821" width="421" height="19" fill="#FDF4EA"/>
+<text x="1200" y="834.5" font-size="9" font-weight="800" fill="#7C3AED">UK</text>
+<text x="1232" y="834.5" font-size="11.5"  fill="#0F172A">offer_id</text>
+<text x="1605" y="834.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1200" y="853.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1232" y="853.5" font-size="11.5"  fill="#0F172A">source_offer_version_id</text>
+<text x="1605" y="853.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1193" y="859" width="421" height="19" fill="#FDF4EA"/>
+<text x="1200" y="872.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1232" y="872.5" font-size="11.5"  fill="#0F172A">listing_id</text>
+<text x="1605" y="872.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1200" y="891.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1232" y="891.5" font-size="11.5"  fill="#0F172A">owner_id</text>
+<text x="1605" y="891.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1193" y="897" width="421" height="19" fill="#FDF4EA"/>
+<text x="1200" y="910.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1232" y="910.5" font-size="11.5"  fill="#0F172A">counterparty_id</text>
+<text x="1605" y="910.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1232" y="929.5" font-size="11.5"  fill="#0F172A">status</text>
+<text x="1605" y="929.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM(draft,acknowledged,cancelled)</text>
+<rect x="1193" y="935" width="421" height="19" fill="#FDF4EA"/>
+<text x="1232" y="948.5" font-size="11.5"  fill="#0F172A">current_version_no</text>
+<text x="1605" y="948.5" font-size="9.5" text-anchor="end" fill="#64748B">INT</text>
+<text x="1232" y="967.5" font-size="11.5"  fill="#0F172A">cancelled_at</text>
+<text x="1605" y="967.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1193" y="973" width="421" height="19" fill="#FDF4EA"/>
+<text x="1232" y="986.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="1605" y="986.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<text x="1232" y="1005.5" font-size="11.5"  fill="#0F172A">updated_at</text>
+<text x="1605" y="1005.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="1192" y="772" width="423" height="243" rx="7" fill="none" stroke="#B45309" stroke-width="2" />
+<rect x="1751.3333333333333" y="1288" width="242" height="205" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="1749.3333333333333" y="1285" width="242" height="205" rx="7" fill="#fff"/>
+<path d="M1749.3333333333333,1315 V1292 Q1749.3333333333333,1285 1756.3333333333333,1285 H1984.3333333333333 Q1991.3333333333333,1285 1991.3333333333333,1292 V1315 Z" fill="#B45309"/>
+<text x="1761.3333333333333" y="1305" font-size="13.5" font-weight="700" fill="#fff">agreement_versions</text>
+<text x="1757.3333333333333" y="1328.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="1789.3333333333333" y="1328.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="1981.3333333333333" y="1328.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1750.3333333333333" y="1334" width="240" height="19" fill="#FDF4EA"/>
+<text x="1757.3333333333333" y="1347.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1789.3333333333333" y="1347.5" font-size="11.5"  fill="#0F172A">agreement_id</text>
+<text x="1981.3333333333333" y="1347.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1789.3333333333333" y="1366.5" font-size="11.5"  fill="#0F172A">version_no</text>
+<text x="1981.3333333333333" y="1366.5" font-size="9.5" text-anchor="end" fill="#64748B">INT</text>
+<rect x="1750.3333333333333" y="1372" width="240" height="19" fill="#FDF4EA"/>
+<text x="1789.3333333333333" y="1385.5" font-size="11.5"  fill="#0F172A">terms</text>
+<text x="1981.3333333333333" y="1385.5" font-size="9.5" text-anchor="end" fill="#64748B">JSONB</text>
+<text x="1789.3333333333333" y="1404.5" font-size="11.5"  fill="#0F172A">pdf_storage_path</text>
+<text x="1981.3333333333333" y="1404.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<rect x="1750.3333333333333" y="1410" width="240" height="19" fill="#FDF4EA"/>
+<text x="1789.3333333333333" y="1423.5" font-size="11.5"  fill="#0F172A">content_hash</text>
+<text x="1981.3333333333333" y="1423.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<text x="1789.3333333333333" y="1442.5" font-size="11.5"  fill="#0F172A">change_summary</text>
+<text x="1981.3333333333333" y="1442.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1750.3333333333333" y="1448" width="240" height="19" fill="#FDF4EA"/>
+<text x="1757.3333333333333" y="1461.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1789.3333333333333" y="1461.5" font-size="11.5"  fill="#0F172A">created_by</text>
+<text x="1981.3333333333333" y="1461.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1789.3333333333333" y="1480.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="1981.3333333333333" y="1480.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="1749.3333333333333" y="1285" width="242" height="205" rx="7" fill="none" stroke="#B45309" stroke-width="2" />
+<rect x="2160" y="1433" width="270" height="110" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="2158" y="1430" width="270" height="110" rx="7" fill="#fff"/>
+<path d="M2158,1460 V1437 Q2158,1430 2165,1430 H2421 Q2428,1430 2428,1437 V1460 Z" fill="#B45309"/>
+<text x="2170" y="1450" font-size="13.5" font-weight="700" fill="#fff">agreement_acknowledgements</text>
+<text x="2166" y="1473.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="2181" y="1473.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="1473.5" font-size="11.5" font-weight="700" fill="#0F172A">agreement_version_id</text>
+<text x="2418" y="1473.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="2159" y="1479" width="268" height="19" fill="#FDF4EA"/>
+<text x="2198" y="1492.5" font-size="11.5"  fill="#0F172A">agreement_id</text>
+<text x="2418" y="1492.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="2166" y="1511.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="2181" y="1511.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="1511.5" font-size="11.5" font-weight="700" fill="#0F172A">user_id</text>
+<text x="2418" y="1511.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="2159" y="1517" width="268" height="19" fill="#FDF4EA"/>
+<text x="2198" y="1530.5" font-size="11.5"  fill="#0F172A">acknowledged_at</text>
+<text x="2418" y="1530.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="2158" y="1430" width="270" height="110" rx="7" fill="none" stroke="#B45309" stroke-width="2" />
+<rect x="2160" y="1172" width="387" height="205" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="2158" y="1169" width="387" height="205" rx="7" fill="#fff"/>
+<path d="M2158,1199 V1176 Q2158,1169 2165,1169 H2538 Q2545,1169 2545,1176 V1199 Z" fill="#B45309"/>
+<text x="2170" y="1189" font-size="13.5" font-weight="700" fill="#fff">agreement_revision_requests</text>
+<text x="2166" y="1212.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="2198" y="1212.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="2535" y="1212.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="2159" y="1218" width="385" height="19" fill="#FDF4EA"/>
+<text x="2198" y="1231.5" font-size="11.5"  fill="#0F172A">agreement_id</text>
+<text x="2535" y="1231.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="2166" y="1250.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="1250.5" font-size="11.5"  fill="#0F172A">based_on_version_id</text>
+<text x="2535" y="1250.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="2159" y="1256" width="385" height="19" fill="#FDF4EA"/>
+<text x="2166" y="1269.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="1269.5" font-size="11.5"  fill="#0F172A">requested_by</text>
+<text x="2535" y="1269.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="2198" y="1288.5" font-size="11.5"  fill="#0F172A">reason</text>
+<text x="2535" y="1288.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT</text>
+<rect x="2159" y="1294" width="385" height="19" fill="#FDF4EA"/>
+<text x="2198" y="1307.5" font-size="11.5"  fill="#0F172A">status</text>
+<text x="2535" y="1307.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM(open,addressed,declined)</text>
+<text x="2166" y="1326.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="1326.5" font-size="11.5"  fill="#0F172A">resolved_by_version_id</text>
+<text x="2535" y="1326.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="2159" y="1332" width="385" height="19" fill="#FDF4EA"/>
+<text x="2198" y="1345.5" font-size="11.5"  fill="#0F172A">resolved_at</text>
+<text x="2535" y="1345.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="2198" y="1364.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="2535" y="1364.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="2158" y="1169" width="387" height="205" rx="7" fill="none" stroke="#B45309" stroke-width="2" />
+<rect x="1719" y="146" width="339" height="224" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="1717" y="143" width="339" height="224" rx="7" fill="#fff"/>
+<path d="M1717,173 V150 Q1717,143 1724,143 H2049 Q2056,143 2056,150 V173 Z" fill="#B45309"/>
+<text x="1729" y="163" font-size="13.5" font-weight="700" fill="#fff">deals</text>
+<text x="1725" y="186.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="1757" y="186.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="2046" y="186.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1718" y="192" width="337" height="19" fill="#FDF4EA"/>
+<text x="1725" y="205.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1740" y="205.5" font-size="9" font-weight="800" fill="#7C3AED">UK</text>
+<text x="1757" y="205.5" font-size="11.5"  fill="#0F172A">agreement_id</text>
+<text x="2046" y="205.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1725" y="224.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="1757" y="224.5" font-size="11.5"  fill="#0F172A">listing_id</text>
+<text x="2046" y="224.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1718" y="230" width="337" height="19" fill="#FDF4EA"/>
+<text x="1757" y="243.5" font-size="11.5"  fill="#0F172A">owner_id</text>
+<text x="2046" y="243.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="1757" y="262.5" font-size="11.5"  fill="#0F172A">counterparty_id</text>
+<text x="2046" y="262.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="1718" y="268" width="337" height="19" fill="#FDF4EA"/>
+<text x="1757" y="281.5" font-size="11.5"  fill="#0F172A">owner_confirmed_at</text>
+<text x="2046" y="281.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="1757" y="300.5" font-size="11.5"  fill="#0F172A">counterparty_confirmed_at</text>
+<text x="2046" y="300.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1718" y="306" width="337" height="19" fill="#FDF4EA"/>
+<text x="1757" y="319.5" font-size="11.5"  fill="#0F172A">completed_at</text>
+<text x="2046" y="319.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="1757" y="338.5" font-size="11.5"  fill="#0F172A">cancelled_at</text>
+<text x="2046" y="338.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="1718" y="344" width="337" height="19" fill="#FDF4EA"/>
+<text x="1757" y="357.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="2046" y="357.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="1717" y="143" width="339" height="224" rx="7" fill="none" stroke="#B45309" stroke-width="2" />
+<rect x="2160" y="291" width="301" height="281" rx="7" fill="#0F172A" opacity="0.07"/>
+<rect x="2158" y="288" width="301" height="281" rx="7" fill="#fff"/>
+<path d="M2158,318 V295 Q2158,288 2165,288 H2452 Q2459,288 2459,295 V318 Z" fill="#B45309"/>
+<text x="2170" y="308" font-size="13.5" font-weight="700" fill="#fff">reports</text>
+<text x="2166" y="331.5" font-size="9" font-weight="800" fill="#B91C1C">PK</text>
+<text x="2198" y="331.5" font-size="11.5" font-weight="700" fill="#0F172A">id</text>
+<text x="2449" y="331.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<rect x="2159" y="337" width="299" height="19" fill="#FDF4EA"/>
+<text x="2166" y="350.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="350.5" font-size="11.5"  fill="#0F172A">reporter_id</text>
+<text x="2449" y="350.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID</text>
+<text x="2166" y="369.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="369.5" font-size="11.5"  fill="#0F172A">target_user_id</text>
+<text x="2449" y="369.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="2159" y="375" width="299" height="19" fill="#FDF4EA"/>
+<text x="2166" y="388.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="388.5" font-size="11.5"  fill="#0F172A">target_listing_id</text>
+<text x="2449" y="388.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="2166" y="407.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="407.5" font-size="11.5"  fill="#0F172A">target_message_id</text>
+<text x="2449" y="407.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="2159" y="413" width="299" height="19" fill="#FDF4EA"/>
+<text x="2198" y="426.5" font-size="11.5"  fill="#0F172A">reason</text>
+<text x="2449" y="426.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM ‹report_reason›</text>
+<text x="2198" y="445.5" font-size="11.5"  fill="#0F172A">details</text>
+<text x="2449" y="445.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="2159" y="451" width="299" height="19" fill="#FDF4EA"/>
+<text x="2198" y="464.5" font-size="11.5"  fill="#0F172A">status</text>
+<text x="2449" y="464.5" font-size="9.5" text-anchor="end" fill="#64748B">ENUM ‹report_status›</text>
+<text x="2166" y="483.5" font-size="9" font-weight="800" fill="#1D4ED8">FK</text>
+<text x="2198" y="483.5" font-size="11.5"  fill="#0F172A">assigned_admin_id</text>
+<text x="2449" y="483.5" font-size="9.5" text-anchor="end" fill="#64748B">UUID <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="2159" y="489" width="299" height="19" fill="#FDF4EA"/>
+<text x="2198" y="502.5" font-size="11.5"  fill="#0F172A">resolution_note</text>
+<text x="2449" y="502.5" font-size="9.5" text-anchor="end" fill="#64748B">TEXT <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<text x="2198" y="521.5" font-size="11.5"  fill="#0F172A">resolved_at</text>
+<text x="2449" y="521.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ <tspan fill="#94A3B8" font-style="italic">null</tspan></text>
+<rect x="2159" y="527" width="299" height="19" fill="#FDF4EA"/>
+<text x="2198" y="540.5" font-size="11.5"  fill="#0F172A">created_at</text>
+<text x="2449" y="540.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<text x="2198" y="559.5" font-size="11.5"  fill="#0F172A">updated_at</text>
+<text x="2449" y="559.5" font-size="9.5" text-anchor="end" fill="#64748B">TIMESTAMPTZ</text>
+<rect x="2158" y="288" width="301" height="281" rx="7" fill="none" stroke="#B45309" stroke-width="2" />
+<rect x="40" y="1588" width="300" height="238" rx="8" fill="#fff" stroke="#CBD5E1"/><text x="54" y="1612" font-size="14" font-weight="800" fill="#0F2557">Legend</text>
+<rect x="54" y="1625" width="26" height="14" rx="3" fill="#7C3AED"/><text x="90" y="1636" font-size="12" fill="#0F172A">Access requests & bidding</text>
+<rect x="54" y="1647" width="26" height="14" rx="3" fill="#0F766E"/><text x="90" y="1658" font-size="12" fill="#0F172A">Documents, chat & notifications</text>
+<rect x="54" y="1669" width="26" height="14" rx="3" fill="#B45309"/><text x="90" y="1680" font-size="12" fill="#0F172A">Agreements, deals & reports</text>
+<rect x="54" y="1690" width="26" height="15" rx="3" fill="#fff" stroke="#64748B" stroke-width="1.3" stroke-dasharray="5 4"/><text x="90" y="1702" font-size="12" fill="#0F172A">linked table from the other part</text>
+<text x="54" y="1730" font-size="12" fill="#0F172A"><tspan fill="#B91C1C" font-weight="800">PK</tspan> primary key   <tspan fill="#1D4ED8" font-weight="800">FK</tspan> foreign key   <tspan fill="#7C3AED" font-weight="800">UK</tspan> unique</text>
+<text x="54" y="1752" font-size="12" fill="#0F172A"><tspan fill="#94A3B8" font-style="italic">null</tspan> = column may be empty (nullable)</text>
+<rect x="360" y="1588" width="300" height="238" rx="8" fill="#fff" stroke="#CBD5E1"/><text x="374" y="1612" font-size="14" font-weight="800" fill="#0F2557">Relationship notation (crow's foot)</text>
+<line x1="378" y1="1644" x2="460" y2="1644" stroke="#334155" stroke-width="1.5"/>
+<line x1="384" y1="1638" x2="384" y2="1650" stroke="#334155" stroke-width="1.5"/>
+<line x1="388" y1="1638" x2="388" y2="1650" stroke="#334155" stroke-width="1.5"/>
+<text x="474" y="1648" font-size="12" fill="#0F172A">exactly one (parent)</text>
+<line x1="378" y1="1674" x2="460" y2="1674" stroke="#334155" stroke-width="1.5"/>
+<line x1="384" y1="1668" x2="384" y2="1680" stroke="#334155" stroke-width="1.5"/><circle cx="393" cy="1674" r="3.6" fill="#fff" stroke="#334155" stroke-width="1.5"/>
+<text x="474" y="1678" font-size="12" fill="#0F172A">zero or one (optional parent)</text>
+<line x1="378" y1="1704" x2="460" y2="1704" stroke="#334155" stroke-width="1.5"/>
+<path d="M449,1704 L460,1698 M449,1704 L460,1710" fill="none" stroke="#334155" stroke-width="1.5"/><circle cx="444" cy="1704" r="3.6" fill="#fff" stroke="#334155" stroke-width="1.5"/>
+<text x="474" y="1708" font-size="12" fill="#0F172A">zero or many (child rows)</text>
+<line x1="378" y1="1734" x2="460" y2="1734" stroke="#334155" stroke-width="1.5"/>
+<line x1="453" y1="1728" x2="453" y2="1740" stroke="#334155" stroke-width="1.5"/><circle cx="444" cy="1734" r="3.6" fill="#fff" stroke="#334155" stroke-width="1.5"/>
+<text x="474" y="1738" font-size="12" fill="#0F172A">zero or one (1 : 1)</text>
+<text x="376" y="1772" font-size="11.5" fill="#475569">Lines start at the parent's id (PK) and</text>
+<text x="376" y="1788" font-size="11.5" fill="#475569">end at the child's foreign-key row.</text>
+<text x="376" y="1804" font-size="11.5" fill="#475569">Line colour = colour of the parent table.</text>
+<rect x="680" y="1588" width="744.4000000000001" height="238" rx="8" fill="#fff" stroke="#CBD5E1"/><text x="694" y="1612" font-size="14" font-weight="800" fill="#0F2557">Enum values (‹name› in the tables)</text>
+<text x="696" y="1640" font-size="12" font-weight="700" fill="#0F172A">access_request_status</text>
+<text x="696" y="1657" font-size="11" fill="#475569">pending, approved, rejected, withdrawn, revoked</text>
+<text x="696" y="1684" font-size="12" font-weight="700" fill="#0F172A">offer_status</text>
+<text x="696" y="1701" font-size="11" fill="#475569">open, accepted, rejected, expired, withdrawn</text>
+<text x="696" y="1728" font-size="12" font-weight="700" fill="#0F172A">offer_version_status</text>
+<text x="696" y="1745" font-size="11" fill="#475569">pending, countered, accepted, rejected, expired, withdrawn</text>
+<text x="1068.2" y="1640" font-size="12" font-weight="700" fill="#0F172A">document_kind</text>
+<text x="1068.2" y="1657" font-size="11" fill="#475569">pitch_deck, project_report, screenshot, other</text>
+<text x="1068.2" y="1684" font-size="12" font-weight="700" fill="#0F172A">report_reason</text>
+<text x="1068.2" y="1701" font-size="11" fill="#475569">spam, fraud, misleading, inappropriate, other</text>
+<text x="1068.2" y="1728" font-size="12" font-weight="700" fill="#0F172A">report_status</text>
+<text x="1068.2" y="1745" font-size="11" fill="#475569">open, reviewing, resolved, dismissed</text>
+<rect x="1444.4" y="1588" width="300" height="238" rx="8" fill="#fff" stroke="#CBD5E1"/><text x="1458.4" y="1612" font-size="14" font-weight="800" fill="#0F2557">Tables in this diagram</text>
+<rect x="1458.4" y="1629" width="14" height="14" rx="3" fill="#7C3AED"/><text x="1482.4" y="1640" font-size="12" fill="#0F172A">Access requests & bidding</text><text x="1728.4" y="1640" font-size="12" text-anchor="end" fill="#475569">3</text>
+<rect x="1458.4" y="1655" width="14" height="14" rx="3" fill="#0F766E"/><text x="1482.4" y="1666" font-size="12" fill="#0F172A">Documents, chat & notifications</text><text x="1728.4" y="1666" font-size="12" text-anchor="end" fill="#475569">5</text>
+<rect x="1458.4" y="1681" width="14" height="14" rx="3" fill="#B45309"/><text x="1482.4" y="1692" font-size="12" fill="#0F172A">Agreements, deals & reports</text><text x="1728.4" y="1692" font-size="12" text-anchor="end" fill="#475569">6</text>
+<line x1="1458.4" y1="1710" x2="1730.4" y2="1710" stroke="#E2E8F0"/><text x="1458.4" y="1730" font-size="12.5" font-weight="800" fill="#0F172A">Total</text><text x="1728.4" y="1730" font-size="12.5" font-weight="800" text-anchor="end" fill="#0F172A">14 tables, 34 relationships</text>
+</svg>

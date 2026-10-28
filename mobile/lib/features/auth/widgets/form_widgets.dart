@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
 import '../session/session_controller.dart';
 
@@ -83,7 +84,7 @@ class PasswordChecklist extends StatelessWidget {
                 Icon(
                   rule.isMet(password) ? Icons.check_circle : Icons.radio_button_unchecked,
                   size: 16,
-                  color: rule.isMet(password) ? Colors.green : colors.outline,
+                  color: rule.isMet(password) ? StatusColors.of(context).success : colors.outline,
                 ),
                 const SizedBox(width: 4),
                 Text(rule.label, style: Theme.of(context).textTheme.bodySmall),

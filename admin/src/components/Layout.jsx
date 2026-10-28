@@ -34,7 +34,8 @@ export default function Layout() {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <AppBar position="fixed" color="inherit" elevation={0} sx={{ zIndex: t => t.zIndex.drawer + 1, borderBottom: 1, borderColor: 'divider' }}>
         <Toolbar>
-          <Typography variant="h6" color="primary" sx={{ flexGrow: 1, fontWeight: 800 }}>
+          <Box component="img" src="/favicon.svg" alt="" sx={{ width: 34, height: 34, mr: 1.5 }} />
+          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 800 }}>
             Orwickle <Typography component="span" color="text.secondary">Admin</Typography>
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>

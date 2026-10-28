@@ -5,6 +5,7 @@ import '../../features/auth/data/auth_models.dart';
 import '../../features/auth/screens/change_password_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
@@ -17,34 +18,42 @@ import '../../features/listings/screens/my_listings_screen.dart';
 import '../../features/profile/screens/profile_edit_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../features/system_check/system_check_screen.dart';
+import '../storage/onboarding_state.dart';
 import 'routes.dart';
 
 /// All app routes. Redirects follow the session: while it is being checked → splash,
-/// logged out → welcome (or login after an automatic logout), logged in without a
-/// completed profile → profile setup, otherwise → home.
-GoRouter buildRouter(SessionController session) => GoRouter(
+/// logged out → intro slides on the first start, then welcome (or login after an automatic
+/// logout), logged in without a completed profile → profile setup, otherwise → home.
+GoRouter buildRouter(SessionController session, OnboardingState onboarding) => GoRouter(
   initialLocation: Routes.splash,
-  refreshListenable: session,
+  refreshListenable: Listenable.merge([session, onboarding]),
   redirect: (context, state) {
     final location = state.matchedLocation;
     switch (session.status) {
       case SessionStatus.unknown:
         return location == Routes.splash ? null : Routes.splash;
       case SessionStatus.unauthenticated:
-        if (Routes.public.contains(location)) return null;
         final reason = session.lastLogoutReason;
+        if (!onboarding.seen && reason == null) {
+          return location == Routes.onboarding ? null : Routes.onboarding;
+        }
+        if (Routes.public.contains(location)) return null;
         return reason == LogoutReason.inactivity || reason == LogoutReason.expired ? Routes.login : Routes.welcome;
       case SessionStatus.authenticated:
         if (!(session.user?.profileCompleted ?? true)) {
           return location == Routes.profileSetup ? null : Routes.profileSetup;
         }
-        return Routes.public.contains(location) || location == Routes.splash || location == Routes.profileSetup
+        return Routes.public.contains(location) ||
+                location == Routes.splash ||
+                location == Routes.onboarding ||
+                location == Routes.profileSetup
             ? Routes.home
             : null;
     }
   },
   routes: [
     GoRoute(path: Routes.splash, builder: (context, state) => const SplashScreen()),
+    GoRoute(path: Routes.onboarding, builder: (context, state) => const OnboardingScreen()),
     GoRoute(path: Routes.welcome, builder: (context, state) => const WelcomeScreen()),
     GoRoute(
       path: Routes.register,

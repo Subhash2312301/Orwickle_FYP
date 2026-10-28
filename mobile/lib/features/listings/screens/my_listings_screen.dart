@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../data/listing_api.dart';
 import '../data/listing_models.dart';
 import '../widgets/listing_widgets.dart';
@@ -47,24 +49,56 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           future: _listings,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return ListView(
+                padding: const EdgeInsets.all(Gaps.lg),
+                children: const [
+                  ListingCardSkeleton(),
+                  SizedBox(height: Gaps.md),
+                  ListingCardSkeleton(),
+                ],
+              );
             }
+            // ListViews below so pull-to-refresh still works
             if (snapshot.hasError) {
               final message = snapshot.error is ApiException
                   ? (snapshot.error! as ApiException).message
                   : 'Could not load listings.';
               return ListView(
+                padding: const EdgeInsets.all(Gaps.xl),
                 children: [
-                  const SizedBox(height: 120),
-                  Center(child: Text(message)),
-                  Center(
-                    child: TextButton(onPressed: _reload, child: const Text('Try again')),
+                  EmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Something went wrong',
+                    message: message,
+                    action: OutlinedButton.icon(
+                      onPressed: _reload,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Try again'),
+                    ),
                   ),
                 ],
               );
             }
             final listings = snapshot.data!;
-            if (listings.isEmpty) return const _EmptyState();
+            if (listings.isEmpty) {
+              return ListView(
+                padding: const EdgeInsets.all(Gaps.xl),
+                children: [
+                  EmptyState(
+                    icon: Icons.add_business_outlined,
+                    title: 'No listings yet',
+                    message:
+                        'List your project as "Seeking Funding" to reach investors, or "Available for Purchase" '
+                        'to reach buyers.',
+                    action: FilledButton.icon(
+                      onPressed: () => _open(Routes.newListing),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create your first listing'),
+                    ),
+                  ),
+                ],
+              );
+            }
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
               itemCount: listings.length,
@@ -111,10 +145,27 @@ class _ListingCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${listing.categoryName} · ${formatAmount(listing.askingAmount, listing.currency)}',
-                    style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary),
+                  const SizedBox(height: Gaps.md),
+                  Row(
+                    children: [
+                      Text(
+                        formatAmount(listing.askingAmount, listing.currency),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.category_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: Gaps.xs),
+                      Flexible(
+                        child: Text(
+                          listing.categoryName,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -122,31 +173,6 @@ class _ListingCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // ListView so pull-to-refresh still works
-    return ListView(
-      padding: const EdgeInsets.all(32),
-      children: [
-        const SizedBox(height: 60),
-        Icon(Icons.inventory_2_outlined, size: 72, color: theme.colorScheme.outline),
-        const SizedBox(height: 16),
-        Text('No listings yet', textAlign: TextAlign.center, style: theme.textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Text(
-          'List your project as "Seeking Funding" to reach investors, or "Available for Purchase" to reach buyers.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium,
-        ),
-      ],
     );
   }
 }
