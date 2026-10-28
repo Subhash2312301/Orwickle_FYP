@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/theme/app_theme.dart';
 import 'health_service.dart';
 
 /// Phase 1 end-to-end check: app → Node.js backend → Supabase PostgreSQL.
@@ -110,7 +111,7 @@ class _StatusTile extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final Widget leading = loading
         ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
-        : Icon(ok ? Icons.check_circle : Icons.cancel, color: ok ? Colors.green : colors.error);
+        : Icon(ok ? Icons.check_circle : Icons.cancel, color: ok ? StatusColors.of(context).success : colors.error);
     return Card(
       child: ListTile(
         leading: leading,

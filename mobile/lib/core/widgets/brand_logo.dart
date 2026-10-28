@@ -4,90 +4,160 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// Draws the Orwickle rocket (tilted up and to the right) into a [size] × [size] square.
-/// Also used by tool/icon/generate_icon_test.dart for the launcher icon and splash image.
-void paintRocket(Canvas canvas, double size, {Color body = Colors.white, Color window = AppTheme.brand}) {
-  final s = size / 1024; // the drawing below uses a 1024-unit square
+const Color _navy = Color(0xFF111827);
+const Color _navy2 = Color(0xFF1E1B4B);
+const Color _deepIndigo = Color(0xFF4F46E5);
+const Color _flame = Color(0xFFF59E0B);
+
+/// Navy background of the app icon.
+const LinearGradient iconBackground = LinearGradient(
+  colors: [_navy, _navy2],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+/// Draws the Orwickle mark (logo A, "orbit rocket"): an open orbit ring with a rocket breaking
+/// out of it, into a [size] × [size] square. [onDark] draws a white rocket for dark backgrounds;
+/// otherwise the rocket uses the brand gradient. Also used by tool/icon/generate_icon_test.dart.
+void paintMark(Canvas canvas, double size, {bool onDark = true}) {
   canvas
     ..save()
-    ..scale(s)
-    ..translate(512, 512)
-    ..rotate(math.pi / 4)
-    ..translate(-512, -512);
+    ..scale(size / 512); // the drawing below uses a 512-unit square
 
-  final white = Paint()..color = body;
-
-  // flame
-  canvas.drawPath(
-    Path()
-      ..moveTo(462, 640)
-      ..quadraticBezierTo(512, 860, 512, 860)
-      ..quadraticBezierTo(512, 860, 562, 640)
-      ..close(),
-    Paint()..color = const Color(0xFFF59E0B),
+  // orbit ring: 700 of its 917 units drawn, gap at the top right where the rocket leaves
+  const ring = Rect.fromLTWH(110, 110, 292, 292);
+  canvas.drawArc(
+    ring,
+    -14 * math.pi / 180,
+    700 / 146,
+    false,
+    Paint()
+      ..shader = AppTheme.gradient.createShader(ring)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 58
+      ..strokeCap = StrokeCap.round,
   );
 
-  // fins
+  // rocket, drawn pointing up around 0,0, then tilted up and to the right
+  canvas
+    ..translate(322, 192)
+    ..rotate(math.pi / 4)
+    ..scale(0.92);
+  final body = Paint();
+  if (onDark) {
+    body.color = Colors.white;
+  } else {
+    body.shader = AppTheme.gradient.createShader(const Rect.fromLTRB(-126, -170, 126, 126));
+  }
+
   canvas
     ..drawPath(
       Path()
-        ..moveTo(420, 470)
-        ..lineTo(330, 620)
-        ..quadraticBezierTo(330, 660, 370, 650)
-        ..lineTo(430, 610)
+        ..moveTo(-34, 84)
+        ..quadraticBezierTo(0, 200, 34, 84)
         ..close(),
-      white,
+      Paint()..color = _flame,
     )
     ..drawPath(
       Path()
-        ..moveTo(604, 470)
-        ..lineTo(694, 620)
-        ..quadraticBezierTo(694, 660, 654, 650)
-        ..lineTo(594, 610)
+        ..moveTo(-52, 14)
+        ..lineTo(-120, 100)
+        ..quadraticBezierTo(-126, 126, -98, 120)
+        ..lineTo(-52, 92)
         ..close(),
-      white,
-    );
-
-  // body: pointed nose, rounded sides, flat base
-  canvas.drawPath(
-    Path()
-      ..moveTo(512, 170)
-      ..cubicTo(610, 250, 630, 420, 600, 650)
-      ..lineTo(424, 650)
-      ..cubicTo(394, 420, 414, 250, 512, 170)
-      ..close(),
-    white,
-  );
-
-  // window
-  canvas
-    ..drawCircle(const Offset(512, 410), 62, Paint()..color = window)
-    ..drawCircle(const Offset(512, 410), 30, white)
+      body,
+    )
+    ..drawPath(
+      Path()
+        ..moveTo(52, 14)
+        ..lineTo(120, 100)
+        ..quadraticBezierTo(126, 126, 98, 120)
+        ..lineTo(52, 92)
+        ..close(),
+      body,
+    )
+    ..drawPath(
+      Path()
+        ..moveTo(0, -170)
+        ..cubicTo(66, -122, 80, -24, 62, 84)
+        ..lineTo(-62, 84)
+        ..cubicTo(-80, -24, -66, -122, 0, -170)
+        ..close(),
+      body,
+    )
+    ..drawCircle(const Offset(0, -62), 32, Paint()..color = Colors.white)
+    ..drawCircle(const Offset(0, -62), 17, Paint()..color = _deepIndigo)
     ..restore();
 }
 
-class _RocketPainter extends CustomPainter {
-  const _RocketPainter();
+/// Draws the full app icon (navy rounded square with the mark) into a [size] × [size] square.
+void paintIcon(Canvas canvas, double size, {double radius = 112 / 512}) {
+  final square = Rect.fromLTWH(0, 0, size, size);
+  canvas
+    ..drawRRect(
+      RRect.fromRectAndRadius(square, Radius.circular(size * radius)),
+      Paint()..shader = iconBackground.createShader(square),
+    )
+    ..save()
+    ..translate(size * 0.1, size * 0.1);
+  paintMark(canvas, size * 0.8);
+  canvas.restore();
+}
+
+class _IconPainter extends CustomPainter {
+  const _IconPainter();
 
   @override
-  void paint(Canvas canvas, Size size) => paintRocket(canvas, size.shortestSide);
+  void paint(Canvas canvas, Size size) => paintIcon(canvas, size.shortestSide);
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// The app logo: white rocket on the brand gradient, in a rounded square.
+class _MarkPainter extends CustomPainter {
+  const _MarkPainter({required this.onDark});
+
+  final bool onDark;
+
+  @override
+  void paint(Canvas canvas, Size size) => paintMark(canvas, size.shortestSide, onDark: onDark);
+
+  @override
+  bool shouldRepaint(covariant _MarkPainter oldDelegate) => oldDelegate.onDark != onDark;
+}
+
+/// The app logo: the orbit-rocket mark on the navy rounded square (same as the launcher icon).
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, this.size = 64});
 
   final double size;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(gradient: AppTheme.gradient, borderRadius: BorderRadius.circular(size * 0.24)),
-    child: CustomPaint(painter: const _RocketPainter()),
+  Widget build(BuildContext context) => Semantics(
+    image: true,
+    label: 'Orwickle logo',
+    child: SizedBox.square(
+      dimension: size,
+      child: const CustomPaint(painter: _IconPainter()),
+    ),
+  );
+}
+
+/// The mark alone, without the square: for app bars and light or dark surfaces.
+class BrandMark extends StatelessWidget {
+  const BrandMark({super.key, this.size = 32, this.onDark});
+
+  final double size;
+  final bool? onDark; // null = follow the theme
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    image: true,
+    label: 'Orwickle logo',
+    child: SizedBox.square(
+      dimension: size,
+      child: CustomPaint(painter: _MarkPainter(onDark: onDark ?? Theme.of(context).brightness == Brightness.dark)),
+    ),
   );
 }
 

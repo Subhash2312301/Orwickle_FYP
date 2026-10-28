@@ -1,7 +1,7 @@
 /// The three roles a user can sign up as. Admins are created by the team, not through the app.
 enum UserRole {
   owner('Project Owner', 'List your project for funding or sale'),
-  investor('Investor', 'Discover startups seeking funding'),
+  investor('Investor', 'Discover projects seeking funding'),
   buyer('Buyer', 'Buy ready-made projects');
 
   const UserRole(this.label, this.description);

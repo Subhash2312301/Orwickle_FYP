@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/router/routes.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/image_widgets.dart';
 import '../auth/session/session_controller.dart';
 import '../auth/widgets/form_widgets.dart';
@@ -53,11 +54,12 @@ class _ProfileTabState extends State<ProfileTab> {
     final user = session.user!;
     final theme = Theme.of(context);
     final subtitle = [_profile?.headline, _profile?.city].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
+    final status = StatusColors.of(context);
     final (statusLabel, statusColor) = switch (user.approvalStatus) {
-      'approved' => ('Approved', Colors.green.shade700),
-      'rejected' => ('Not approved', theme.colorScheme.error),
-      'needs_evidence' => ('More info needed', theme.colorScheme.tertiary),
-      _ => ('Under review', Colors.orange.shade800),
+      'approved' => ('Approved', status.success),
+      'rejected' => ('Not approved', status.danger),
+      'needs_evidence' => ('More info needed', status.danger),
+      _ => ('Under review', status.warning),
     };
 
     return Scaffold(

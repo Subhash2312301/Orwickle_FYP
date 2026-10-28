@@ -205,16 +205,27 @@ async function changeStatus(listingId, ownerId, action, { ip, baseUrl }) {
 
 // Only drafts can be deleted; published listings are closed instead so their history stays.
 async function deleteListing(listingId, ownerId, { ip }) {
-  const filePaths = await withTransaction(async client => {
-    const row = await loadOwned(client, listingId, ownerId);
-    if (row.status !== 'draft') {
-      throw new HttpError(409, 'INVALID_STATUS', 'Only draft listings can be deleted. Close the listing instead.');
+  let filePaths;
+  try {
+    filePaths = await withTransaction(async client => {
+      const row = await loadOwned(client, listingId, ownerId);
+      if (row.status !== 'draft') {
+        throw new HttpError(409, 'INVALID_STATUS', 'Only draft listings can be deleted. Close the listing instead.');
+      }
+      const { rows: photos } = await client.query('SELECT path FROM listing_photos WHERE listing_id = $1', [listingId]);
+      await client.query('DELETE FROM listings WHERE id = $1', [listingId]);
+      await audit(client, { actorId: ownerId, action: 'listing.deleted', entityType: 'listing', entityId: listingId, ip });
+      return [row.thumbnail_path, ...photos.map(p => p.path)];
+    });
+  } catch (err) {
+    // 23503 = foreign key violation: an admin review (or later an access request or offer) refers to the listing,
+    // and that history is kept
+    if (err.code === '23503') {
+      throw new HttpError(409, 'LISTING_HAS_HISTORY',
+        'This listing has already been reviewed or has activity, so its history is kept. Close it instead.');
     }
-    const { rows: photos } = await client.query('SELECT path FROM listing_photos WHERE listing_id = $1', [listingId]);
-    await client.query('DELETE FROM listings WHERE id = $1', [listingId]);
-    await audit(client, { actorId: ownerId, action: 'listing.deleted', entityType: 'listing', entityId: listingId, ip });
-    return [row.thumbnail_path, ...photos.map(p => p.path)];
-  });
+    throw err;
+  }
   await Promise.all(filePaths.map(p => storage.remove(p)));
 }
 

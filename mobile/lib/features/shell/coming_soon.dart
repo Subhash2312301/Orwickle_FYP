@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/empty_state.dart';
+
 /// A feature planned for a later phase. Its tab or button is already visible so the app's
 /// full scope is clear; opening it explains what is coming.
 class UpcomingFeature {
@@ -80,18 +82,12 @@ class _ComingSoonBody extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const SizedBox(height: 16),
-        Icon(feature.icon, size: 64, color: theme.colorScheme.outline),
-        const SizedBox(height: 12),
-        Chip(
-          avatar: Icon(Icons.schedule, size: 16, color: theme.colorScheme.primary),
-          label: const Text('Coming soon'),
+        EmptyState(
+          icon: feature.icon,
+          badge: const ComingSoonChip(),
+          title: feature.title,
+          message: feature.description,
         ),
-        const SizedBox(height: 8),
-        Text(feature.title, textAlign: TextAlign.center, style: theme.textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Text(feature.description, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
-        const SizedBox(height: 16),
         for (final point in feature.points)
           ListTile(
             dense: true,
