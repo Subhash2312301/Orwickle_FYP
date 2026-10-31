@@ -2,16 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/motion/entrance.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_widgets.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
 import '../data/listing_api.dart';
 import '../data/listing_models.dart';
 import '../widgets/listing_widgets.dart';
 
-/// Owner's view of one listing: preview, confidential details and the actions allowed in its status.
+/// One listing. The cover collapses into the app bar with a slight parallax.
+///
+/// * Owner (the API returns the confidential details only to the owner): status banners, the
+///   confidential section, and the actions allowed in the listing's status.
+/// * Investors and buyers: the public preview, a locked teaser of the confidential details and a
+///   "Request access" button (access requests arrive in the next phase).
 class ListingDetailScreen extends StatefulWidget {
   const ListingDetailScreen({super.key, required this.listingId});
 
@@ -25,6 +33,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   late Future<ListingDetail> _detail = _load();
   bool _busy = false;
 
+  static const double _headerHeight = 280;
+
   ListingApi get _api => context.read<ListingApi>();
 
   Future<ListingDetail> _load() => context.read<ListingApi>().get(widget.listingId);
@@ -37,7 +47,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       final updated = await action();
       if (!mounted) return;
       setState(() => _detail = Future.value(updated));
-      showInfoSnack(context, doneMessage);
+      showAppToast(context, doneMessage, role: ToneRole.approved);
     } on ApiException catch (e) {
       if (mounted) showErrorSnack(context, e);
     } finally {
@@ -45,19 +55,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     }
   }
 
-  Future<bool> _confirm(String title, String message, String action) async =>
-      await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(action)),
-          ],
-        ),
-      ) ??
-      false;
+  Future<bool> _confirm(String title, String message, String action, {bool destructive = false, IconData? icon}) =>
+      confirmAction(
+        context,
+        title: title,
+        message: message,
+        confirmLabel: action,
+        destructive: destructive,
+        icon: icon,
+      );
 
   // Changing a live listing (edit, cover, photos) hides it again until an admin re-approves it,
   // so the owner is warned first.
@@ -68,6 +74,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         'After you $what, the listing goes back to admin review and is hidden from investors and buyers '
             'until it is approved again.',
         'Continue',
+        icon: Icons.visibility_off_outlined,
       );
 
   Future<void> _changeCover(Listing listing) async {
@@ -91,7 +98,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   Future<void> _removePhoto(Listing listing, ListingPhoto photo) async {
-    if (!await _confirm('Remove photo?', 'The photo is deleted from this listing.', 'Remove')) return;
+    if (!await _confirm('Remove photo?', 'The photo is deleted from this listing.', 'Remove', destructive: true)) {
+      return;
+    }
     if (!await _confirmLiveChange(listing, 'remove a photo')) return;
     await _run(() => _api.removePhoto(listing.id, photo.id), 'Photo removed');
   }
@@ -102,6 +111,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       'Investors and buyers will be able to see the public preview. Your confidential details stay private. '
           'An administrator will review the listing.',
       'Publish',
+      icon: Icons.publish,
     )) {
       await _run(() => _api.changeStatus(widget.listingId, 'publish'), 'Listing published');
     }
@@ -114,13 +124,21 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   Future<void> _close() async {
-    if (await _confirm('Close listing?', 'A closed listing can no longer be edited or published.', 'Close')) {
+    if (await _confirm(
+      'Close listing?',
+      'A closed listing can no longer be edited or published.',
+      'Close',
+      destructive: true,
+      icon: Icons.lock_outline,
+    )) {
       await _run(() => _api.changeStatus(widget.listingId, 'close'), 'Listing closed');
     }
   }
 
   Future<void> _delete() async {
-    if (!await _confirm('Delete draft?', 'This cannot be undone.', 'Delete')) return;
+    if (!await _confirm('Delete draft?', 'This cannot be undone.', 'Delete', destructive: true, icon: Icons.delete)) {
+      return;
+    }
     setState(() => _busy = true);
     try {
       await _api.delete(widget.listingId);
@@ -140,178 +158,374 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     if (saved == true && mounted) _reload();
   }
 
+  /// Secondary owner actions, in a sheet so the bottom bar keeps one clear primary action.
+  Future<void> _more(Listing l) async {
+    final editable = l.status == 'draft' || l.status == 'published';
+    final action = await showAppBottomSheet<VoidCallback>(
+      context,
+      title: 'Manage listing',
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (editable)
+            SheetOption(
+              icon: Icons.photo_camera_outlined,
+              label: l.coverUrl == null ? 'Add cover image' : 'Change cover image',
+              onTap: () => Navigator.pop(context, () => _changeCover(l)),
+            ),
+          if (l.status == 'published')
+            SheetOption(
+              icon: Icons.visibility_off_outlined,
+              label: 'Unpublish',
+              subtitle: 'Hide it and return to draft',
+              onTap: () => Navigator.pop(context, _unpublish),
+            ),
+          if (editable)
+            SheetOption(
+              icon: Icons.lock_outline,
+              label: 'Close listing',
+              subtitle: 'It can no longer be edited or published',
+              onTap: () => Navigator.pop(context, _close),
+            ),
+          if (l.status == 'draft')
+            SheetOption(
+              icon: Icons.delete_outline,
+              label: 'Delete draft',
+              destructive: true,
+              onTap: () => Navigator.pop(context, _delete),
+            ),
+        ],
+      ),
+    );
+    action?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Listing')),
-      body: FutureBuilder<ListingDetail>(
-        future: _detail,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            final message = snapshot.error is ApiException
-                ? (snapshot.error! as ApiException).message
-                : 'Could not load the listing.';
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(message),
-                  TextButton(onPressed: _reload, child: const Text('Try again')),
-                ],
+    return FutureBuilder<ListingDetail>(
+      future: _detail,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done && !snapshot.hasData) {
+          return const Scaffold(appBar: AppAppBar(), body: _DetailSkeleton());
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: const AppAppBar(),
+            body: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(Gaps.xl),
+                child: ErrorState.from(snapshot.error, fallback: 'Could not load the listing.', onRetry: _reload),
               ),
-            );
-          }
-          final detail = snapshot.data!;
-          final l = detail.listing;
-          final editable = l.status == 'draft' || l.status == 'published';
-          final theme = Theme.of(context);
-
-          return ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              Stack(
-                children: [
-                  ListingCover(url: l.coverUrl, isFunding: l.isFunding, height: 200),
-                  if (editable)
-                    Positioned(
-                      right: 12,
-                      bottom: 12,
-                      child: FilledButton.tonalIcon(
-                        onPressed: _busy ? null : () => _changeCover(l),
-                        icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                        label: Text(l.coverUrl == null ? 'Add cover' : 'Change cover'),
-                      ),
-                    ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ListingChips(l),
-                    const SizedBox(height: 12),
-                    Text(l.title, style: theme.textTheme.headlineSmall),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${l.isFunding ? 'Funding needed' : 'Asking price'}: ${formatAmount(l.askingAmount, l.currency)}',
-                      style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(l.shortDescription),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        Chip(avatar: const Icon(Icons.category_outlined, size: 16), label: Text(l.categoryName)),
-                        Chip(
-                          avatar: const Icon(Icons.flag_outlined, size: 16),
-                          label: Text(projectStages[l.projectStage] ?? l.projectStage),
-                        ),
-                        for (final t in l.techStack) Chip(label: Text(t)),
-                      ],
-                    ),
-                    if (l.photos.isNotEmpty || editable) ...[
-                      const SizedBox(height: 16),
-                      Text('Photos (${l.photos.length}/$maxListingPhotos)', style: theme.textTheme.titleSmall),
-                      const SizedBox(height: 8),
-                      PhotoStrip(
-                        images: [for (final p in l.photos) NetworkImage(p.url ?? '')],
-                        onAdd: editable && !_busy ? () => _addPhoto(l) : null,
-                        onRemove: editable && !_busy ? (i) => _removePhoto(l, l.photos[i]) : null,
-                      ),
-                    ],
-                    if (l.reviewStatus == 'rejected' && l.status == 'draft')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: InfoBanner(
-                          isError: true,
-                          icon: Icons.feedback_outlined,
-                          message:
-                              'An admin did not approve this listing: ${l.reviewNote ?? 'no reason given'}. '
-                              'Edit it and publish again.',
-                        ),
-                      ),
-                    if (l.status == 'published' && l.reviewStatus == 'pending')
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: InfoBanner(
-                          icon: Icons.hourglass_top,
-                          message: 'Waiting for admin review. Investors and buyers will see it once approved.',
-                        ),
-                      ),
-                    if (l.status == 'suspended')
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: InfoBanner(
-                          isError: true,
-                          icon: Icons.block,
-                          message: 'An administrator suspended this listing. It is hidden and cannot be changed.',
-                        ),
-                      ),
-                    if (detail.confidential != null) _ConfidentialCard(detail.confidential!, isFunding: l.isFunding),
-                    const SizedBox(height: 20),
-                    if (_busy) const LinearProgressIndicator(),
-                    ..._actions(l),
-                  ],
-                ),
-              ),
-            ],
+            ),
           );
-        },
+        }
+        final detail = snapshot.data!;
+        final isOwner = detail.confidential != null;
+        return Scaffold(
+          body: RefreshIndicator(
+            onRefresh: () async => _reload(),
+            edgeOffset: _headerHeight,
+            child: CustomScrollView(
+              slivers: [
+                _header(detail.listing, isOwner),
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: Sizes.maxContentWidth),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.lg, Gaps.page, Gaps.xxl),
+                        child: _Body(
+                          detail: detail,
+                          isOwner: isOwner,
+                          busy: _busy,
+                          onAddPhoto: () => _addPhoto(detail.listing),
+                          onRemovePhoto: (p) => _removePhoto(detail.listing, p),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: isOwner ? _ownerBar(detail.listing) : _seekerBar(detail.listing),
+        );
+      },
+    );
+  }
+
+  Widget _header(Listing l, bool isOwner) {
+    final colors = Theme.of(context).colorScheme;
+    return SliverAppBar(
+      pinned: true,
+      stretch: true,
+      expandedHeight: _headerHeight,
+      backgroundColor: colors.surface,
+      foregroundColor: colors.onSurface,
+      leading: Padding(
+        padding: const EdgeInsets.all(Gaps.xs),
+        child: IconButton.filledTonal(
+          tooltip: 'Back',
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back),
+        ),
+      ),
+      actions: [
+        if (isOwner && (l.status == 'draft' || l.status == 'published'))
+          Padding(
+            padding: const EdgeInsets.only(right: Gaps.sm),
+            child: IconButton.filledTonal(
+              tooltip: 'Change cover image',
+              onPressed: _busy ? null : () => _changeCover(l),
+              icon: const Icon(Icons.photo_camera_outlined),
+            ),
+          ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.parallax,
+        stretchModes: const [StretchMode.zoomBackground],
+        background: ListingCover(
+          url: l.coverUrl,
+          isFunding: l.isFunding,
+          height: _headerHeight + MediaQuery.paddingOf(context).top,
+          heroTag: listingHeroTag(l.id),
+        ),
       ),
     );
   }
 
-  List<Widget> _actions(Listing l) {
+  Widget _barFrame(List<Widget> children) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border(top: BorderSide(color: AppColors.of(context).border)),
+    ),
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Gaps.lg, Gaps.md, Gaps.lg, Gaps.md),
+        child: Column(mainAxisSize: MainAxisSize.min, children: children),
+      ),
+    ),
+  );
+
+  /// Owner: the one main action for the status (publish a draft, edit a published listing),
+  /// and "More" for the rest.
+  Widget? _ownerBar(Listing l) {
+    final editable = l.status == 'draft' || l.status == 'published';
+    if (!editable) return null;
     final approved = context.read<SessionController>().user?.isApproved ?? false;
-    final buttons = <Widget>[
-      if (l.status == 'draft') ...[
-        FilledButton.icon(
-          onPressed: _busy || !approved ? null : _publish,
-          icon: const Icon(Icons.publish),
-          label: const Text('Publish'),
-        ),
-        if (!approved)
-          Text(
+    final draft = l.status == 'draft';
+    return _barFrame([
+      if (_busy) ...[const LinearProgressIndicator(), const SizedBox(height: Gaps.sm)],
+      Row(
+        children: [
+          IconButton.outlined(
+            tooltip: 'More actions',
+            onPressed: _busy ? null : () => _more(l),
+            icon: const Icon(Icons.more_horiz),
+          ),
+          const SizedBox(width: Gaps.sm),
+          Expanded(
+            child: AppButton.secondary(
+              label: 'Edit',
+              icon: Icons.edit_outlined,
+              onPressed: _busy ? null : () => _edit(l),
+            ),
+          ),
+          if (draft) ...[
+            const SizedBox(width: Gaps.sm),
+            Expanded(
+              child: AppButton(label: 'Publish', icon: Icons.publish, onPressed: _busy || !approved ? null : _publish),
+            ),
+          ],
+        ],
+      ),
+      if (draft && !approved)
+        Padding(
+          padding: const EdgeInsets.only(top: Gaps.sm),
+          child: Text(
             'You can publish once an admin approves your account.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
+        ),
+    ]);
+  }
+
+  /// Investors and buyers: ask the owner for the confidential details.
+  // TODO: wire in Week 9 (access requests): POST /listings/:id/access-requests and show its status.
+  Widget _seekerBar(Listing l) => _barFrame([
+    AppButton(
+      label: 'Request access',
+      icon: Icons.lock_open_outlined,
+      onPressed: () => showAppToast(
+        context,
+        'Access requests are coming next. You will be able to ask ${l.ownerName.isEmpty ? 'the owner' : l.ownerName} '
+        'for the confidential details here.',
+        role: ToneRole.pending,
+      ),
+    ),
+  ]);
+}
+
+class _Body extends StatelessWidget {
+  const _Body({
+    required this.detail,
+    required this.isOwner,
+    required this.busy,
+    required this.onAddPhoto,
+    required this.onRemovePhoto,
+  });
+
+  final ListingDetail detail;
+  final bool isOwner;
+  final bool busy;
+  final VoidCallback onAddPhoto;
+  final ValueChanged<ListingPhoto> onRemovePhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final app = AppColors.of(context);
+    final l = detail.listing;
+    final tone = app.listingType(isFunding: l.isFunding);
+    final editable = isOwner && (l.status == 'draft' || l.status == 'published');
+    final equity = detail.confidential?.equityOfferedPercent;
+
+    final sections = <Widget>[
+      Wrap(
+        spacing: Gaps.sm - Gaps.xxs,
+        runSpacing: Gaps.sm - Gaps.xxs,
+        children: [
+          ListingTypeChip(isFunding: l.isFunding),
+          if (isOwner) StatusChip.status(listingStatus(l)),
+          if (l.isSample) const StatusChip('Sample', icon: Icons.science_outlined),
+        ],
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: Gaps.md),
+        child: Semantics(header: true, child: Text(l.title, style: theme.textTheme.headlineMedium)),
+      ),
+      if (!isOwner && l.ownerName.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: Gaps.md),
+          child: OwnerChip(name: l.ownerName, subtitle: 'Project owner'),
+        ),
+      // the money, front and centre
+      Padding(
+        padding: const EdgeInsets.only(top: Gaps.lg),
+        child: AppCard(
+          variant: AppCardVariant.tinted,
+          role: l.isFunding ? ToneRole.funding : ToneRole.sale,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.isFunding ? 'FUNDING NEEDED' : 'ASKING PRICE',
+                      style: theme.textTheme.overline.copyWith(color: tone.fg),
+                    ),
+                    const SizedBox(height: Gaps.xs),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(formatAmount(l.askingAmount, l.currency), style: theme.textTheme.numeric(size: 26)),
+                    ),
+                  ],
+                ),
+              ),
+              if (l.isFunding && equity != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('EQUITY', style: theme.textTheme.overline.copyWith(color: tone.fg)),
+                    const SizedBox(height: Gaps.xs),
+                    Text('${equity % 1 == 0 ? equity.toInt() : equity}%', style: theme.textTheme.numeric(size: 26)),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+      ..._statusBanners(l),
+      const SectionHeader('About the project'),
+      Text(l.shortDescription, style: theme.textTheme.bodyLarge),
+      const SizedBox(height: Gaps.lg),
+      Wrap(
+        spacing: Gaps.sm,
+        runSpacing: Gaps.sm,
+        children: [
+          CategoryChip(label: l.categoryName),
+          StatusChip(projectStages[l.projectStage] ?? l.projectStage, icon: Icons.flag_outlined),
+          for (final t in l.techStack) StatusChip(t, icon: Icons.memory),
+        ],
+      ),
+      if (l.photos.isNotEmpty || editable) ...[
+        SectionHeader('Photos', subtitle: '${l.photos.length} of $maxListingPhotos'),
+        PhotoStrip(
+          images: [for (final p in l.photos) NetworkImage(p.url ?? '')],
+          onAdd: editable && !busy ? onAddPhoto : null,
+          onRemove: editable && !busy ? (i) => onRemovePhoto(l.photos[i]) : null,
+        ),
       ],
-      if (l.status == 'draft' || l.status == 'published')
-        OutlinedButton.icon(
-          onPressed: _busy ? null : () => _edit(l),
-          icon: const Icon(Icons.edit_outlined),
-          label: const Text('Edit'),
+      if (detail.confidential != null)
+        _ConfidentialCard(detail.confidential!, isFunding: l.isFunding)
+      else
+        const _LockedTeaser(),
+      const DisclaimerBanner(margin: EdgeInsets.only(top: Gaps.xl)),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [for (final (i, s) in sections.indexed) s.entrance(context, index: i)],
+    );
+  }
+
+  List<Widget> _statusBanners(Listing l) {
+    Widget banner(AppBanner b) => Padding(
+      padding: const EdgeInsets.only(top: Gaps.lg),
+      child: b,
+    );
+    return [
+      if (isOwner && l.reviewStatus == 'rejected' && l.status == 'draft')
+        banner(
+          AppBanner(
+            role: ToneRole.rejected,
+            icon: Icons.feedback_outlined,
+            title: 'Not approved',
+            message:
+                'An admin did not approve this listing: ${l.reviewNote ?? 'no reason given'}. '
+                'Edit it and publish again.',
+            margin: EdgeInsets.zero,
+          ),
         ),
-      if (l.status == 'published')
-        OutlinedButton.icon(
-          onPressed: _busy ? null : _unpublish,
-          icon: const Icon(Icons.visibility_off_outlined),
-          label: const Text('Unpublish'),
+      if (isOwner && l.status == 'published' && l.reviewStatus == 'pending')
+        banner(
+          const AppBanner(
+            role: ToneRole.pending,
+            icon: Icons.hourglass_top,
+            title: 'Waiting for admin review',
+            message: 'Investors and buyers will see it once it is approved.',
+            margin: EdgeInsets.zero,
+          ),
         ),
-      if (l.status == 'draft' || l.status == 'published')
-        TextButton.icon(
-          onPressed: _busy ? null : _close,
-          icon: const Icon(Icons.lock_outline),
-          label: const Text('Close listing'),
-        ),
-      if (l.status == 'draft')
-        TextButton.icon(
-          onPressed: _busy ? null : _delete,
-          icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
-          label: Text('Delete draft', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      if (l.status == 'suspended')
+        banner(
+          const AppBanner(
+            role: ToneRole.rejected,
+            icon: Icons.block,
+            title: 'Suspended',
+            message: 'An administrator suspended this listing. It is hidden and cannot be changed.',
+            margin: EdgeInsets.zero,
+          ),
         ),
     ];
-    return [for (final b in buttons) Padding(padding: const EdgeInsets.only(bottom: 8), child: b)];
   }
 }
 
+/// The owner's confidential details, set apart with a lock and a tint.
 class _ConfidentialCard extends StatelessWidget {
   const _ConfidentialCard(this.confidential, {required this.isFunding});
 
@@ -321,37 +535,112 @@ class _ConfidentialCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final equity = confidential.equityOfferedPercent;
+    final tone = AppColors.of(context).verified;
     final rows = <MapEntry<String, String>>[
-      if (isFunding && equity != null) MapEntry('Equity offered', '${equity % 1 == 0 ? equity.toInt() : equity}%'),
       for (final e in confidentialLabels.entries)
         if ((confidential.text(e.key) ?? '').isNotEmpty) MapEntry(e.value, confidential.text(e.key)!),
     ];
-    return Card(
-      margin: const EdgeInsets.only(top: 20),
-      color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.4),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.only(top: Gaps.xl),
+      child: AppCard(
+        variant: AppCardVariant.tinted,
+        role: ToneRole.verified,
+        padding: const EdgeInsets.all(Gaps.lg + Gaps.xs),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.lock_outline, color: theme.colorScheme.tertiary),
-                const SizedBox(width: 8),
-                Text('Confidential details', style: theme.textTheme.titleMedium),
+                Icon(Icons.lock_outline, color: tone.fg),
+                const SizedBox(width: Gaps.sm),
+                Expanded(child: Text('Confidential details', style: theme.textTheme.titleLarge)),
               ],
             ),
-            Text('Only you can see this section.', style: theme.textTheme.bodySmall),
+            const SizedBox(height: Gaps.xs),
+            Text(
+              'Only you can see this. Approved investors or buyers will, once you grant access.',
+              style: theme.textTheme.bodySmall,
+            ),
             for (final row in rows) ...[
-              const SizedBox(height: 12),
-              Text(row.key, style: theme.textTheme.labelLarge),
-              const SizedBox(height: 2),
-              Text(row.value),
+              const SizedBox(height: Gaps.lg),
+              Text(row.key.toUpperCase(), style: theme.textTheme.overline.copyWith(color: tone.fg)),
+              const SizedBox(height: Gaps.xs),
+              Text(row.value, style: theme.textTheme.bodyMedium),
             ],
           ],
         ),
       ),
     );
   }
+}
+
+/// What investors and buyers see instead of the confidential details: blurred-looking lines
+/// behind a lock, and what they get once the owner approves their request.
+class _LockedTeaser extends StatelessWidget {
+  const _LockedTeaser();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tone = AppColors.of(context).verified;
+    return Padding(
+      padding: const EdgeInsets.only(top: Gaps.xl),
+      child: AppCard(
+        padding: const EdgeInsets.all(Gaps.lg + Gaps.xs),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(Gaps.sm),
+                  decoration: BoxDecoration(color: tone.bg, shape: BoxShape.circle),
+                  child: Icon(Icons.lock_outline, color: tone.fg, size: IconSizes.md),
+                ),
+                const SizedBox(width: Gaps.md),
+                Expanded(child: Text('Confidential details', style: theme.textTheme.titleLarge)),
+              ],
+            ),
+            const SizedBox(height: Gaps.lg),
+            const ExcludeSemantics(child: SkeletonLines(lines: 4, lineHeight: 10)),
+            const SizedBox(height: Gaps.lg),
+            Text(
+              'Full description, problem, business model, financials and ownership. The owner shares them '
+              'after approving your access request.',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) => const Skeleton(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SkeletonBox(height: 220, radius: 0),
+        Padding(
+          padding: EdgeInsets.all(Gaps.page),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox(width: 140, height: 24, radius: Radii.pill),
+              SizedBox(height: Gaps.lg),
+              SkeletonBox(width: 260, height: 26),
+              SizedBox(height: Gaps.lg),
+              SkeletonBox(height: 72, radius: Radii.lg),
+              SizedBox(height: Gaps.xl),
+              SkeletonLines(lines: 4),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }

@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/network/api_exception.dart';
+import '../../../core/motion/entrance.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/widgets.dart';
 import '../data/listing_api.dart';
 import '../data/listing_models.dart';
 import '../widgets/listing_widgets.dart';
 
-/// The owner's listings with their status; entry point for creating new ones.
+/// The owner's listings with their status, filterable by status; entry point for creating new ones.
+/// Two columns on tablets.
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
 
@@ -18,15 +19,25 @@ class MyListingsScreen extends StatefulWidget {
   State<MyListingsScreen> createState() => _MyListingsScreenState();
 }
 
+/// Status filters; null = all.
+const _filters = <(String, Set<AppStatus>?)>[
+  ('All', null),
+  ('Live', {AppStatus.live}),
+  ('In review', {AppStatus.inReview}),
+  ('Drafts', {AppStatus.draft, AppStatus.rejected, AppStatus.needsInfo}),
+  ('Closed', {AppStatus.closed, AppStatus.suspended}),
+];
+
 class _MyListingsScreenState extends State<MyListingsScreen> {
   late Future<List<Listing>> _listings = _load();
+  int _filter = 0;
 
   Future<List<Listing>> _load() => context.read<ListingApi>().mine();
 
   Future<void> _reload() async {
     final next = _load();
     setState(() => _listings = next);
-    await next;
+    await next.catchError((_) => <Listing>[]);
   }
 
   Future<void> _open(String location) async {
@@ -34,10 +45,13 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     if (mounted) _reload();
   }
 
+  /// Error and empty states sit in a scrollable list, so pull-to-refresh still works.
+  Widget _scrollable(Widget child) => ListView(padding: const EdgeInsets.all(Gaps.xl), children: [child]);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My listings')),
+      appBar: const AppAppBar(title: 'My listings', large: true),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _open(Routes.newListing),
         icon: const Icon(Icons.add),
@@ -45,132 +59,105 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _reload,
-        child: FutureBuilder<List<Listing>>(
+        child: AsyncView<List<Listing>>(
           future: _listings,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return ListView(
-                padding: const EdgeInsets.all(Gaps.lg),
-                children: const [
-                  ListingCardSkeleton(),
-                  SizedBox(height: Gaps.md),
-                  ListingCardSkeleton(),
-                ],
-              );
-            }
-            // ListViews below so pull-to-refresh still works
-            if (snapshot.hasError) {
-              final message = snapshot.error is ApiException
-                  ? (snapshot.error! as ApiException).message
-                  : 'Could not load listings.';
-              return ListView(
-                padding: const EdgeInsets.all(Gaps.xl),
-                children: [
-                  EmptyState(
-                    icon: Icons.cloud_off_outlined,
-                    title: 'Something went wrong',
-                    message: message,
-                    action: OutlinedButton.icon(
-                      onPressed: _reload,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Try again'),
+          loading: const ListingSkeletonList(),
+          onRetry: _reload,
+          errorFallback: 'Could not load listings.',
+          wrap: _scrollable,
+          isEmpty: (l) => l.isEmpty,
+          empty: EmptyState(
+            icon: Icons.add_business_outlined,
+            title: 'No listings yet',
+            message:
+                'List your project as "Seeking Funding" to reach investors, or "Available for Purchase" '
+                'to reach buyers.',
+            action: AppButton(
+              label: 'Create your first listing',
+              icon: Icons.add,
+              expand: false,
+              onPressed: () => _open(Routes.newListing),
+            ),
+          ),
+          builder: (context, listings) {
+            final statuses = _filters[_filter].$2;
+            final shown = statuses == null
+                ? listings
+                : listings.where((l) => statuses.contains(listingStatus(l))).toList();
+            return CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _filterBar(listings)),
+                if (shown.isEmpty)
+                  SliverToBoxAdapter(
+                    child: EmptyState(
+                      icon: Icons.filter_alt_off_outlined,
+                      role: ToneRole.neutral,
+                      title: 'Nothing here',
+                      message: 'No listings with this status.',
+                      action: AppButton.ghost(label: 'Show all', onPressed: () => setState(() => _filter = 0)),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.sm, Gaps.page, Gaps.xxxl * 2),
+                    sliver: SliverLayoutBuilder(
+                      builder: (context, constraints) {
+                        Widget card(BuildContext context, int i) => ListingCard(
+                          listing: shown[i],
+                          showStatus: true,
+                          showOwner: false,
+                          onTap: () => _open(Routes.listing(shown[i].id)),
+                        ).entrance(context, index: i);
+                        // phones: a list, each card as tall as it needs; tablets: two columns
+                        if (constraints.crossAxisExtent < Sizes.twoColumnBreakpoint) {
+                          return SliverList.separated(
+                            itemCount: shown.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: Gaps.lg),
+                            itemBuilder: card,
+                          );
+                        }
+                        return SliverGrid.builder(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: Gaps.lg,
+                            crossAxisSpacing: Gaps.lg,
+                            mainAxisExtent: _cardHeight(context),
+                          ),
+                          itemCount: shown.length,
+                          itemBuilder: card,
+                        );
+                      },
                     ),
                   ),
-                ],
-              );
-            }
-            final listings = snapshot.data!;
-            if (listings.isEmpty) {
-              return ListView(
-                padding: const EdgeInsets.all(Gaps.xl),
-                children: [
-                  EmptyState(
-                    icon: Icons.add_business_outlined,
-                    title: 'No listings yet',
-                    message:
-                        'List your project as "Seeking Funding" to reach investors, or "Available for Purchase" '
-                        'to reach buyers.',
-                    action: FilledButton.icon(
-                      onPressed: () => _open(Routes.newListing),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create your first listing'),
-                    ),
-                  ),
-                ],
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-              itemCount: listings.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, i) =>
-                  _ListingCard(listings[i], onTap: () => _open(Routes.listing(listings[i].id))),
+              ],
             );
           },
         ),
       ),
     );
   }
-}
 
-class _ListingCard extends StatelessWidget {
-  const _ListingCard(this.listing, {required this.onTap});
+  /// Cards in a grid need a fixed height; it grows with the text size so nothing is cut off.
+  double _cardHeight(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    return ListingCard.coverHeight + 240 * scale;
+  }
 
-  final Listing listing;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListingCover(url: listing.coverUrl, isFunding: listing.isFunding, height: 120),
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ListingChips(listing),
-                  const SizedBox(height: 8),
-                  Text(listing.title, style: theme.textTheme.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
-                  Text(
-                    listing.shortDescription,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: Gaps.md),
-                  Row(
-                    children: [
-                      Text(
-                        formatAmount(listing.askingAmount, listing.currency),
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(Icons.category_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
-                      const SizedBox(width: Gaps.xs),
-                      Flexible(
-                        child: Text(
-                          listing.categoryName,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+  Widget _filterBar(List<Listing> listings) {
+    int count(Set<AppStatus>? statuses) =>
+        statuses == null ? listings.length : listings.where((l) => statuses.contains(listingStatus(l))).length;
+    return SizedBox(
+      height: Sizes.tapTarget + Gaps.md,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: Gaps.page, vertical: Gaps.xs),
+        itemCount: _filters.length,
+        separatorBuilder: (_, _) => const SizedBox(width: Gaps.sm),
+        itemBuilder: (context, i) => CategoryChip(
+          label: '${_filters[i].$1} · ${count(_filters[i].$2)}',
+          selected: _filter == i,
+          onSelected: (_) => setState(() => _filter = i),
         ),
       ),
     );
