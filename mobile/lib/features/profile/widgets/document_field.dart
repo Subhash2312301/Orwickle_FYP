@@ -5,7 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_widgets.dart';
-import '../../auth/widgets/form_widgets.dart';
+import '../../../core/widgets/widgets.dart';
 import '../data/profile_models.dart';
 
 /// One verification document (e.g. CNIC front). Picking a photo uploads it straight away;
@@ -42,6 +42,8 @@ class _DocumentTile extends StatefulWidget {
 class _DocumentTileState extends State<_DocumentTile> {
   bool _busy = false;
 
+  static const double _thumb = 56;
+
   Future<void> _pick() async {
     final choice = await pickImage(context, canRemove: widget.state.value != null, allowPdf: true);
     if (choice == null || !mounted) return;
@@ -55,7 +57,7 @@ class _DocumentTileState extends State<_DocumentTile> {
           widget.state.didChange(null);
       }
     } on ApiException catch (e) {
-      if (mounted) showErrorSnack(context, e);
+      if (mounted) showErrorToast(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -63,55 +65,93 @@ class _DocumentTileState extends State<_DocumentTile> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final app = AppColors.of(context);
     final doc = widget.state.value;
     final hasError = widget.state.hasError;
+    // labels are written to follow "Upload …", so start the title with a capital
+    final title = widget.label[0].toUpperCase() + widget.label.substring(1);
 
     final Widget preview = doc == null
         ? Icon(Icons.add_a_photo_outlined, color: colors.primary)
         : doc.isPdf || doc.url == null
         ? Icon(Icons.picture_as_pdf_outlined, color: colors.primary)
-        : ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Image.network(
-              doc.url!,
-              width: 56,
-              height: 40,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Icon(Icons.description_outlined, color: colors.primary),
-            ),
+        : Image.network(
+            doc.url!,
+            width: _thumb,
+            height: _thumb,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Icon(Icons.description_outlined, color: colors.primary),
           );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: Gaps.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Material(
-            color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: hasError ? colors.error : colors.outlineVariant),
+          AnimatedContainer(
+            duration: Motion.of(context, Motion.base),
+            decoration: BoxDecoration(
+              color: doc == null ? colors.surface : app.approved.bg.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(Radii.lg),
+              border: Border.all(color: hasError ? colors.error : (doc == null ? app.border : app.approved.fg)),
             ),
-            child: ListTile(
-              onTap: _busy ? null : _pick,
-              leading: SizedBox(width: 56, child: Center(child: preview)),
-              // labels are written to follow "Upload …", so start the title with a capital
-              title: Text(widget.label[0].toUpperCase() + widget.label.substring(1)),
-              subtitle: Text(doc == null ? 'Tap to upload a photo or PDF' : 'Uploaded · tap to replace'),
-              trailing: _busy
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Icon(
-                      doc == null ? Icons.upload_outlined : Icons.check_circle,
-                      color: doc == null ? null : AppColors.of(context).success,
-                    ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: _busy ? null : _pick,
+                borderRadius: BorderRadius.circular(Radii.lg),
+                child: Padding(
+                  padding: const EdgeInsets.all(Gaps.md),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: _thumb,
+                        height: _thumb,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: colors.primaryContainer,
+                          borderRadius: BorderRadius.circular(Radii.md),
+                        ),
+                        child: Center(child: preview),
+                      ),
+                      const SizedBox(width: Gaps.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: theme.textTheme.titleSmall),
+                            const SizedBox(height: Gaps.xxs),
+                            Text(
+                              doc == null ? 'Tap to upload a photo or PDF' : 'Uploaded · tap to replace',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: Gaps.sm),
+                      AnimatedSwitcher(
+                        duration: Motion.of(context, Motion.fast),
+                        child: _busy
+                            ? const SizedBox.square(
+                                key: ValueKey('busy'),
+                                dimension: IconSizes.md,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(
+                                doc == null ? Icons.upload_outlined : Icons.check_circle,
+                                key: ValueKey(doc == null),
+                                color: doc == null ? colors.onSurfaceVariant : app.approved.fg,
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-          if (hasError)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, left: 12),
-              child: Text(widget.state.errorText!, style: TextStyle(color: colors.error, fontSize: 12)),
-            ),
+          FieldError(widget.state.errorText),
         ],
       ),
     );
@@ -125,7 +165,7 @@ class PrivacyNote extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => InfoBanner(icon: Icons.privacy_tip_outlined, message: text);
+  Widget build(BuildContext context) => AppBanner(icon: Icons.lock_outline, role: ToneRole.info, message: text);
 }
 
 /// Types 4210112345671 as 42101-1234567-1 while the user enters a CNIC.

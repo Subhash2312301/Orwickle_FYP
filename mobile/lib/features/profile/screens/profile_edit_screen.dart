@@ -7,7 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
-import '../../../core/widgets/avatar.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../../core/widgets/image_widgets.dart';
 import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
@@ -271,16 +271,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     String? hint,
     List<TextInputFormatter>? formatters,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: TextFormField(
+    padding: const EdgeInsets.only(bottom: Gaps.lg),
+    child: AppTextField(
       controller: _ctl(key),
+      label: label,
+      hint: hint,
+      icon: icon,
       validator: validator,
-      forceErrorText: _serverErrors[key],
+      serverError: _serverErrors[key],
       keyboardType: keyboard,
       inputFormatters: formatters,
       maxLines: maxLines,
-      textInputAction: maxLines > 1 ? TextInputAction.newline : TextInputAction.next,
-      decoration: InputDecoration(labelText: label, hintText: hint, prefixIcon: icon == null ? null : Icon(icon)),
+      textCapitalization: maxLines > 1 ? TextCapitalization.sentences : TextCapitalization.none,
     ),
   );
 
@@ -293,15 +295,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     required String requiredError,
     IconData icon = Icons.badge_outlined,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: DropdownButtonFormField<String>(
-      initialValue: options.containsKey(value) ? value : null,
-      isExpanded: true,
-      items: [for (final e in options.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+    padding: const EdgeInsets.only(bottom: Gaps.lg),
+    child: AppDropdownField<String>(
+      label: label,
+      value: value,
+      options: options,
       onChanged: (v) => setState(() => onChanged(v)),
-      validator: (v) => v == null ? requiredError : null,
-      forceErrorText: _serverErrors[errorKey],
-      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      requiredError: requiredError,
+      serverError: _serverErrors[errorKey],
+      icon: icon,
     ),
   );
 
@@ -359,30 +361,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final session = context.watch<SessionController>();
     return [
       if (widget.setup)
-        InfoBanner(
+        AppBanner(
           icon: Icons.waving_hand_outlined,
-          message:
-              'Welcome, ${session.user?.fullName ?? ''}! Complete your profile in four short steps — an admin '
-              'reviews it before you get full access.',
+          title: 'Welcome, ${session.user?.fullName.split(' ').first ?? ''}!',
+          message: 'Complete your profile in four short steps. An admin reviews it before you get full access.',
         ),
-      Center(
-        child: Stack(
-          children: [
-            AppAvatar(size: 96, url: _avatarUrl, initials: session.user?.initials ?? '?'),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: IconButton.filled(
-                tooltip: 'Change photo',
-                onPressed: _avatarBusy ? null : _changeAvatar,
-                icon: _avatarBusy
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.photo_camera_outlined, size: 20),
-              ),
-            ),
-          ],
-        ),
-      ),
+      AvatarPicker(url: _avatarUrl, initials: session.user?.initials ?? '?', busy: _avatarBusy, onTap: _changeAvatar),
       const SizedBox(height: Gaps.xl),
       _text(
         'fullName',
@@ -401,7 +385,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   ];
 
   /// Shown on the last step while the documents depend on a choice made in an earlier step.
-  Widget _chooseFirst(String text) => InfoBanner(icon: Icons.arrow_back, message: text);
+  Widget _chooseFirst(String text) => AppBanner(icon: Icons.arrow_back, role: ToneRole.pending, message: text);
 
   List<Widget> _ownerAbout() => [
     _text(
@@ -661,7 +645,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     if (_type == null) _chooseFirst('Choose your investor type in step 2 to see which other documents you need.'),
   ];
 
-  /// Two or more mutually exclusive options as a segmented button that takes part in form validation.
+  /// Two or more mutually exclusive options as side-by-side tiles that take part in form validation.
   Widget _choice(
     String? value,
     Map<String, String> options,
@@ -673,33 +657,33 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     initialValue: value,
     validator: (_) => value == null ? requiredError : null,
     forceErrorText: _serverErrors[errorKey],
-    builder: (state) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SegmentedButton<String>(
-          emptySelectionAllowed: true,
-          segments: [
-            for (final e in options.entries)
-              ButtonSegment(
-                value: e.key,
-                label: Text(e.value, textAlign: TextAlign.center),
-                icon: Icon(icons[e.key]),
-              ),
-          ],
-          selected: {?value},
-          onSelectionChanged: (s) {
-            final picked = s.isEmpty ? null : s.first;
-            setState(() => onChanged(picked));
-            state.didChange(picked);
-          },
-        ),
-        if (state.hasError)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 12),
-            child: Text(state.errorText!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12)),
+    builder: (state) => Padding(
+      padding: const EdgeInsets.only(bottom: Gaps.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              for (final (i, e) in options.entries.indexed) ...[
+                if (i > 0) const SizedBox(width: Gaps.md),
+                Expanded(
+                  child: ChoiceTile(
+                    label: e.value,
+                    icon: icons[e.key]!,
+                    selected: value == e.key,
+                    hasError: state.hasError,
+                    onTap: () {
+                      setState(() => onChanged(e.key));
+                      state.didChange(e.key);
+                    },
+                  ),
+                ),
+              ],
+            ],
           ),
-        const SizedBox(height: 16),
-      ],
+          FieldError(state.errorText),
+        ],
+      ),
     ),
   );
 
@@ -713,8 +697,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       errorKey: 'buyerType',
       requiredError: 'Choose a buyer type',
     ),
-    Text('Are you buying as a student or for a company?', style: Theme.of(context).textTheme.bodyMedium),
-    const SizedBox(height: 8),
+    Text('Are you buying as a student or for a company?', style: Theme.of(context).textTheme.titleSmall),
+    const SizedBox(height: Gaps.sm),
     _choice(
       _affiliation,
       affiliations,
@@ -747,7 +731,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       _document('university_id_front', 'the front of your university ID card'),
       _document('university_id_back', 'the back of your university ID card'),
     ] else if (_affiliation == 'company')
-      const InfoBanner(icon: Icons.check_circle_outline, message: 'No documents are needed when you buy for a company.')
+      const AppBanner(
+        icon: Icons.check_circle_outline,
+        role: ToneRole.approved,
+        message: 'No documents are needed when you buy for a company.',
+      )
     else
       _chooseFirst('Choose University or Company in step 2 first.'),
   ];
@@ -755,9 +743,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppAppBar(
         automaticallyImplyLeading: !widget.setup,
-        title: Text(widget.setup ? 'Complete your profile' : 'Edit profile'),
+        title: widget.setup ? 'Complete your profile' : 'Edit profile',
         actions: [
           if (widget.setup)
             IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout), onPressed: () => confirmLogout(context)),
@@ -766,23 +754,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       body: FutureBuilder<void>(
         future: _loading,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          if (snapshot.connectionState != ConnectionState.done) return const _FormSkeleton();
           if (snapshot.hasError) {
-            final message = snapshot.error is ApiException
-                ? (snapshot.error! as ApiException).message
-                : 'Could not load your profile.';
             return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(message, textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    FilledButton(onPressed: () => setState(() => _loading = _load()), child: const Text('Try again')),
-                  ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(Gaps.xl),
+                child: ErrorState.from(
+                  snapshot.error,
+                  fallback: 'Could not load your profile.',
+                  onRetry: () => setState(() => _loading = _load()),
                 ),
               ),
             );
@@ -791,15 +771,27 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           final isLast = _step == steps.length - 1;
           return Column(
             children: [
-              _StepHeader(steps: steps, current: _step, onTap: _goTo),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Gaps.page, 0, Gaps.page, Gaps.sm),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: Sizes.maxContentWidth),
+                    child: StepperProgress(
+                      steps: [for (final s in steps) s.title],
+                      current: _step,
+                      onStepTapped: _goTo,
+                    ),
+                  ),
+                ),
+              ),
               Expanded(
                 // every step stays built (only the current one is visible), so saving can check them all
                 child: SingleChildScrollView(
                   controller: _scroll,
-                  padding: const EdgeInsets.fromLTRB(Gaps.xl, Gaps.sm, Gaps.xl, Gaps.xl),
+                  padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.sm, Gaps.page, Gaps.xl),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 560),
+                      constraints: const BoxConstraints(maxWidth: Sizes.maxContentWidth),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -833,9 +825,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   /// Editing: Save is always there, so a small change does not need all four steps.
   Widget _bottomBar(bool isLast) {
     final saveLabel = widget.setup ? 'Submit for review' : 'Save';
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      elevation: 3,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: AppColors.of(context).border)),
+      ),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -844,29 +838,21 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             children: [
               if (_step > 0) ...[
                 Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-                    onPressed: () => _goTo(_step - 1),
-                    child: const Text('Back'),
-                  ),
+                  child: AppButton.secondary(label: 'Back', onPressed: () => _goTo(_step - 1)),
                 ),
                 const SizedBox(width: Gaps.md),
               ],
               if (!widget.setup && !isLast) ...[
                 Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-                    onPressed: _next,
-                    child: const Text('Next'),
-                  ),
+                  child: AppButton.secondary(label: 'Next', onPressed: _next),
                 ),
                 const SizedBox(width: Gaps.md),
               ],
               Expanded(
                 flex: 2,
                 child: widget.setup && !isLast
-                    ? FilledButton(onPressed: _next, child: const Text('Next'))
-                    : LoadingButton(label: saveLabel, loading: _saving, onPressed: _save),
+                    ? AppButton(label: 'Next', icon: Icons.arrow_forward, onPressed: _next)
+                    : AppButton(label: saveLabel, loading: _saving, onPressed: _save),
               ),
             ],
           ),
@@ -883,62 +869,141 @@ class _ProfileStep {
   final List<Widget> fields;
 }
 
-/// "Step 2 of 4", a progress bar and the step names; tapping a name opens that step.
-class _StepHeader extends StatelessWidget {
-  const _StepHeader({required this.steps, required this.current, required this.onTap});
+/// Placeholder while the profile and categories load: stepper, avatar and a few fields.
+class _FormSkeleton extends StatelessWidget {
+  const _FormSkeleton();
 
-  final List<_ProfileStep> steps;
-  final int current;
-  final ValueChanged<int> onTap;
+  @override
+  Widget build(BuildContext context) => const Skeleton(
+    child: Padding(
+      padding: EdgeInsets.all(Gaps.page),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SkeletonBox(height: Gaps.xs),
+          SizedBox(height: Gaps.xxl),
+          Center(child: SkeletonBox.circle(size: 96)),
+          SizedBox(height: Gaps.xl),
+          SkeletonBox(height: Sizes.inputHeight, radius: Radii.md),
+          SizedBox(height: Gaps.lg),
+          SkeletonBox(height: Sizes.inputHeight, radius: Radii.md),
+          SizedBox(height: Gaps.lg),
+          SkeletonBox(height: Sizes.inputHeight * 2, radius: Radii.md),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Large avatar with a camera badge; tapping it opens the photo sheet. The photo is saved at once.
+class AvatarPicker extends StatelessWidget {
+  const AvatarPicker({super.key, required this.url, required this.initials, required this.busy, required this.onTap});
+
+  final String? url;
+  final String initials;
+  final bool busy;
+  final VoidCallback onTap;
+
+  static const double _size = 104;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Gaps.xl, 0, Gaps.xl, Gaps.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Step ${current + 1} of ${steps.length}',
-            style: theme.textTheme.labelLarge?.copyWith(color: colors.primary),
-          ),
-          const SizedBox(height: Gaps.sm),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(Radii.sm),
-            child: LinearProgressIndicator(
-              value: (current + 1) / steps.length,
-              minHeight: 6,
-              backgroundColor: colors.primary.withValues(alpha: 0.15),
-            ),
-          ),
-          const SizedBox(height: Gaps.xs),
-          Row(
-            children: [
-              for (var i = 0; i < steps.length; i++)
-                Expanded(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(Radii.sm),
-                    onTap: () => onTap(i),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: Gaps.sm),
-                      child: Text(
-                        steps[i].title,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: i == current ? colors.primary : colors.onSurfaceVariant,
-                          fontWeight: i == current ? FontWeight.w700 : FontWeight.w500,
-                        ),
-                      ),
+    return Column(
+      children: [
+        Semantics(
+          button: true,
+          label: url == null ? 'Add a profile photo' : 'Change profile photo',
+          excludeSemantics: true,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: busy ? null : onTap,
+            child: Stack(
+              children: [
+                AppAvatar(size: _size, url: url, initials: initials),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: Sizes.tapTarget - Gaps.sm,
+                    height: Sizes.tapTarget - Gaps.sm,
+                    decoration: BoxDecoration(
+                      color: colors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: colors.surface, width: Sizes.focusRing + 1),
                     ),
+                    child: busy
+                        ? Padding(
+                            padding: const EdgeInsets.all(Gaps.md - Gaps.xxs),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: colors.onPrimary),
+                          )
+                        : Icon(Icons.photo_camera_outlined, size: IconSizes.md, color: colors.onPrimary),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
-        ],
+        ),
+        const SizedBox(height: Gaps.sm),
+        Text(url == null ? 'Add a photo' : 'Tap to change photo', style: theme.textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+/// One option of a two-way choice (student / independent, university / company).
+class ChoiceTile extends StatelessWidget {
+  const ChoiceTile({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    this.hasError = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final bool hasError;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final app = AppColors.of(context);
+    final border = selected ? colors.primary : (hasError ? colors.error : app.border);
+    return Semantics(
+      selected: selected,
+      button: true,
+      inMutuallyExclusiveGroup: true,
+      child: AnimatedContainer(
+        duration: Motion.of(context, Motion.base),
+        curve: Motion.standard,
+        decoration: BoxDecoration(
+          color: selected ? colors.primaryContainer : colors.surface,
+          borderRadius: BorderRadius.circular(Radii.lg),
+          border: Border.all(color: border, width: selected ? Sizes.focusRing : Sizes.hairline),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(Radii.lg),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Gaps.md, vertical: Gaps.lg),
+              child: Column(
+                children: [
+                  Icon(icon, color: selected ? colors.primary : colors.onSurfaceVariant),
+                  const SizedBox(height: Gaps.sm),
+                  Text(label, textAlign: TextAlign.center, style: theme.textTheme.titleSmall),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

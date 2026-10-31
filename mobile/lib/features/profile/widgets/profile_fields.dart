@@ -1,28 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/widgets.dart';
+
 import '../data/profile_models.dart';
 
-/// Section title inside the profile form.
+/// Section title inside a form.
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.title, {super.key, this.subtitle});
+  const SectionTitle(this.title, {super.key, this.subtitle, this.leading});
 
   final String title;
   final String? subtitle;
+  final Widget? leading;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
-          if (subtitle != null) Text(subtitle!, style: theme.textTheme.bodySmall),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SectionHeader(
+    title,
+    subtitle: subtitle,
+    leading: leading,
+    padding: const EdgeInsets.only(top: Gaps.xl, bottom: Gaps.md),
+  );
 }
 
 /// Short text tags as removable chips plus an input to add more — owner skills, listing tech stack.
@@ -115,10 +112,10 @@ class _TagsInputState extends State<_TagsInput> {
             suffixIcon: IconButton(tooltip: 'Add', icon: const Icon(Icons.add), onPressed: _add),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: Gaps.sm),
         Wrap(
-          spacing: 8,
-          runSpacing: 4,
+          spacing: Gaps.sm,
+          runSpacing: Gaps.xs,
           children: [
             for (final skill in skills)
               InputChip(label: Text(skill), onDeleted: () => _set([...skills]..remove(skill))),
@@ -146,15 +143,15 @@ class RangeChipsField extends FormField<AmountRange?> {
          builder: (state) {
            final theme = Theme.of(state.context);
            return Padding(
-             padding: const EdgeInsets.only(bottom: 16),
+             padding: const EdgeInsets.only(bottom: Gaps.lg),
              child: Column(
                crossAxisAlignment: CrossAxisAlignment.start,
                children: [
-                 Text(label, style: theme.textTheme.bodyMedium),
-                 const SizedBox(height: 8),
+                 Text(label, style: theme.textTheme.titleSmall),
+                 const SizedBox(height: Gaps.sm),
                  Wrap(
-                   spacing: 8,
-                   runSpacing: 4,
+                   spacing: Gaps.sm,
+                   runSpacing: Gaps.xs,
                    children: [
                      for (final range in amountRanges)
                        ChoiceChip(
@@ -168,11 +165,7 @@ class RangeChipsField extends FormField<AmountRange?> {
                        ),
                    ],
                  ),
-                 if (state.hasError)
-                   Padding(
-                     padding: const EdgeInsets.only(top: 6, left: 12),
-                     child: Text(state.errorText!, style: TextStyle(color: theme.colorScheme.error, fontSize: 12)),
-                   ),
+                 FieldError(state.errorText),
                ],
              ),
            );
@@ -198,13 +191,12 @@ class InterestsField extends FormField<Set<String>> {
          },
          builder: (state) {
            final selected = state.value ?? {};
-           final colors = Theme.of(state.context).colorScheme;
            return Column(
              crossAxisAlignment: CrossAxisAlignment.start,
              children: [
                Wrap(
-                 spacing: 8,
-                 runSpacing: 4,
+                 spacing: Gaps.sm,
+                 runSpacing: Gaps.xs,
                  children: [
                    for (final c in categories)
                      FilterChip(
@@ -219,11 +211,7 @@ class InterestsField extends FormField<Set<String>> {
                      ),
                  ],
                ),
-               if (state.hasError)
-                 Padding(
-                   padding: const EdgeInsets.only(top: 6, left: 12),
-                   child: Text(state.errorText!, style: TextStyle(color: colors.error, fontSize: 12)),
-                 ),
+               FieldError(state.errorText),
              ],
            );
          },

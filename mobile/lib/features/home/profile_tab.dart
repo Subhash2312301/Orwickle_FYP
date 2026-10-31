@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/motion/entrance.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/avatar.dart';
+import '../../core/widgets/widgets.dart';
 import '../auth/session/session_controller.dart';
 import '../auth/widgets/form_widgets.dart';
 import '../profile/data/profile_api.dart';
 import '../profile/data/profile_models.dart';
 import '../shell/approval_banner.dart';
 
-/// Profile and account settings. Loading the profile also refreshes the approval status.
+/// Profile: who you are (photo, name, role, review status) and your account actions.
+/// Loading the profile also refreshes the approval status.
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
 
@@ -53,29 +55,36 @@ class _ProfileTabState extends State<ProfileTab> {
     final session = context.watch<SessionController>();
     final user = session.user!;
     final theme = Theme.of(context);
+    final app = AppColors.of(context);
     final subtitle = [_profile?.headline, _profile?.city].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
-    final status = AppColors.of(context);
-    final (statusLabel, statusColor) = switch (user.approvalStatus) {
-      'approved' => ('Approved', status.success),
-      'rejected' => ('Not approved', status.danger),
-      'needs_evidence' => ('More info needed', status.danger),
-      _ => ('Under review', status.warning),
+    final status = switch (user.approvalStatus) {
+      'approved' => AppStatus.approved,
+      'rejected' => AppStatus.rejected,
+      'needs_evidence' => AppStatus.needsInfo,
+      _ => AppStatus.inReview,
     };
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
+    final sections = <Widget>[
+      const ApprovalBanner(),
+      AppCard(
+        variant: AppCardVariant.elevated,
+        padding: const EdgeInsets.all(Gaps.xl),
+        child: Column(
           children: [
-            const ApprovalBanner(),
-            Center(
-              child: AppAvatar(size: 88, url: _profile?.avatarUrl, initials: user.initials),
+            AppAvatar(
+              size: 88,
+              url: _profile?.avatarUrl,
+              initials: user.initials,
+              verified: user.isApproved,
+              label: 'Profile photo of ${user.fullName}',
             ),
-            const SizedBox(height: 12),
-            Text(user.fullName, textAlign: TextAlign.center, style: theme.textTheme.titleLarge),
-            if (subtitle.isNotEmpty) Text(subtitle, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+            const SizedBox(height: Gaps.md),
+            Text(user.fullName, textAlign: TextAlign.center, style: theme.textTheme.headlineSmall),
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: Gaps.xxs),
+              Text(subtitle, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+            ],
+            const SizedBox(height: Gaps.xxs),
             Text(user.email, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
             if (user.role == 'investor' && _profile != null)
               Text(
@@ -83,60 +92,102 @@ class _ProfileTabState extends State<ProfileTab> {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall,
               ),
-            const SizedBox(height: 10),
+            const SizedBox(height: Gaps.md),
             Wrap(
               alignment: WrapAlignment.center,
-              spacing: 8,
+              spacing: Gaps.sm,
+              runSpacing: Gaps.sm,
               children: [
-                Chip(avatar: const Icon(Icons.badge_outlined, size: 16), label: Text(user.roleLabel)),
-                Chip(
-                  avatar: Icon(user.isApproved ? Icons.verified : Icons.hourglass_top, size: 16, color: statusColor),
-                  label: Text(statusLabel, style: TextStyle(color: statusColor)),
-                ),
+                RoleBadge(role: user.role, label: user.roleLabel),
+                StatusChip.status(status),
               ],
-            ),
-            const SizedBox(height: 16),
-            if (user.role != 'admin')
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Edit profile'),
-                  subtitle: const Text('Photo, details and interests'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _open(Routes.profileEdit),
-                ),
-              ),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.password),
-                title: const Text('Change password'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _open(Routes.changePassword),
-              ),
-            ),
-            if (user.role == 'admin')
-              const Card(
-                child: ListTile(
-                  leading: Icon(Icons.admin_panel_settings_outlined),
-                  title: Text('Administrator'),
-                  subtitle: Text('Reviews and moderation are done in the Orwickle admin dashboard on the web.'),
-                ),
-              ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () => confirmLogout(context),
-              icon: const Icon(Icons.logout),
-              label: const Text('Log out'),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'For your security you are logged out after ${session.idleTimeout.inMinutes} minutes without activity.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
             ),
           ],
         ),
       ),
+      const SectionHeader('Account'),
+      AppCard(
+        padding: const EdgeInsets.symmetric(vertical: Gaps.xs),
+        child: Column(
+          children: [
+            if (user.role != 'admin')
+              _ActionTile(
+                icon: Icons.edit_outlined,
+                title: 'Edit profile',
+                subtitle: 'Photo, details and interests',
+                onTap: () => _open(Routes.profileEdit),
+              ),
+            _ActionTile(icon: Icons.password, title: 'Change password', onTap: () => _open(Routes.changePassword)),
+            _ActionTile(
+              icon: Icons.tune,
+              title: 'Settings',
+              subtitle: 'Appearance, terms and about',
+              onTap: () => context.push(Routes.settings),
+            ),
+          ],
+        ),
+      ),
+      if (user.role == 'admin') ...[
+        const SizedBox(height: Gaps.lg),
+        const AppBanner(
+          icon: Icons.admin_panel_settings_outlined,
+          title: 'Administrator',
+          message: 'Reviews and moderation are done in the Orwickle admin dashboard on the web.',
+        ),
+      ],
+      const SizedBox(height: Gaps.xl),
+      AppButton.secondary(label: 'Log out', icon: Icons.logout, onPressed: () => confirmLogout(context)),
+      const SizedBox(height: Gaps.md),
+      Text(
+        'For your security you are logged out after ${session.idleTimeout.inMinutes} minutes without activity.',
+        textAlign: TextAlign.center,
+        style: theme.textTheme.bodySmall?.copyWith(color: app.textMuted),
+      ),
+    ];
+
+    return Scaffold(
+      appBar: const AppAppBar(title: 'Profile', large: true),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.sm, Gaps.page, Gaps.xxl),
+          children: [
+            for (final (i, section) in sections.indexed)
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: Sizes.maxContentWidth),
+                  child: section.entrance(context, index: i),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({required this.icon, required this.title, this.subtitle, required this.onTap});
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Container(
+        width: Sizes.tapTarget - Gaps.sm,
+        height: Sizes.tapTarget - Gaps.sm,
+        decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(Radii.md)),
+        child: Icon(icon, size: IconSizes.md, color: colors.onPrimaryContainer),
+      ),
+      title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle!),
+      trailing: Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+      onTap: onTap,
     );
   }
 }

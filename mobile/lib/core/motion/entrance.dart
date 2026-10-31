@@ -41,9 +41,15 @@ class _EntranceTransitionState extends State<EntranceTransition> with SingleTick
     final total = delay + Motion.slow;
     final start = delay.inMicroseconds / total.inMicroseconds;
     _controller = AnimationController(vsync: this, duration: total)..forward();
-    _fade = CurvedAnimation(parent: _controller, curve: Interval(start, 1, curve: Motion.standard));
+    _fade = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(start, 1, curve: Motion.standard),
+    );
     _rise = Tween<double>(begin: _distance, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Interval(start, 1, curve: Motion.decelerate)),
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(start, 1, curve: Motion.decelerate),
+      ),
     );
   }
 

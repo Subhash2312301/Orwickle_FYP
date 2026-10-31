@@ -25,16 +25,16 @@ class StepperProgress extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ExcludeSemantics(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'STEP ${current + 1} OF ${steps.length}  ',
-                    style: theme.textTheme.overline.copyWith(color: colors.primary),
-                  ),
-                  TextSpan(text: steps[current], style: theme.textTheme.titleSmall),
-                ],
-              ),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: Gaps.sm,
+              children: [
+                Text(
+                  'Step ${current + 1} of ${steps.length}',
+                  style: theme.textTheme.overline.copyWith(color: colors.primary, letterSpacing: 0.4),
+                ),
+                Text('·  ${steps[current]}', style: theme.textTheme.titleSmall),
+              ],
             ),
           ),
           const SizedBox(height: Gaps.sm),

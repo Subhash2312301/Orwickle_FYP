@@ -22,6 +22,7 @@ import '../../features/listings/screens/listing_form_screen.dart';
 import '../../features/listings/screens/my_listings_screen.dart';
 import '../../features/profile/screens/profile_edit_screen.dart';
 import '../../features/shell/app_shell.dart';
+import '../../features/settings/settings_screen.dart';
 import '../../features/shell/coming_soon.dart';
 import '../../features/system_check/system_check_screen.dart';
 import '../motion/transitions.dart';
@@ -122,6 +123,7 @@ GoRouter buildRouter(SessionController session, OnboardingState onboarding) => G
       ],
     ),
 
+    GoRoute(path: Routes.settings, builder: (context, state) => const SettingsScreen()),
     GoRoute(path: Routes.changePassword, builder: (context, state) => const ChangePasswordScreen()),
     GoRoute(
       path: Routes.profileSetup,

@@ -13,6 +13,9 @@ class AppConfig {
 
   static const Duration requestTimeout = Duration(seconds: 15);
 
+  /// Shown in Settings → About; keep in step with the version in pubspec.yaml.
+  static const String version = '1.0.0';
+
   /// Developer pages (health check, component gallery): on in debug builds, off in releases
   /// unless DEV_TOOLS=true.
   static const bool devTools = bool.fromEnvironment('DEV_TOOLS', defaultValue: kDebugMode);
