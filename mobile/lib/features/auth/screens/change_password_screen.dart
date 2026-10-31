@@ -91,7 +91,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   autofillHints: const [AutofillHints.newPassword],
                   onChanged: (_) => setState(() {}),
                 ),
-                PasswordChecklist(password: _password.text),
+                PasswordChecklist(password: _password.text, name: user?.fullName, email: user?.email),
                 const SizedBox(height: Gaps.lg),
                 PasswordField(
                   controller: _confirm,

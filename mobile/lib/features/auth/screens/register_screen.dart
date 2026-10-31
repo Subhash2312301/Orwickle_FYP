@@ -111,6 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   textCapitalization: TextCapitalization.words,
                   autofillHints: const [AutofillHints.name],
                   validator: Validators.fullName,
+                  onChanged: (_) => setState(() {}), // the password checklist compares against the name
                   serverError: _serverErrors['fullName'],
                 ),
                 const SizedBox(height: Gaps.lg),
@@ -121,6 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.email],
                   validator: Validators.email,
+                  onChanged: (_) => setState(() {}),
                   serverError: _serverErrors['email'],
                 ),
                 const SizedBox(height: Gaps.lg),
@@ -132,7 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   autofillHints: const [AutofillHints.newPassword],
                   onChanged: (_) => setState(() {}),
                 ),
-                PasswordChecklist(password: _password.text),
+                PasswordChecklist(password: _password.text, name: _name.text, email: _email.text),
                 const SizedBox(height: Gaps.lg),
                 PasswordField(
                   controller: _confirm,

@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 ///
 /// * [validator] runs on submit; [serverError] shows a message from the API under the field.
 /// * [password] adds a show / hide button and turns off suggestions.
+/// * A shown error is re-checked while typing, so it clears as soon as the input is fixed.
 /// * Focus moves the label up, thickens the cobalt border and tints the icon (all animated by
 ///   the theme); errors slide in under the field.
 class AppTextField extends StatefulWidget {
@@ -63,11 +64,21 @@ class AppTextField extends StatefulWidget {
 
 class _AppTextFieldState extends State<AppTextField> {
   bool _hidden = true;
+  final _field = GlobalKey<FormFieldState<String>>();
+
+  // Once an error shows, check again on every keystroke, so it disappears as soon as the input is fixed
+  // (and no stale message stays while typing).
+  void _changed(String value) {
+    final field = _field.currentState;
+    if (field != null && field.hasError && widget.serverError == null) field.validate();
+    widget.onChanged?.call(value);
+  }
 
   @override
   Widget build(BuildContext context) {
     final multiline = widget.maxLines > 1;
     return TextFormField(
+      key: _field,
       controller: widget.controller,
       enabled: widget.enabled,
       autofocus: widget.autofocus,
@@ -77,7 +88,7 @@ class _AppTextFieldState extends State<AppTextField> {
       keyboardType: widget.keyboardType ?? (multiline ? TextInputType.multiline : null),
       textInputAction: widget.textInputAction ?? (multiline ? TextInputAction.newline : TextInputAction.next),
       onFieldSubmitted: widget.onSubmitted,
-      onChanged: widget.onChanged,
+      onChanged: _changed,
       autofillHints: widget.autofillHints,
       inputFormatters: widget.inputFormatters,
       maxLines: widget.password ? 1 : widget.maxLines,

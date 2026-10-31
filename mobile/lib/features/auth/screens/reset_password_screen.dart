@@ -96,7 +96,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 autofillHints: const [AutofillHints.newPassword],
                 onChanged: (_) => setState(() {}),
               ),
-              PasswordChecklist(password: _password.text),
+              PasswordChecklist(password: _password.text, email: widget.email),
               const SizedBox(height: Gaps.lg),
               PasswordField(
                 controller: _confirm,

@@ -178,9 +178,7 @@ class _StatsHeader extends StatelessWidget {
                           : AnimatedCounter(
                               value: value,
                               semanticsLabel: '$value $label',
-                              style: theme.textTheme
-                                  .numeric(size: 28)
-                                  .copyWith(color: app.onHero),
+                              style: theme.textTheme.numeric(size: 28).copyWith(color: app.onHero),
                             ),
                       const SizedBox(height: Gaps.xs),
                       Row(

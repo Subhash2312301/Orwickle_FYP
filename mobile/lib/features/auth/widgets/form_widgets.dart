@@ -45,26 +45,40 @@ class PasswordField extends StatelessWidget {
   );
 }
 
-/// Live list of password rules, ticked (with a small pop) as the user types.
+/// Live list of password rules, ticked (with a small pop) as the user types. Besides the character
+/// rules it shows the two checks that otherwise only appear as an error: not the user's own [name] or
+/// [email], and not a common password. So a fully ticked list always means the password is accepted.
 class PasswordChecklist extends StatelessWidget {
-  const PasswordChecklist({super.key, required this.password});
+  const PasswordChecklist({super.key, required this.password, this.name, this.email});
 
   final String password;
+  final String? name;
+  final String? email;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final app = AppColors.of(context);
     final duration = Motion.of(context, Motion.fast);
+    final checks = <(String, bool)>[
+      for (final rule in Validators.passwordRules.where((r) => r.label != 'At most 72 characters'))
+        (rule.label, rule.isMet(password)),
+      if (name != null || email != null)
+        (
+          'Not your name or email',
+          password.isNotEmpty && !Validators.containsPersonalInfo(password, name: name, email: email),
+        ),
+      ('Not a common password', password.length >= 3 && !Validators.isCommonPassword(password)),
+    ];
     return Padding(
       padding: const EdgeInsets.only(top: Gaps.sm, left: Gaps.xs),
       child: Wrap(
         spacing: Gaps.md,
         runSpacing: Gaps.xs,
         children: [
-          for (final rule in Validators.passwordRules.where((r) => r.label != 'At most 72 characters'))
+          for (final (label, met) in checks)
             Semantics(
-              label: '${rule.label}${rule.isMet(password) ? ', done' : ''}',
+              label: '$label${met ? ', done' : ''}',
               excludeSemantics: true,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -73,14 +87,14 @@ class PasswordChecklist extends StatelessWidget {
                     duration: duration,
                     transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
                     child: Icon(
-                      rule.isMet(password) ? Icons.check_circle : Icons.radio_button_unchecked,
-                      key: ValueKey(rule.isMet(password)),
+                      met ? Icons.check_circle : Icons.radio_button_unchecked,
+                      key: ValueKey(met),
                       size: IconSizes.sm,
-                      color: rule.isMet(password) ? app.approved.fg : app.borderStrong,
+                      color: met ? app.approved.fg : app.borderStrong,
                     ),
                   ),
                   const SizedBox(width: Gaps.xs),
-                  Text(rule.label, style: theme.textTheme.bodySmall),
+                  Text(label, style: theme.textTheme.bodySmall),
                 ],
               ),
             ),
