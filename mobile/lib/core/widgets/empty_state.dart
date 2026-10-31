@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'chips.dart';
 
-/// Friendly placeholder for an empty list or a feature that is not built yet:
-/// an icon in a soft brand circle, a title, a short explanation and an optional button.
+/// Placeholder for an empty list or a feature that is not built yet: a small illustration,
+/// a title, a short explanation and an optional call to action.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
@@ -12,44 +13,39 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.badge,
     this.action,
+    this.role = ToneRole.info,
   });
 
   final IconData icon;
   final String title;
   final String message;
-  final Widget? badge; // e.g. a "Coming soon" chip above the title
+  final Widget? badge; // e.g. ComingSoonChip above the title
   final Widget? action;
+  final ToneRole role;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Gaps.xl),
+      padding: const EdgeInsets.symmetric(vertical: Gaps.xl, horizontal: Gaps.sm),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 112,
-            height: 112,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppTheme.brand.withValues(alpha: 0.16), AppTheme.brandSecondary.withValues(alpha: 0.16)],
-              ),
-            ),
-            child: Icon(icon, size: 52, color: colors.primary),
+          EmptyIllustration(icon: icon, role: role),
+          const SizedBox(height: Gaps.xl),
+          if (badge != null) ...[badge!, const SizedBox(height: Gaps.md)],
+          Semantics(
+            header: true,
+            child: Text(title, textAlign: TextAlign.center, style: theme.textTheme.headlineSmall),
           ),
-          const SizedBox(height: Gaps.lg),
-          if (badge != null) ...[badge!, const SizedBox(height: Gaps.sm)],
-          Text(title, textAlign: TextAlign.center, style: theme.textTheme.titleLarge),
           const SizedBox(height: Gaps.sm),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: Sizes.maxFormWidth),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.of(context).textMuted),
+            ),
           ),
           if (action != null) ...[const SizedBox(height: Gaps.xl), action!],
         ],
@@ -58,17 +54,67 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-/// Small "Coming soon" label for features planned for a later phase.
+/// The empty-state picture: two tilted tinted tiles behind a raised card holding the icon.
+/// Drawn from widgets, so it follows the theme and needs no image files.
+class EmptyIllustration extends StatelessWidget {
+  const EmptyIllustration({super.key, required this.icon, this.role = ToneRole.info, this.size = 120});
+
+  final IconData icon;
+  final ToneRole role;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = role.resolve(context);
+    final app = AppColors.of(context);
+    final surface = Theme.of(context).colorScheme.surface;
+    final tile = size * 0.72;
+
+    Widget tilted(double turns, double alpha, Offset offset) => Transform.translate(
+      offset: offset,
+      child: Transform.rotate(
+        angle: turns,
+        child: Container(
+          width: tile,
+          height: tile,
+          decoration: BoxDecoration(
+            color: tone.fg.withValues(alpha: alpha),
+            borderRadius: BorderRadius.circular(Radii.xl),
+          ),
+        ),
+      ),
+    );
+
+    return ExcludeSemantics(
+      child: SizedBox.square(
+        dimension: size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            tilted(-0.22, 0.10, Offset(-size * 0.08, size * 0.04)),
+            tilted(0.18, 0.16, Offset(size * 0.08, -size * 0.04)),
+            Container(
+              width: tile * 0.82,
+              height: tile * 0.82,
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(Radii.lg),
+                border: Border.all(color: app.border),
+                boxShadow: Elevations.md(app.shadow),
+              ),
+              child: Icon(icon, size: IconSizes.xl, color: tone.fg),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Coming soon" label for features planned for a later phase.
 class ComingSoonChip extends StatelessWidget {
   const ComingSoonChip({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Chip(
-      avatar: Icon(Icons.schedule, size: 16, color: colors.primary),
-      label: const Text('Coming soon'),
-      visualDensity: VisualDensity.compact,
-    );
-  }
+  Widget build(BuildContext context) => const StatusChip('Coming soon', role: ToneRole.info, icon: Icons.schedule);
 }

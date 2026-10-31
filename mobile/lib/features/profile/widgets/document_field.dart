@@ -103,7 +103,7 @@ class _DocumentTileState extends State<_DocumentTile> {
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : Icon(
                       doc == null ? Icons.upload_outlined : Icons.check_circle,
-                      color: doc == null ? null : StatusColors.of(context).success,
+                      color: doc == null ? null : AppColors.of(context).success,
                     ),
             ),
           ),

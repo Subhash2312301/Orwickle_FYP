@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/chips.dart';
 import '../data/listing_models.dart';
 
 /// Cover image with a placeholder when there is none.
@@ -21,7 +22,7 @@ class ListingCover extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: isFunding ? [AppTheme.brand, AppTheme.brandSecondary] : [AppTheme.accentText, AppTheme.brand],
+          colors: isFunding ? [Palette.amber500, Palette.amber700] : [Palette.teal500, Palette.teal700],
         ),
       ),
       alignment: Alignment.center,
@@ -87,34 +88,7 @@ class ListingCardSkeleton extends StatelessWidget {
   }
 }
 
-/// Small coloured label: listing type, status, review status.
-class StatusChip extends StatelessWidget {
-  const StatusChip(this.label, {super.key, required this.color, this.icon});
-
-  final String label;
-  final Color color;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[Icon(icon, size: 14, color: color), const SizedBox(width: 4)],
-          Text(
-            label,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Type, status and (when relevant) review chips for one listing.
+/// Type and status chips for one listing.
 class ListingChips extends StatelessWidget {
   const ListingChips(this.listing, {super.key});
 
@@ -122,36 +96,29 @@ class ListingChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final status = StatusColors.of(context);
-    final statusColor = switch (listing.status) {
-      'published' => status.success,
-      'closed' => colors.outline,
-      'suspended' => status.danger,
-      _ => status.warning,
-    };
-    final review = reviewLabels[listing.reviewStatus];
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: Gaps.sm - Gaps.xxs,
+      runSpacing: Gaps.sm - Gaps.xxs,
       children: [
-        if (listing.isSample) StatusChip('Sample', color: colors.outline, icon: Icons.science_outlined),
-        StatusChip(
-          listingTypeLabels[listing.listingType]!,
-          color: colors.primary,
-          icon: listing.isFunding ? Icons.trending_up : Icons.sell_outlined,
-        ),
-        StatusChip(statusLabels[listing.status] ?? listing.status, color: statusColor),
-        if (review != null && listing.status == 'published')
-          StatusChip(
-            review,
-            color: listing.reviewStatus == 'approved' ? status.success : status.info,
-            icon: listing.reviewStatus == 'approved' ? Icons.verified_outlined : Icons.hourglass_top,
-          ),
+        if (listing.isSample) const StatusChip('Sample', icon: Icons.science_outlined),
+        ListingTypeChip(isFunding: listing.isFunding),
+        StatusChip.status(listingStatus(listing)),
       ],
     );
   }
 }
+
+/// The one status an owner needs to see: draft, in review, live, closed, suspended,
+/// or rejected / more info (shown on the draft it went back to).
+AppStatus listingStatus(Listing l) => switch ((l.status, l.reviewStatus)) {
+  ('published', 'approved') => AppStatus.live,
+  ('published', _) => AppStatus.inReview,
+  ('closed', _) => AppStatus.closed,
+  ('suspended', _) => AppStatus.suspended,
+  (_, 'rejected') => AppStatus.rejected,
+  (_, 'needs_evidence') => AppStatus.needsInfo,
+  _ => AppStatus.draft,
+};
 
 /// Horizontal strip of project photos (hardware, screenshots). Tapping a photo opens it full screen.
 /// With [onAdd] and [onRemove] the owner can manage them; [onAdd] is hidden once the limit is reached.

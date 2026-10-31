@@ -4,39 +4,6 @@ import 'package:image_picker/image_picker.dart';
 
 import '../network/api_client.dart';
 
-/// Profile photo, or the user's initials when there is none (or it fails to load).
-class UserAvatar extends StatelessWidget {
-  const UserAvatar({super.key, required this.initials, this.url, this.radius = 24});
-
-  final String initials;
-  final String? url;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final fallback = Text(
-      initials,
-      style: TextStyle(fontSize: radius * 0.75, color: colors.onPrimaryContainer, fontWeight: FontWeight.w500),
-    );
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: colors.primaryContainer,
-      child: url == null
-          ? fallback
-          : ClipOval(
-              child: Image.network(
-                url!,
-                width: radius * 2,
-                height: radius * 2,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => fallback,
-              ),
-            ),
-    );
-  }
-}
-
 /// Result of [pickImage]: a picked file, or a request to remove the current image.
 sealed class ImageChoice {}
 

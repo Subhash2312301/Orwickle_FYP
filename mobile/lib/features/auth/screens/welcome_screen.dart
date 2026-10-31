@@ -28,7 +28,7 @@ class WelcomeScreen extends StatelessWidget {
           Container(
             padding: EdgeInsets.fromLTRB(Gaps.xl, MediaQuery.paddingOf(context).top + 48, Gaps.xl, Gaps.xxl),
             decoration: const BoxDecoration(
-              gradient: AppTheme.gradient,
+              gradient: iconBackground,
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
             ),
             child: Column(

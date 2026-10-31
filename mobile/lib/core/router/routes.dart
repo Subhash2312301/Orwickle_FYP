@@ -11,6 +11,7 @@ class Routes {
   static const forgotPassword = '/forgot-password';
   static const resetPassword = '/reset-password'; // ?email=
   static const systemCheck = '/system-check';
+  static const designSystem = '/design-system'; // debug only: component gallery
   static const home = '/home';
   static const changePassword = '/change-password';
   static const profileSetup = '/profile/setup'; // forced until the first profile is saved

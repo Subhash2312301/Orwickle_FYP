@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/image_widgets.dart';
+import '../../core/widgets/avatar.dart';
 import '../auth/session/session_controller.dart';
 import '../auth/widgets/form_widgets.dart';
 import '../profile/data/profile_api.dart';
@@ -54,7 +54,7 @@ class _ProfileTabState extends State<ProfileTab> {
     final user = session.user!;
     final theme = Theme.of(context);
     final subtitle = [_profile?.headline, _profile?.city].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
-    final status = StatusColors.of(context);
+    final status = AppColors.of(context);
     final (statusLabel, statusColor) = switch (user.approvalStatus) {
       'approved' => ('Approved', status.success),
       'rejected' => ('Not approved', status.danger),
@@ -71,7 +71,7 @@ class _ProfileTabState extends State<ProfileTab> {
           children: [
             const ApprovalBanner(),
             Center(
-              child: UserAvatar(radius: 44, url: _profile?.avatarUrl, initials: user.initials),
+              child: AppAvatar(size: 88, url: _profile?.avatarUrl, initials: user.initials),
             ),
             const SizedBox(height: 12),
             Text(user.fullName, textAlign: TextAlign.center, style: theme.textTheme.titleLarge),

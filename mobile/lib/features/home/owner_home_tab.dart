@@ -47,7 +47,7 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
   Widget build(BuildContext context) {
     final user = context.watch<SessionController>().user!;
     final theme = Theme.of(context);
-    final status = StatusColors.of(context);
+    final status = AppColors.of(context);
     final firstName = user.fullName.split(' ').first;
 
     return Scaffold(
@@ -60,7 +60,7 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
             const ApprovalBanner(),
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(gradient: AppTheme.gradient, borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(color: AppColors.of(context).hero, borderRadius: BorderRadius.circular(20)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -77,7 +77,11 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
             Row(
               children: [
                 _Stat('Live', _count((l) => l.status == 'published' && l.reviewStatus == 'approved'), status.success),
-                _Stat('In review', _count((l) => l.status == 'published' && l.reviewStatus == 'pending'), status.info),
+                _Stat(
+                  'In review',
+                  _count((l) => l.status == 'published' && l.reviewStatus == 'pending'),
+                  status.info.fg,
+                ),
                 _Stat('Drafts', _count((l) => l.status == 'draft'), status.warning),
               ],
             ),

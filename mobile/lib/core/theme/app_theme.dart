@@ -1,166 +1,271 @@
 import 'package:flutter/material.dart';
 
-/// Orwickle look and feel (Material 3), from the brand sheet: indigo primary, purple secondary,
-/// teal accent, light grey background. All screens take colours and text styles from here.
+import 'colors.dart';
+import 'tokens.dart';
+import 'typography.dart';
+
+export 'colors.dart';
+export 'tokens.dart';
+export 'typography.dart';
+
+/// Orwickle's look: "calm confidence". A deep ink base, one cobalt accent for trust,
+/// amber for projects seeking funding and teal for projects for sale.
+/// Every screen takes colours, text styles and shapes from here (import this one file).
 class AppTheme {
   const AppTheme._();
 
-  static const Color brand = Color(0xFF6366F1); // indigo, for gradients and large shapes
-  static const Color brandDeep = Color(0xFF4F46E5); // buttons and links: white text on it is 6.3:1
-  static const Color brandSecondary = Color(0xFF8B5CF6); // purple
-  static const Color accent = Color(0xFF06B6D4); // teal, decoration only (too light for text)
-  static const Color accentText = Color(0xFF0E7490); // teal that is readable as text
-  static const Color background = Color(0xFFF3F4F6);
-  static const Color ink = Color(0xFF111827);
-  static const Color darkBackground = Color(0xFF0B1020);
-  static const Color darkSurface = Color(0xFF151B2E);
+  static ThemeData get light => _build(_lightScheme, AppColors.light);
+  static ThemeData get dark => _build(_darkScheme, AppColors.dark);
 
-  /// Brand gradient for the splash, welcome header and home banner (not for whole screens).
-  static const LinearGradient gradient = LinearGradient(
-    colors: [brand, brandSecondary],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+  static const _lightScheme = ColorScheme(
+    brightness: Brightness.light,
+    primary: Palette.cobalt600,
+    onPrimary: Palette.white,
+    primaryContainer: Palette.cobalt100,
+    onPrimaryContainer: Palette.cobalt700,
+    secondary: Palette.ink700,
+    onSecondary: Palette.white,
+    secondaryContainer: Palette.slate100,
+    onSecondaryContainer: Palette.ink900,
+    tertiary: Palette.teal700,
+    onTertiary: Palette.white,
+    tertiaryContainer: Palette.teal50,
+    onTertiaryContainer: Palette.teal700,
+    error: Palette.red700,
+    onError: Palette.white,
+    errorContainer: Palette.red50,
+    onErrorContainer: Palette.red700,
+    surface: Palette.white,
+    onSurface: Palette.ink900,
+    onSurfaceVariant: Palette.slate600,
+    surfaceContainerLowest: Palette.white,
+    surfaceContainerLow: Palette.paper,
+    surfaceContainer: Palette.slate100,
+    surfaceContainerHigh: Palette.slate100,
+    surfaceContainerHighest: Palette.slate200,
+    outline: Palette.slate400,
+    outlineVariant: Palette.slate200,
+    shadow: Palette.ink900,
+    scrim: Palette.ink950,
+    inverseSurface: Palette.ink900,
+    onInverseSurface: Palette.white,
+    inversePrimary: Palette.cobalt400,
+    surfaceTint: Colors.transparent,
   );
 
-  static ThemeData get light => _build(Brightness.light);
-  static ThemeData get dark => _build(Brightness.dark);
+  static const _darkScheme = ColorScheme(
+    brightness: Brightness.dark,
+    primary: Palette.cobalt400,
+    onPrimary: Palette.ink950,
+    primaryContainer: Palette.cobalt900,
+    onPrimaryContainer: Palette.cobalt200,
+    secondary: Palette.slate300,
+    onSecondary: Palette.ink900,
+    secondaryContainer: Palette.ink700,
+    onSecondaryContainer: Palette.white,
+    tertiary: Palette.teal300,
+    onTertiary: Palette.ink950,
+    tertiaryContainer: Palette.teal950,
+    onTertiaryContainer: Palette.teal300,
+    error: Palette.red300,
+    onError: Palette.ink950,
+    errorContainer: Palette.red950,
+    onErrorContainer: Palette.red300,
+    surface: Palette.ink900,
+    onSurface: Palette.slate100,
+    onSurfaceVariant: Palette.slate300,
+    surfaceContainerLowest: Palette.ink950,
+    surfaceContainerLow: Palette.ink900,
+    surfaceContainer: Palette.ink800,
+    surfaceContainerHigh: Palette.ink700,
+    surfaceContainerHighest: Palette.ink600,
+    outline: Palette.slate500,
+    outlineVariant: Palette.ink600,
+    shadow: Palette.ink950,
+    scrim: Palette.ink950,
+    inverseSurface: Palette.slate100,
+    onInverseSurface: Palette.ink900,
+    inversePrimary: Palette.cobalt600,
+    surfaceTint: Colors.transparent,
+  );
 
-  static ThemeData _build(Brightness brightness) {
-    final isLight = brightness == Brightness.light;
-    final base = ColorScheme.fromSeed(seedColor: brand, brightness: brightness);
-    final colors = isLight
-        ? base.copyWith(
-            primary: brandDeep,
-            onPrimary: Colors.white,
-            secondary: brandSecondary,
-            tertiary: accentText,
-            surface: Colors.white,
-            onSurface: ink,
-          )
-        : base.copyWith(
-            primary: const Color(0xFFA5B4FC),
-            onPrimary: const Color(0xFF1E1B4B),
-            secondary: const Color(0xFFC4B5FD),
-            tertiary: const Color(0xFF67E8F9),
-            surface: darkSurface,
-          );
-    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md));
-    final text = Typography.material2021(platform: TargetPlatform.android).black
-        .apply(bodyColor: colors.onSurface, displayColor: colors.onSurface);
+  static ThemeData _build(ColorScheme colors, AppColors app) {
+    final text = AppTypography.textTheme(colors.onSurface, app.textMuted);
+    RoundedRectangleBorder rounded(double radius, {BorderSide side = BorderSide.none}) =>
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: side);
+    OutlineInputBorder inputBorder(Color color, [double width = Sizes.hairline]) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(Radii.md),
+      borderSide: BorderSide(color: color, width: width),
+    );
+    const buttonPadding = EdgeInsets.symmetric(horizontal: Gaps.xl);
+    const buttonSize = Size(Sizes.tapTarget, Sizes.buttonHeight);
+
     return ThemeData(
-      colorScheme: colors,
       useMaterial3: true,
-      extensions: [isLight ? StatusColors.light : StatusColors.dark],
-      scaffoldBackgroundColor: isLight ? background : darkBackground,
-      textTheme: text.copyWith(
-        headlineMedium: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
-        headlineSmall: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-        titleLarge: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        titleMedium: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-        labelLarge: text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-      ),
+      colorScheme: colors,
+      extensions: [app],
+      textTheme: text,
+      scaffoldBackgroundColor: app.canvas,
+      canvasColor: app.canvas,
+      splashFactory: InkSparkle.splashFactory,
+      visualDensity: VisualDensity.standard,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      dividerTheme: DividerThemeData(color: app.border, thickness: Sizes.hairline, space: Gaps.xl),
+      iconTheme: IconThemeData(color: colors.onSurfaceVariant, size: IconSizes.lg),
       appBarTheme: AppBarTheme(
-        backgroundColor: isLight ? background : darkBackground,
+        backgroundColor: app.canvas,
+        foregroundColor: colors.onSurface,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: colors.onSurface),
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        centerTitle: false,
+        titleSpacing: Gaps.page,
+        titleTextStyle: text.titleLarge,
       ),
       cardTheme: CardThemeData(
         elevation: 0,
+        margin: EdgeInsets.zero,
         color: colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.lg),
-          side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.6)),
-        ),
+        clipBehavior: Clip.antiAlias,
+        shape: rounded(Radii.lg, side: BorderSide(color: app.border)),
+      ),
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(horizontal: Gaps.lg),
+        minVerticalPadding: Gaps.md,
+        iconColor: colors.onSurfaceVariant,
+        titleTextStyle: text.titleSmall,
+        subtitleTextStyle: text.bodySmall,
+        shape: rounded(Radii.md),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(Radii.md)),
         filled: true,
         fillColor: colors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: Gaps.lg, vertical: Gaps.lg),
+        labelStyle: text.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+        floatingLabelStyle: text.labelLarge?.copyWith(color: colors.primary),
+        hintStyle: text.bodyMedium?.copyWith(color: app.textMuted),
+        helperStyle: text.bodySmall,
+        errorStyle: text.bodySmall?.copyWith(color: colors.error),
+        prefixIconColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.focused) ? colors.primary : colors.onSurfaceVariant,
+        ),
+        border: inputBorder(app.border),
+        enabledBorder: inputBorder(app.border),
+        focusedBorder: inputBorder(colors.primary, Sizes.focusRing),
+        errorBorder: inputBorder(colors.error),
+        focusedErrorBorder: inputBorder(colors.error, Sizes.focusRing),
+        disabledBorder: inputBorder(app.border.withValues(alpha: 0.5)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          shape: shape,
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          minimumSize: buttonSize,
+          padding: buttonPadding,
+          shape: rounded(Radii.md),
+          textStyle: text.labelLarge?.copyWith(fontSize: 15),
+          disabledBackgroundColor: colors.onSurface.withValues(alpha: 0.1),
+          disabledForegroundColor: colors.onSurface.withValues(alpha: 0.4),
         ),
       ),
-      outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: shape)),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: colors.surface,
-        indicatorColor: colors.primary.withValues(alpha: 0.14),
-        surfaceTintColor: Colors.transparent,
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: buttonSize,
+          padding: buttonPadding,
+          foregroundColor: colors.onSurface,
+          side: BorderSide(color: app.borderStrong),
+          shape: rounded(Radii.md),
+          textStyle: text.labelLarge?.copyWith(fontSize: 15),
+        ),
       ),
-      chipTheme: ChipThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill))),
-    );
-  }
-}
-
-/// Spacing scale: use these instead of loose numbers so screens line up.
-class Gaps {
-  const Gaps._();
-
-  static const double xs = 4;
-  static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 24;
-  static const double xxl = 32;
-}
-
-/// Corner radius scale.
-class Radii {
-  const Radii._();
-
-  static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 24;
-  static const double pill = 20;
-}
-
-/// Meaning colours for statuses, readable as text in both light and dark mode:
-/// success = approved / live, warning = pending / draft, danger = rejected, info = in review.
-@immutable
-class StatusColors extends ThemeExtension<StatusColors> {
-  const StatusColors({required this.success, required this.warning, required this.danger, required this.info});
-
-  final Color success;
-  final Color warning;
-  final Color danger;
-  final Color info;
-
-  static const light = StatusColors(
-    success: Color(0xFF15803D),
-    warning: Color(0xFFB45309),
-    danger: Color(0xFFB91C1C),
-    info: AppTheme.accentText,
-  );
-
-  static const dark = StatusColors(
-    success: Color(0xFF4ADE80),
-    warning: Color(0xFFFBBF24),
-    danger: Color(0xFFF87171),
-    info: Color(0xFF67E8F9),
-  );
-
-  static StatusColors of(BuildContext context) => Theme.of(context).extension<StatusColors>() ?? light;
-
-  @override
-  StatusColors copyWith({Color? success, Color? warning, Color? danger, Color? info}) => StatusColors(
-    success: success ?? this.success,
-    warning: warning ?? this.warning,
-    danger: danger ?? this.danger,
-    info: info ?? this.info,
-  );
-
-  @override
-  StatusColors lerp(covariant StatusColors? other, double t) {
-    if (other == null) return this;
-    return StatusColors(
-      success: Color.lerp(success, other.success, t)!,
-      warning: Color.lerp(warning, other.warning, t)!,
-      danger: Color.lerp(danger, other.danger, t)!,
-      info: Color.lerp(info, other.info, t)!,
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(Sizes.tapTarget, Sizes.tapTarget),
+          padding: const EdgeInsets.symmetric(horizontal: Gaps.md),
+          shape: rounded(Radii.md),
+          textStyle: text.labelLarge,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(minimumSize: const Size(Sizes.tapTarget, Sizes.tapTarget)),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colors.primary,
+        foregroundColor: colors.onPrimary,
+        elevation: 2,
+        highlightElevation: 4,
+        shape: rounded(Radii.lg),
+        extendedTextStyle: text.labelLarge?.copyWith(fontSize: 15),
+      ),
+      chipTheme: ChipThemeData(
+        shape: rounded(Radii.pill),
+        side: BorderSide(color: app.border),
+        backgroundColor: colors.surface,
+        selectedColor: colors.primaryContainer,
+        checkmarkColor: colors.onPrimaryContainer,
+        labelStyle: text.labelLarge?.copyWith(color: colors.onSurface),
+        secondaryLabelStyle: text.labelLarge?.copyWith(color: colors.onPrimaryContainer),
+        padding: const EdgeInsets.symmetric(horizontal: Gaps.sm, vertical: Gaps.xs),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: SegmentedButton.styleFrom(
+          minimumSize: const Size(Sizes.tapTarget, Sizes.tapTarget),
+          side: BorderSide(color: app.border),
+          selectedBackgroundColor: colors.primaryContainer,
+          selectedForegroundColor: colors.onPrimaryContainer,
+          textStyle: text.labelLarge,
+          shape: rounded(Radii.md),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: Sizes.navBarHeight,
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: colors.primaryContainer,
+        indicatorShape: rounded(Radii.pill),
+        elevation: 0,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => text.labelMedium?.copyWith(
+            color: states.contains(WidgetState.selected) ? colors.onSurface : colors.onSurfaceVariant,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            size: IconSizes.lg,
+            color: states.contains(WidgetState.selected) ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+          ),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        dragHandleColor: app.borderStrong,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.xl))),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: rounded(Radii.xl),
+        titleTextStyle: text.headlineSmall,
+        contentTextStyle: text.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: colors.inverseSurface,
+        contentTextStyle: text.bodyMedium?.copyWith(color: colors.onInverseSurface),
+        actionTextColor: colors.inversePrimary,
+        shape: rounded(Radii.md),
+        insetPadding: const EdgeInsets.all(Gaps.lg),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: colors.primary,
+        linearTrackColor: colors.primaryContainer,
+        circularTrackColor: Colors.transparent,
+      ),
+      checkboxTheme: CheckboxThemeData(shape: rounded(Radii.xs)),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(color: colors.inverseSurface, borderRadius: BorderRadius.circular(Radii.sm)),
+        textStyle: text.bodySmall?.copyWith(color: colors.onInverseSurface),
+      ),
     );
   }
 }

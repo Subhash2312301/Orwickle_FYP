@@ -6,6 +6,7 @@ import 'core/network/api_client.dart';
 import 'core/router/app_router.dart';
 import 'core/storage/onboarding_state.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'features/auth/data/auth_api.dart';
 import 'features/auth/session/session_controller.dart';
 import 'features/listings/data/listing_api.dart';
@@ -20,6 +21,7 @@ class OrwickleApp extends StatefulWidget {
     required this.listingApi,
     required this.session,
     required this.onboarding,
+    required this.theme,
   });
 
   final ApiClient apiClient;
@@ -28,6 +30,7 @@ class OrwickleApp extends StatefulWidget {
   final ListingApi listingApi;
   final SessionController session;
   final OnboardingState onboarding;
+  final ThemeController theme;
 
   @override
   State<OrwickleApp> createState() => _OrwickleAppState();
@@ -47,18 +50,23 @@ class _OrwickleAppState extends State<OrwickleApp> {
         Provider.value(value: widget.listingApi),
         ChangeNotifierProvider.value(value: widget.session),
         ChangeNotifierProvider.value(value: widget.onboarding),
+        ChangeNotifierProvider.value(value: widget.theme),
       ],
-      child: MaterialApp.router(
-        title: 'Orwickle',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        routerConfig: _router,
-        // every touch anywhere counts as activity for the 15-minute auto logout
-        builder: (context, child) => Listener(
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: (_) => widget.session.recordActivity(),
-          child: child,
+      child: ListenableBuilder(
+        listenable: widget.theme,
+        builder: (context, _) => MaterialApp.router(
+          title: 'Orwickle',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: widget.theme.mode,
+          routerConfig: _router,
+          // every touch anywhere counts as activity for the 15-minute auto logout
+          builder: (context, child) => Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => widget.session.recordActivity(),
+            child: child,
+          ),
         ),
       ),
     );

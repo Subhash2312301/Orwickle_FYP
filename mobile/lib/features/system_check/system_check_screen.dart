@@ -111,7 +111,7 @@ class _StatusTile extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final Widget leading = loading
         ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
-        : Icon(ok ? Icons.check_circle : Icons.cancel, color: ok ? StatusColors.of(context).success : colors.error);
+        : Icon(ok ? Icons.check_circle : Icons.cancel, color: ok ? AppColors.of(context).success : colors.error);
     return Card(
       child: ListTile(
         leading: leading,

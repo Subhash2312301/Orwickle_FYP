@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/avatar.dart';
 import '../../../core/widgets/image_widgets.dart';
 import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
@@ -365,7 +366,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       Center(
         child: Stack(
           children: [
-            UserAvatar(radius: 48, url: _avatarUrl, initials: session.user?.initials ?? '?'),
+            AppAvatar(size: 96, url: _avatarUrl, initials: session.user?.initials ?? '?'),
             Positioned(
               right: 0,
               bottom: 0,

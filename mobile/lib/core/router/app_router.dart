@@ -12,6 +12,7 @@ import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/auth/screens/welcome_screen.dart';
 import '../../features/auth/session/session_controller.dart';
+import '../../features/design_system/component_gallery_screen.dart';
 import '../../features/listings/screens/listing_detail_screen.dart';
 import '../../features/listings/screens/listing_form_screen.dart';
 import '../../features/listings/screens/my_listings_screen.dart';
@@ -29,6 +30,7 @@ GoRouter buildRouter(SessionController session, OnboardingState onboarding) => G
   refreshListenable: Listenable.merge([session, onboarding]),
   redirect: (context, state) {
     final location = state.matchedLocation;
+    if (location == Routes.designSystem && session.status != SessionStatus.unknown) return null; // debug gallery
     switch (session.status) {
       case SessionStatus.unknown:
         return location == Routes.splash ? null : Routes.splash;
@@ -72,6 +74,7 @@ GoRouter buildRouter(SessionController session, OnboardingState onboarding) => G
     ),
     // developer health check, not part of the release app
     if (kDebugMode) GoRoute(path: Routes.systemCheck, builder: (context, state) => const SystemCheckScreen()),
+    if (kDebugMode) GoRoute(path: Routes.designSystem, builder: (context, state) => const ComponentGalleryScreen()),
     GoRoute(path: Routes.home, builder: (context, state) => const MainShell()),
     GoRoute(path: Routes.changePassword, builder: (context, state) => const ChangePasswordScreen()),
     GoRoute(path: Routes.profileSetup, builder: (context, state) => const ProfileEditScreen(setup: true)),

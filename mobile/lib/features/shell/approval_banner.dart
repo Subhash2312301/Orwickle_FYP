@@ -14,7 +14,7 @@ class ApprovalBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = context.watch<SessionController>().user;
     if (user == null || user.isApproved) return const SizedBox.shrink();
-    final status = StatusColors.of(context);
+    final status = AppColors.of(context);
 
     final (icon, title, body, onColor, canFix) = switch (user.approvalStatus) {
       'needs_evidence' => (

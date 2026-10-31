@@ -142,7 +142,7 @@ class _SlideView extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [AppTheme.brand.withValues(alpha: 0.12), AppTheme.brandSecondary.withValues(alpha: 0.12)],
+                      colors: [Palette.cobalt600.withValues(alpha: 0.12), Palette.cobalt400.withValues(alpha: 0.12)],
                     ),
                   ),
                   alignment: Alignment.center,
@@ -150,7 +150,7 @@ class _SlideView extends StatelessWidget {
                     widthFactor: 0.4,
                     heightFactor: 0.4,
                     child: DecoratedBox(
-                      decoration: const BoxDecoration(gradient: AppTheme.gradient, shape: BoxShape.circle),
+                      decoration: const BoxDecoration(color: Palette.cobalt600, shape: BoxShape.circle),
                       child: FittedBox(
                         child: Padding(
                           padding: const EdgeInsets.all(Gaps.lg),

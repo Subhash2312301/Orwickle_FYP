@@ -4,10 +4,11 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/widgets.dart';
 import '../session/session_controller.dart';
 
 /// Password input with a show/hide button.
-class PasswordField extends StatefulWidget {
+class PasswordField extends StatelessWidget {
   const PasswordField({
     super.key,
     required this.controller,
@@ -30,39 +31,21 @@ class PasswordField extends StatefulWidget {
   final Iterable<String> autofillHints;
 
   @override
-  State<PasswordField> createState() => _PasswordFieldState();
+  Widget build(BuildContext context) => AppTextField(
+    controller: controller,
+    label: label,
+    icon: Icons.lock_outline,
+    password: true,
+    validator: validator,
+    serverError: errorText,
+    onChanged: onChanged,
+    textInputAction: textInputAction,
+    onSubmitted: onSubmitted,
+    autofillHints: autofillHints,
+  );
 }
 
-class _PasswordFieldState extends State<PasswordField> {
-  bool _hidden = true;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: widget.controller,
-      obscureText: _hidden,
-      enableSuggestions: false,
-      autocorrect: false,
-      autofillHints: widget.autofillHints,
-      textInputAction: widget.textInputAction,
-      onFieldSubmitted: widget.onSubmitted,
-      onChanged: widget.onChanged,
-      validator: widget.validator,
-      forceErrorText: widget.errorText,
-      decoration: InputDecoration(
-        labelText: widget.label,
-        prefixIcon: const Icon(Icons.lock_outline),
-        suffixIcon: IconButton(
-          tooltip: _hidden ? 'Show password' : 'Hide password',
-          icon: Icon(_hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-          onPressed: () => setState(() => _hidden = !_hidden),
-        ),
-      ),
-    );
-  }
-}
-
-/// Live list of password rules, ticked as the user types.
+/// Live list of password rules, ticked (with a small pop) as the user types.
 class PasswordChecklist extends StatelessWidget {
   const PasswordChecklist({super.key, required this.password});
 
@@ -70,25 +53,36 @@ class PasswordChecklist extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final app = AppColors.of(context);
+    final duration = Motion.of(context, Motion.fast);
     return Padding(
-      padding: const EdgeInsets.only(top: 8, left: 4),
+      padding: const EdgeInsets.only(top: Gaps.sm, left: Gaps.xs),
       child: Wrap(
-        spacing: 12,
-        runSpacing: 4,
+        spacing: Gaps.md,
+        runSpacing: Gaps.xs,
         children: [
           for (final rule in Validators.passwordRules.where((r) => r.label != 'At most 72 characters'))
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  rule.isMet(password) ? Icons.check_circle : Icons.radio_button_unchecked,
-                  size: 16,
-                  color: rule.isMet(password) ? StatusColors.of(context).success : colors.outline,
-                ),
-                const SizedBox(width: 4),
-                Text(rule.label, style: Theme.of(context).textTheme.bodySmall),
-              ],
+            Semantics(
+              label: '${rule.label}${rule.isMet(password) ? ', done' : ''}',
+              excludeSemantics: true,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedSwitcher(
+                    duration: duration,
+                    transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                    child: Icon(
+                      rule.isMet(password) ? Icons.check_circle : Icons.radio_button_unchecked,
+                      key: ValueKey(rule.isMet(password)),
+                      size: IconSizes.sm,
+                      color: rule.isMet(password) ? app.approved.fg : app.borderStrong,
+                    ),
+                  ),
+                  const SizedBox(width: Gaps.xs),
+                  Text(rule.label, style: theme.textTheme.bodySmall),
+                ],
+              ),
             ),
         ],
       ),
@@ -105,14 +99,7 @@ class LoadingButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: loading ? null : onPressed,
-      child: loading
-          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
-          : Text(label),
-    );
-  }
+  Widget build(BuildContext context) => AppButton(label: label, loading: loading, onPressed: onPressed);
 }
 
 /// Coloured box for a message above a form (e.g. "logged out after 15 minutes").
@@ -124,57 +111,24 @@ class InfoBanner extends StatelessWidget {
   final bool isError;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isError ? colors.errorContainer : colors.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: isError ? colors.onErrorContainer : colors.onSecondaryContainer),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: isError ? colors.onErrorContainer : colors.onSecondaryContainer),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      AppBanner(message: message, icon: icon, role: isError ? ToneRole.rejected : ToneRole.info);
 }
 
 /// Asks "Are you sure?" before logging out, then logs out.
 Future<void> confirmLogout(BuildContext context) async {
   final session = context.read<SessionController>();
-  final sure = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      icon: const Icon(Icons.logout),
-      title: const Text('Log out?'),
-      content: const Text('Are you sure you want to log out?'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Log out')),
-      ],
-    ),
+  final sure = await confirmAction(
+    context,
+    icon: Icons.logout,
+    title: 'Log out?',
+    message: 'Are you sure you want to log out?',
+    confirmLabel: 'Log out',
+    destructive: true,
   );
-  if (sure ?? false) await session.logout();
+  if (sure) await session.logout();
 }
 
-void showErrorSnack(BuildContext context, ApiException error) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(error.message), behavior: SnackBarBehavior.floating));
-}
+void showErrorSnack(BuildContext context, ApiException error) => showErrorToast(context, error);
 
-void showInfoSnack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message), behavior: SnackBarBehavior.floating));
-}
+void showInfoSnack(BuildContext context, String message) => showAppToast(context, message);

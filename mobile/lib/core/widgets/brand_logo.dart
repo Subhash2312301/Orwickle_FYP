@@ -4,21 +4,23 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-const Color _navy = Color(0xFF111827);
-const Color _navy2 = Color(0xFF1E1B4B);
-const Color _deepIndigo = Color(0xFF4F46E5);
-const Color _flame = Color(0xFFF59E0B);
-
-/// Navy background of the app icon.
+/// Ink background of the app icon and the splash screen.
 const LinearGradient iconBackground = LinearGradient(
-  colors: [_navy, _navy2],
+  colors: [Palette.ink800, Palette.ink950],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+/// Cobalt orbit ring and rocket body (on light backgrounds).
+const LinearGradient _brandBlue = LinearGradient(
+  colors: [Palette.cobalt400, Palette.cobalt600],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
 
 /// Draws the Orwickle mark (logo A, "orbit rocket"): an open orbit ring with a rocket breaking
-/// out of it, into a [size] × [size] square. [onDark] draws a white rocket for dark backgrounds;
-/// otherwise the rocket uses the brand gradient. Also used by tool/icon/generate_icon_test.dart.
+/// out of it and an amber flame, into a [size] × [size] square. [onDark] draws a white rocket for
+/// dark backgrounds; otherwise the rocket is cobalt. Also used by tool/icon/generate_icon_test.dart.
 void paintMark(Canvas canvas, double size, {bool onDark = true}) {
   canvas
     ..save()
@@ -32,7 +34,7 @@ void paintMark(Canvas canvas, double size, {bool onDark = true}) {
     700 / 146,
     false,
     Paint()
-      ..shader = AppTheme.gradient.createShader(ring)
+      ..shader = _brandBlue.createShader(ring)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 58
       ..strokeCap = StrokeCap.round,
@@ -47,7 +49,7 @@ void paintMark(Canvas canvas, double size, {bool onDark = true}) {
   if (onDark) {
     body.color = Colors.white;
   } else {
-    body.shader = AppTheme.gradient.createShader(const Rect.fromLTRB(-126, -170, 126, 126));
+    body.shader = _brandBlue.createShader(const Rect.fromLTRB(-126, -170, 126, 126));
   }
 
   canvas
@@ -56,7 +58,7 @@ void paintMark(Canvas canvas, double size, {bool onDark = true}) {
         ..moveTo(-34, 84)
         ..quadraticBezierTo(0, 200, 34, 84)
         ..close(),
-      Paint()..color = _flame,
+      Paint()..color = Palette.amber500,
     )
     ..drawPath(
       Path()
@@ -86,11 +88,11 @@ void paintMark(Canvas canvas, double size, {bool onDark = true}) {
       body,
     )
     ..drawCircle(const Offset(0, -62), 32, Paint()..color = Colors.white)
-    ..drawCircle(const Offset(0, -62), 17, Paint()..color = _deepIndigo)
+    ..drawCircle(const Offset(0, -62), 17, Paint()..color = Palette.cobalt600)
     ..restore();
 }
 
-/// Draws the full app icon (navy rounded square with the mark) into a [size] × [size] square.
+/// Draws the full app icon (ink rounded square with the mark) into a [size] × [size] square.
 void paintIcon(Canvas canvas, double size, {double radius = 112 / 512}) {
   final square = Rect.fromLTWH(0, 0, size, size);
   canvas
@@ -126,7 +128,7 @@ class _MarkPainter extends CustomPainter {
   bool shouldRepaint(covariant _MarkPainter oldDelegate) => oldDelegate.onDark != onDark;
 }
 
-/// The app logo: the orbit-rocket mark on the navy rounded square (same as the launcher icon).
+/// The app logo: the orbit-rocket mark on the ink rounded square (same as the launcher icon).
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, this.size = 64});
 
@@ -174,13 +176,10 @@ class BrandTitle extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        Text('Orwickle', style: theme.textTheme.displaySmall?.copyWith(color: textColor)),
         Text(
-          'Orwickle',
-          style: theme.textTheme.headlineMedium?.copyWith(color: textColor, fontWeight: FontWeight.w800),
-        ),
-        Text(
-          'Build  ·  Bid  ·  Grow',
-          style: theme.textTheme.bodyMedium?.copyWith(color: textColor.withValues(alpha: 0.75), letterSpacing: 2),
+          'BUILD  ·  BID  ·  GROW',
+          style: theme.textTheme.overline.copyWith(color: textColor.withValues(alpha: 0.75)),
         ),
       ],
     );
