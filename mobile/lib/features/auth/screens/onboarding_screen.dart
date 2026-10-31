@@ -55,7 +55,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _next() {
     if (_isLast) return _finish();
-    _pages.nextPage(duration: Motion.of(context, Motion.slow), curve: Motion.emphasized);
+    // with reduced motion jump straight to the next slide (a zero-length page animation is not allowed)
+    if (Motion.reduced(context)) return _pages.jumpToPage(_page + 1);
+    _pages.nextPage(duration: Motion.slow, curve: Motion.emphasized);
   }
 
   @override
