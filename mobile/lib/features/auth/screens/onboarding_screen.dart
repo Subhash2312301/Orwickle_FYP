@@ -311,13 +311,13 @@ class _VerifyArt extends StatelessWidget {
         children: [
           Row(
             children: [
-              const AppAvatar(initials: 'SA', size: 40, verified: true),
+              const AppAvatar(initials: 'You', size: 40, verified: true),
               const SizedBox(width: Gaps.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Sara Ahmed', style: theme.textTheme.titleSmall),
+                    Text('Your profile', style: theme.textTheme.titleSmall),
                     Text('BS Computer Science', style: theme.textTheme.bodySmall),
                   ],
                 ),

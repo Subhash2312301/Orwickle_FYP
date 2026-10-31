@@ -41,7 +41,7 @@ Listing _listing(String id, bool funding, String title, String status, String re
   coverUrl: null,
   status: status,
   reviewStatus: review,
-  ownerName: 'Sara Ahmed',
+  ownerName: 'Subhash Rai',
 );
 
 final _mine = [
@@ -72,9 +72,9 @@ class _OwnerApi extends FakeAuthApi {
     expiresIn: const Duration(minutes: 15),
     user: const AppUser(
       id: 'u',
-      email: 'sara@example.com',
+      email: 'subhash@gmail.com',
       role: 'owner',
-      fullName: 'Sara Ahmed',
+      fullName: 'Subhash Rai',
       emailVerified: true,
       profileCompleted: true,
       approvalStatus: 'approved',
@@ -84,7 +84,7 @@ class _OwnerApi extends FakeAuthApi {
 
 Future<(Widget Function(ThemeData), SessionController)> _app(Widget screen) async {
   final session = SessionController(api: _OwnerApi(), storage: MemoryTokenStorage());
-  await session.login(email: 'sara@example.com', password: 'x');
+  await session.login(email: 'subhash@gmail.com', password: 'x');
   return (
     (ThemeData theme) => MultiProvider(
       providers: [

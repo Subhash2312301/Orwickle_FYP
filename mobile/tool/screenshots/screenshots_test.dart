@@ -58,7 +58,7 @@ Listing _listing(String id, bool funding, String title, String status, String re
       coverUrl: null,
       status: status,
       reviewStatus: review,
-      ownerName: 'Sara Ahmed',
+      ownerName: 'Subhash Rai',
     );
 
 final _mine = [
@@ -100,12 +100,12 @@ class _Profiles extends ProfileApi {
   @override
   Future<MyProfile> getMine() async => const MyProfile(
     role: 'owner',
-    email: 'sara@example.com',
-    fullName: 'Sara Ahmed',
+    email: 'subhash@gmail.com',
+    fullName: 'Subhash Rai',
     headline: 'CS student building AgriTech hardware',
     city: 'Karachi',
     bio: 'I build simple, low-cost devices for small farms.',
-    linkedinUrl: 'https://www.linkedin.com/in/sara',
+    linkedinUrl: 'https://www.linkedin.com/in/subhash-rai',
     completed: true,
     reviewStatus: 'approved',
     details: {'isStudent': true, 'university': 'SZABIST', 'degreeProgram': 'BS Computer Science'},
@@ -124,9 +124,9 @@ class _RoleApi extends FakeAuthApi {
     expiresIn: const Duration(minutes: 15),
     user: AppUser(
       id: 'u',
-      email: 'sara@example.com',
+      email: 'subhash@gmail.com',
       role: role,
-      fullName: role == 'owner' ? 'Sara Ahmed' : 'Ali Khan',
+      fullName: 'Subhash Rai',
       emailVerified: true,
       profileCompleted: true,
       approvalStatus: 'approved',
@@ -187,13 +187,13 @@ final _shots = <_Shot>[
     '06_register',
     const RegisterScreen(role: UserRole.owner),
     before: (tester) async {
-      await tester.enterText(find.widgetWithText(TextFormField, 'Full name'), 'Sara Ahmed');
-      await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'sara@example.com');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Full name'), 'Subhash Rai');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'subhash@gmail.com');
       await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'Orwick@2026!');
       await _settle(tester);
     },
   ),
-  const _Shot('07_verify_email', VerifyEmailScreen(email: 'sara@example.com')),
+  const _Shot('07_verify_email', VerifyEmailScreen(email: 'subhash@gmail.com')),
   const _Shot('08_login', LoginScreen()),
   const _Shot('09_forgot_password', ForgotPasswordScreen()),
   const _Shot('10_profile_setup', ProfileEditScreen(setup: true)),
@@ -249,7 +249,7 @@ void main() {
         addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
 
         final session = SessionController(api: _RoleApi(shot.role), storage: MemoryTokenStorage());
-        await session.login(email: 'sara@example.com', password: 'x');
+        await session.login(email: 'subhash@gmail.com', password: 'x');
         final themes = ThemeController();
         await themes.setMode(dark ? ThemeMode.dark : ThemeMode.light);
 
