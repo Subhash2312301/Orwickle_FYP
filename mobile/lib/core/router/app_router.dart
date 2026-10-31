@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_config.dart';
+
 import '../../features/auth/data/auth_models.dart';
 import '../../features/auth/screens/change_password_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
@@ -30,7 +32,7 @@ GoRouter buildRouter(SessionController session, OnboardingState onboarding) => G
   refreshListenable: Listenable.merge([session, onboarding]),
   redirect: (context, state) {
     final location = state.matchedLocation;
-    if (location == Routes.designSystem && session.status != SessionStatus.unknown) return null; // debug gallery
+    if (location == Routes.designSystem) return null; // developer gallery needs no session
     switch (session.status) {
       case SessionStatus.unknown:
         return location == Routes.splash ? null : Routes.splash;
@@ -73,8 +75,8 @@ GoRouter buildRouter(SessionController session, OnboardingState onboarding) => G
       builder: (context, state) => ResetPasswordScreen(email: state.uri.queryParameters['email'] ?? ''),
     ),
     // developer health check, not part of the release app
-    if (kDebugMode) GoRoute(path: Routes.systemCheck, builder: (context, state) => const SystemCheckScreen()),
-    if (kDebugMode) GoRoute(path: Routes.designSystem, builder: (context, state) => const ComponentGalleryScreen()),
+    if (AppConfig.devTools) GoRoute(path: Routes.systemCheck, builder: (context, state) => const SystemCheckScreen()),
+    if (AppConfig.devTools) GoRoute(path: Routes.designSystem, builder: (context, state) => const ComponentGalleryScreen()),
     GoRoute(path: Routes.home, builder: (context, state) => const MainShell()),
     GoRoute(path: Routes.changePassword, builder: (context, state) => const ChangePasswordScreen()),
     GoRoute(path: Routes.profileSetup, builder: (context, state) => const ProfileEditScreen(setup: true)),

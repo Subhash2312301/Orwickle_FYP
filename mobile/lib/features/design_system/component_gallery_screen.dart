@@ -6,7 +6,7 @@ import '../../core/theme/theme_controller.dart';
 import '../../core/widgets/widgets.dart';
 
 /// Developer page showing every design-system component and its states, in light or dark.
-/// Debug builds only (/design-system); handy for checking changes and for report screenshots.
+/// Developer builds only (/design-system, see AppConfig.devTools); handy for checking changes and for report screenshots.
 class ComponentGalleryScreen extends StatefulWidget {
   const ComponentGalleryScreen({super.key});
 

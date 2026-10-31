@@ -98,7 +98,8 @@ class AppTheme {
       borderSide: BorderSide(color: color, width: width),
     );
     const buttonPadding = EdgeInsets.symmetric(horizontal: Gaps.xl);
-    const buttonSize = Size(Sizes.tapTarget, Sizes.buttonHeight);
+    // filled buttons fill their row by default (forms, bottom bars); AppButton(expand: false) hugs
+    const buttonSize = Size.fromHeight(Sizes.buttonHeight);
 
     return ThemeData(
       useMaterial3: true,
@@ -168,7 +169,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: buttonSize,
+          minimumSize: const Size(Sizes.tapTarget, Sizes.buttonHeight),
           padding: buttonPadding,
           foregroundColor: colors.onSurface,
           side: BorderSide(color: app.borderStrong),
