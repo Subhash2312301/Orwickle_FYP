@@ -96,23 +96,24 @@ Future<SessionController> _pump(WidgetTester tester, String role, {String approv
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
-  testWidgets('owners get Home, My Listings, Requests and Profile tabs', (tester) async {
+  testWidgets('owners get Home, My Listings and Profile tabs', (tester) async {
     final session = await _pump(tester, 'owner');
-    for (final label in ['Home', 'My Listings', 'Requests', 'Profile']) {
+    for (final label in ['Home', 'My Listings', 'Profile']) {
       expect(find.widgetWithText(NavigationDestination, label), findsOneWidget);
     }
-    expect(find.widgetWithText(NavigationDestination, 'Discover'), findsNothing);
+    expect(find.widgetWithText(NavigationDestination, 'Requests'), findsNothing, reason: 'only phases 1-3');
     expect(find.text('Account under review'), findsNothing, reason: 'approved accounts see no banner');
     session.dispose();
   });
 
-  testWidgets('investors get Discover, Saved, Requests and Profile tabs and land on Discover', (tester) async {
+  testWidgets('investors get Home and Profile tabs and see their account status', (tester) async {
     final session = await _pump(tester, 'investor');
-    for (final label in ['Discover', 'Saved', 'Requests', 'Profile']) {
+    for (final label in ['Home', 'Profile']) {
       expect(find.widgetWithText(NavigationDestination, label), findsOneWidget);
     }
     expect(find.widgetWithText(NavigationDestination, 'My Listings'), findsNothing);
-    expect(_router.routerDelegate.currentConfiguration.uri.path, Routes.discover);
+    expect(_router.routerDelegate.currentConfiguration.uri.path, Routes.home);
+    expect(find.text('Your account'), findsOneWidget);
     session.dispose();
   });
 
@@ -120,7 +121,7 @@ void main() {
     final session = await _pump(tester, 'buyer');
     _router.go(Routes.myListings);
     await tester.pumpAndSettle();
-    expect(_router.routerDelegate.currentConfiguration.uri.path, Routes.discover);
+    expect(_router.routerDelegate.currentConfiguration.uri.path, Routes.home);
     session.dispose();
   });
 
@@ -142,21 +143,6 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Log out'));
     await tester.pumpAndSettle();
     expect(session.user, isNull);
-    session.dispose();
-  });
-
-  testWidgets('later-phase features say "Coming soon" when opened', (tester) async {
-    final session = await _pump(tester, 'buyer');
-    await tester.tap(find.byTooltip('Messages').first);
-    await tester.pumpAndSettle();
-    expect(find.text('Coming soon'), findsWidgets);
-    expect(find.text('Real-time chat with approved connections'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10)); // close the sheet
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('Notifications').first);
-    await tester.pumpAndSettle();
-    expect(find.text('New access requests and offers'), findsOneWidget);
     session.dispose();
   });
 

@@ -14,11 +14,8 @@ class Routes {
   static const designSystem = '/design-system'; // developer only: component gallery
 
   // tabs (one router branch each; which ones a user sees depends on the role)
-  static const home = '/home'; // owner
+  static const home = '/home'; // everyone: owners see their listings summary, others their account status
   static const myListings = '/listings/mine'; // owner
-  static const discover = '/discover'; // investor, buyer
-  static const saved = '/saved'; // investor, buyer
-  static const requests = '/requests'; // everyone: access requests and offers
   static const profile = '/profile';
 
   static const settings = '/settings';
@@ -28,24 +25,18 @@ class Routes {
   static const newListing = '/listings/new';
   static String listing(String id) => '/listings/$id';
   static String editListing(String id) => '/listings/$id/edit';
-  static String offer(String id) => '/offers/$id';
 
   /// Pages a logged-out user may open.
   static const public = {welcome, register, verifyEmail, login, forgotPassword, resetPassword, systemCheck};
 
-  /// The first tab for a role: owners land on their home, investors and buyers on Discover.
-  static String homeFor(String? role) => switch (role) {
-    'owner' => home,
-    'investor' || 'buyer' => discover,
-    _ => profile,
-  };
+  /// The first tab for a role. Admins work in the web dashboard, so the app only shows their profile.
+  static String homeFor(String? role) => role == 'admin' ? profile : home;
 
   /// Pages only some roles may open; anything else is shared.
   static bool allowedFor(String location, String? role) {
-    final ownerOnly = location == home || location.startsWith(myListings) || location == newListing;
-    final seekerOnly = location == discover || location == saved;
+    final ownerOnly = location.startsWith(myListings) || location == newListing;
     if (ownerOnly) return role == 'owner';
-    if (seekerOnly) return role == 'investor' || role == 'buyer';
+    if (location == home) return role != 'admin';
     if (location.endsWith('/edit') && location.startsWith('/listings/')) return role == 'owner';
     return true;
   }

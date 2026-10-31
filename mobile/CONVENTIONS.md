@@ -49,7 +49,8 @@ lib/features/<name> data/ (API + models), screens/, widgets/
    theme), `slideUpPage` for create flows, `fadeThroughPage` for top-level switches.
    A new bottom tab = a new `StatefulShellBranch` + an entry in `Branches` and `tabsFor` in
    `features/shell/app_shell.dart`.
-4. Not wired to the backend yet? Use mock data and mark it `// TODO: wire in Week X`.
+4. Scope: the app covers FYP phases 1–3 (auth, profiles, project listing). Add later phases
+   (discovery, access requests, bidding) as new features and tabs; do not add placeholders for them.
 
 ## Checks before committing
 

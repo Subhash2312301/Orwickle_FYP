@@ -22,8 +22,7 @@ import 'package:orwickle/features/auth/screens/verify_email_screen.dart';
 import 'package:orwickle/features/auth/screens/welcome_screen.dart';
 import 'package:orwickle/features/auth/session/session_controller.dart';
 import 'package:orwickle/features/design_system/component_gallery_screen.dart';
-import 'package:orwickle/features/discover/discover_screen.dart';
-import 'package:orwickle/features/discover/saved_screen.dart';
+import 'package:orwickle/features/home/member_home_tab.dart';
 import 'package:orwickle/features/home/owner_home_tab.dart';
 import 'package:orwickle/features/home/profile_tab.dart';
 import 'package:orwickle/features/listings/data/listing_api.dart';
@@ -34,8 +33,6 @@ import 'package:orwickle/features/listings/screens/my_listings_screen.dart';
 import 'package:orwickle/features/profile/data/profile_api.dart';
 import 'package:orwickle/features/profile/data/profile_models.dart';
 import 'package:orwickle/features/profile/screens/profile_edit_screen.dart';
-import 'package:orwickle/features/requests/offer_screen.dart';
-import 'package:orwickle/features/requests/requests_screen.dart';
 import 'package:orwickle/features/settings/settings_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -82,15 +79,13 @@ const _confidential = ListingConfidential({
 });
 
 class _Listings extends ListingApi {
-  _Listings({this.owner = true}) : super(ApiClient());
-
-  final bool owner;
+  _Listings() : super(ApiClient());
 
   @override
   Future<List<Listing>> mine() async => _mine;
 
   @override
-  Future<ListingDetail> get(String id) async => ListingDetail(_mine.first, owner ? _confidential : null);
+  Future<ListingDetail> get(String id) async => ListingDetail(_mine.first, _confidential);
 }
 
 class _Profiles extends ProfileApi {
@@ -143,24 +138,19 @@ class _RoleApi extends FakeAuthApi {
 
 /// One screenshot: which role is logged in, the screen, and optional steps before the shot.
 class _Shot {
-  const _Shot(this.name, this.screen, {this.role = 'owner', this.ownerView = true, this.before, this.wait});
+  const _Shot(this.name, this.screen, {this.role = 'owner', this.before});
 
   final String name;
   final Widget screen;
   final String role;
-  final bool ownerView;
   final Future<void> Function(WidgetTester tester)? before;
-
-  /// Extra fake time for screens that load sample data with a delay (Discover).
-  final Duration? wait;
 }
 
-Future<void> _settle(WidgetTester tester, [Duration? wait]) async {
+Future<void> _settle(WidgetTester tester) async {
   // fixed pumps instead of pumpAndSettle, so a running indicator can never hang the run
   for (var i = 0; i < 10; i++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
-  if (wait != null) await tester.pump(wait);
   await tester.pump(const Duration(milliseconds: 500));
 }
 
@@ -168,7 +158,7 @@ final _shots = <_Shot>[
   const _Shot('01_splash', SplashScreen()),
   const _Shot('02_onboarding_list', OnboardingScreen()),
   _Shot(
-    '03_onboarding_discover',
+    '03_onboarding_verify',
     const OnboardingScreen(),
     before: (tester) async {
       await tester.tap(find.text('Next'));
@@ -176,7 +166,7 @@ final _shots = <_Shot>[
     },
   ),
   _Shot(
-    '04_onboarding_negotiate',
+    '04_onboarding_privacy',
     const OnboardingScreen(),
     before: (tester) async {
       for (var i = 0; i < 2; i++) {
@@ -235,24 +225,10 @@ final _shots = <_Shot>[
     },
   ),
   const _Shot('17_listing_detail_owner', ListingDetailScreen(listingId: '1')),
-  const _Shot('18_listing_detail_investor', ListingDetailScreen(listingId: '1'), role: 'investor', ownerView: false),
+  const _Shot('18_member_home', MemberHomeTab(), role: 'investor'),
   const _Shot('19_profile', ProfileTab()),
   const _Shot('20_settings', SettingsScreen()),
-  const _Shot('21_discover_funding', DiscoverScreen(), role: 'investor', wait: Duration(seconds: 1)),
-  const _Shot('22_discover_sales', DiscoverScreen(), role: 'buyer', wait: Duration(seconds: 1)),
-  const _Shot('23_saved', SavedScreen(), role: 'investor'),
-  const _Shot('24_requests_access', RequestsScreen()),
-  _Shot(
-    '25_requests_offers',
-    const RequestsScreen(),
-    role: 'investor',
-    before: (tester) async {
-      await tester.tap(find.text('Offers'));
-      await _settle(tester);
-    },
-  ),
-  const _Shot('26_offer_timeline', OfferScreen(offerId: 'o1')),
-  const _Shot('27_design_system', ComponentGalleryScreen()),
+  const _Shot('21_design_system', ComponentGalleryScreen()),
 ];
 
 void main() {
@@ -284,7 +260,7 @@ void main() {
               ChangeNotifierProvider.value(value: themes),
               ChangeNotifierProvider(create: (_) => OnboardingState()),
               Provider<AuthApi>.value(value: FakeAuthApi()),
-              Provider<ListingApi>.value(value: _Listings(owner: shot.ownerView)),
+              Provider<ListingApi>.value(value: _Listings()),
               Provider<ProfileApi>.value(value: _Profiles()),
             ],
             child: Consumer<ThemeController>(
@@ -299,7 +275,7 @@ void main() {
           ),
         );
         await tester.runAsync(GoogleFonts.pendingFonts);
-        await _settle(tester, shot.wait);
+        await _settle(tester);
         if (shot.before != null) await shot.before!(tester);
         await tester.runAsync(GoogleFonts.pendingFonts);
         await _settle(tester);

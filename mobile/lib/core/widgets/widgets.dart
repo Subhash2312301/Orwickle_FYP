@@ -19,4 +19,3 @@ export 'segmented_toggle.dart';
 export 'skeleton.dart';
 export 'stepper_progress.dart';
 export 'success_check.dart';
-export 'timeline.dart';

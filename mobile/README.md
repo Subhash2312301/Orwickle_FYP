@@ -44,10 +44,8 @@ lib/
       screens/                 splash, onboarding, welcome, register, verify email, login, password screens
       widgets/                 auth layout, OTP boxes, password field + checklist, resend countdown
     profile/                   4-step profile setup / edit, document uploads
-    home/                      owner home, profile tab
+    home/                      owner home, investor / buyer home (account status), profile tab
     listings/                  my listings, create / edit wizard, listing detail, ListingCard
-    discover/                  Discover and Saved (UI scaffolds on mock data, wired in Week 9)
-    requests/                  access requests and offers (UI scaffolds, wired in Weeks 10–11)
     settings/                  appearance, account, about
     shell/                     AppShell (bottom navigation per role), approval banner, "coming soon"
     design_system/             component gallery (developer builds only: /#/design-system)
@@ -70,11 +68,11 @@ spacing or radii.
 
 | Part | Where | What |
 |---|---|---|
-| Colours | `theme/colors.dart` | `Palette` (raw values) and the `AppColors` theme extension: `funding`, `sale`, `pending`, `approved`, `rejected`, `expired`, `countered`, `verified`, each a `Tone(fg, bg)` that meets WCAG AA (checked by a test) |
+| Colours | `theme/colors.dart` | `Palette` (raw values) and the `AppColors` theme extension: `funding`, `sale`, `pending`, `approved`, `rejected`, `expired` (closed), `verified`, each a `Tone(fg, bg)` that meets WCAG AA (checked by a test) |
 | Type | `theme/typography.dart` | Sora for headings, Inter for text, `textTheme.numeric()` for money (tabular figures), `textTheme.overline` labels. Fonts are bundled in `assets/google_fonts` (Inter 400–700, Sora 400–800) |
 | Tokens | `theme/tokens.dart` | `Gaps` (4-point spacing), `Radii`, `IconSizes`, `Sizes` (48 dp tap target), `Elevations`, `Motion` (150 / 250 / 400 ms, easeOutCubic and emphasized curves) |
 | Themes | `theme/app_theme.dart` | Material 3 light and dark; Settings → Appearance switches System / Light / Dark |
-| Components | `widgets/` | AppButton, AppTextField, AppDropdownField, AppCard, StatusChip, ListingTypeChip, CategoryChip, RoleBadge, VerifiedBadge, SectionHeader, EmptyState, ErrorState, Skeleton, AppBanner, DisclaimerBanner, bottom sheet / dialog / toast, AppAppBar, SegmentedToggle, StepperProgress, AppAvatar, Timeline, AnimatedCounter, SuccessCheck, AsyncView |
+| Components | `widgets/` | AppButton, AppTextField, AppDropdownField, AppCard, StatusChip, ListingTypeChip, CategoryChip, RoleBadge, VerifiedBadge, SectionHeader, EmptyState, ErrorState, Skeleton, AppBanner, DisclaimerBanner, bottom sheet / dialog / toast, AppAppBar, SegmentedToggle, StepperProgress, AppAvatar, AnimatedCounter, SuccessCheck, AsyncView |
 | Motion | `motion/` | shared-axis pushes, fade-through tab and top-level changes, slide-up for creating, Hero from card to detail, staggered entrances; all skipped when the phone asks for reduced motion |
 
 Every component, in light and dark, is on **/#/design-system** in a developer build.

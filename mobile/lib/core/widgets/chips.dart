@@ -11,7 +11,6 @@ enum ToneRole {
   approved,
   rejected,
   expired,
-  countered,
   verified,
   info,
   neutral;
@@ -26,7 +25,6 @@ enum ToneRole {
       approved => c.approved,
       rejected => c.rejected,
       expired => c.expired,
-      countered => c.countered,
       verified => c.verified,
       info => c.info,
       neutral => Tone(scheme.onSurfaceVariant, scheme.surfaceContainerHigh),
@@ -34,19 +32,15 @@ enum ToneRole {
   }
 }
 
-/// Statuses used across listings, access requests and offers, with their label, colour and icon.
+/// Statuses of accounts and listings, with their label, colour and icon.
 /// Colour is never the only cue: every status also has an icon and a word.
 enum AppStatus {
   draft('Draft', ToneRole.neutral, Icons.edit_note),
   inReview('In review', ToneRole.pending, Icons.hourglass_top),
   live('Live', ToneRole.approved, Icons.check_circle_outline),
-  pending('Pending', ToneRole.pending, Icons.schedule),
   approved('Approved', ToneRole.approved, Icons.check_circle_outline),
   rejected('Rejected', ToneRole.rejected, Icons.cancel_outlined),
   needsInfo('More info needed', ToneRole.rejected, Icons.help_outline),
-  expired('Expired', ToneRole.expired, Icons.timer_off_outlined),
-  countered('Countered', ToneRole.countered, Icons.swap_horiz),
-  accepted('Accepted', ToneRole.approved, Icons.handshake_outlined),
   closed('Closed', ToneRole.expired, Icons.lock_outline),
   suspended('Suspended', ToneRole.rejected, Icons.block);
 

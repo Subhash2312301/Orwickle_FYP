@@ -476,7 +476,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       ),
       SectionTitle(
         'Confidential details',
-        subtitle: 'Hidden until you approve an access request.',
+        subtitle: 'Stored separately. Only you can see them.',
         leading: Icon(Icons.lock_outline, size: IconSizes.md, color: app.verified.fg),
       ),
       AppCard(
@@ -671,9 +671,7 @@ class _VisibilityBanner extends StatelessWidget {
             icon: Icons.lock_outline,
             role: ToneRole.verified,
             title: 'Confidential · only you',
-            message:
-                'Stored separately from the preview. Investors or buyers see these only after you approve '
-                'their access request.',
+            message: 'Stored separately from the public preview. Only you can see these details.',
           )
         : const AppBanner(
             icon: Icons.visibility_outlined,

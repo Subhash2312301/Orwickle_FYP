@@ -58,7 +58,7 @@ class ListingCover extends StatelessWidget {
 /// short description, then the ask or price and the owner.
 ///
 /// * [showStatus]: owner's own lists show draft / in review / live.
-/// * [showOwner]: discovery lists show who is behind the project (with the verified slot).
+/// * [showOwner]: show who is behind the project (with the verified slot).
 class ListingCard extends StatelessWidget {
   const ListingCard({
     super.key,
@@ -76,7 +76,7 @@ class ListingCard extends StatelessWidget {
   final bool showOwner;
   final bool ownerVerified;
 
-  /// Top-right action on the cover, e.g. a save button in Discover.
+  /// Optional top-right action on the cover.
   final Widget? trailing;
 
   static const double coverHeight = 148;

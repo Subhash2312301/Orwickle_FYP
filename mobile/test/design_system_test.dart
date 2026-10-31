@@ -128,24 +128,6 @@ void main() {
     expect(tapped, 2);
   });
 
-  testWidgets('Timeline lists every version and highlights the current one', (tester) async {
-    await tester.pumpWidget(
-      _host(
-        const SingleChildScrollView(
-          child: Timeline(
-            entries: [
-              TimelineEntry(title: 'Offer', time: 'Mon', amount: 'PKR 100'),
-              TimelineEntry(title: 'Counteroffer', time: 'Tue', amount: 'PKR 120', isCurrent: true),
-            ],
-          ),
-        ),
-      ),
-    );
-    expect(find.text('PKR 100'), findsOneWidget);
-    expect(find.text('PKR 120'), findsOneWidget);
-    expect(find.bySemanticsLabel(RegExp('^Version 2, current')), findsOneWidget);
-  });
-
   testWidgets('ErrorState explains being offline and offers a retry', (tester) async {
     var retried = false;
     await tester.pumpWidget(
@@ -204,7 +186,6 @@ void main() {
         colors.pending,
         colors.approved,
         colors.rejected,
-        colors.countered,
         colors.verified,
       ]) {
         expect(contrast(tone.fg, surface), greaterThanOrEqualTo(4.5), reason: '${tone.fg} on $surface');

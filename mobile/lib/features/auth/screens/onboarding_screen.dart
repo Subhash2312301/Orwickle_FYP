@@ -5,7 +5,7 @@ import '../../../core/storage/onboarding_state.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/widgets.dart';
 
-/// Three intro slides shown on the first start: list, discover, negotiate. Finishing or skipping
+/// Three intro slides shown on the first start: list, get verified, keep details private. Finishing or skipping
 /// them marks them as seen, and the router then moves on to the welcome screen.
 /// Each slide's picture is built from the app's own components, so it previews the real product.
 class OnboardingScreen extends StatefulWidget {
@@ -33,16 +33,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _ListArt(),
     ),
     _Slide(
-      'Discover',
-      'Find the right match',
-      'Investors browse projects seeking funding, buyers browse projects for sale, each in their own section.',
-      _DiscoverArt(),
+      'Verify',
+      'Get verified',
+      'Complete your profile and upload your ID. An admin reviews every account before it goes live.',
+      _VerifyArt(),
     ),
     _Slide(
-      'Negotiate',
-      'Negotiate with confidence',
-      'Request access, make offers and counteroffers, and keep every version on record. Every account is reviewed.',
-      _NegotiateArt(),
+      'Protect',
+      'Your secrets stay yours',
+      'Everyone sees the public preview. Your financials and business model stay confidential, visible only to you.',
+      _PrivacyArt(),
     ),
   ];
 
@@ -297,49 +297,8 @@ class _ListArt extends StatelessWidget {
   }
 }
 
-class _DiscoverArt extends StatelessWidget {
-  const _DiscoverArt();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    Widget row(bool funding, String title, String amount) => Padding(
-      padding: const EdgeInsets.only(top: Gaps.md),
-      child: Row(
-        children: [
-          ListingTypeChip(isFunding: funding, short: true),
-          const SizedBox(width: Gaps.sm),
-          Expanded(
-            child: Text(title, style: theme.textTheme.titleSmall, overflow: TextOverflow.ellipsis),
-          ),
-          Text(amount, style: theme.textTheme.numeric(size: 13)),
-        ],
-      ),
-    );
-    return _MiniCard(
-      width: 260,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SegmentedToggle<bool>(
-            value: true,
-            onChanged: null,
-            segments: const [
-              ToggleSegment(value: true, label: 'Funding', icon: Icons.trending_up, role: ToneRole.funding),
-              ToggleSegment(value: false, label: 'Sales', icon: Icons.sell_outlined, role: ToneRole.sale),
-            ],
-          ),
-          row(true, 'Campus delivery app', '8 lakh'),
-          row(true, 'AI tutor for O-levels', '20 lakh'),
-          row(false, 'Clinic booking system', '3 lakh'),
-        ],
-      ),
-    );
-  }
-}
-
-class _NegotiateArt extends StatelessWidget {
-  const _NegotiateArt();
+class _VerifyArt extends StatelessWidget {
+  const _VerifyArt();
 
   @override
   Widget build(BuildContext context) {
@@ -352,23 +311,74 @@ class _NegotiateArt extends StatelessWidget {
         children: [
           Row(
             children: [
-              const AppAvatar(initials: 'AK', size: 32),
-              const SizedBox(width: Gaps.sm),
-              Expanded(child: Text('Offer from Ali', style: theme.textTheme.titleSmall)),
-              StatusChip.status(AppStatus.countered),
+              const AppAvatar(initials: 'SA', size: 40, verified: true),
+              const SizedBox(width: Gaps.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Sara Ahmed', style: theme.textTheme.titleSmall),
+                    Text('BS Computer Science', style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: Gaps.md),
-          Text('PKR 1,200,000', style: theme.textTheme.numeric(size: 20)),
-          Text('10% equity · expires in 5 days', style: theme.textTheme.bodySmall),
-          const SizedBox(height: Gaps.md),
-          Row(
+          const Wrap(
+            spacing: Gaps.sm,
+            runSpacing: Gaps.sm,
             children: [
-              StatusChip.status(AppStatus.accepted),
-              const SizedBox(width: Gaps.sm),
-              const VerifiedBadge(showLabel: true),
+              RoleBadge(role: 'owner', label: 'Project Owner'),
+              StatusChip('University ID', icon: Icons.badge_outlined),
             ],
           ),
+          const SizedBox(height: Gaps.md),
+          StatusChip.status(AppStatus.approved, label: 'Approved by admin'),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrivacyArt extends StatelessWidget {
+  const _PrivacyArt();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final app = AppColors.of(context);
+    Widget row(IconData icon, String title, String body, Tone tone) => Padding(
+      padding: const EdgeInsets.only(top: Gaps.md),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(Gaps.sm),
+            decoration: BoxDecoration(color: tone.bg, borderRadius: BorderRadius.circular(Radii.md)),
+            child: Icon(icon, size: IconSizes.md, color: tone.fg),
+          ),
+          const SizedBox(width: Gaps.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.titleSmall),
+                Text(body, style: theme.textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    return _MiniCard(
+      width: 260,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Smart irrigation kit', style: theme.textTheme.titleMedium),
+          row(Icons.visibility_outlined, 'Public preview', 'Title, summary, price', app.info),
+          row(Icons.lock_outline, 'Confidential', 'Financials, business model', app.verified),
         ],
       ),
     );

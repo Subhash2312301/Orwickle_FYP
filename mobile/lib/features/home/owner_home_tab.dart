@@ -11,7 +11,6 @@ import '../listings/data/listing_api.dart';
 import '../listings/data/listing_models.dart';
 import '../listings/widgets/listing_widgets.dart';
 import '../shell/approval_banner.dart';
-import '../shell/coming_soon.dart';
 
 /// Owner's home: a greeting with live / in review / draft counts, the latest listings and how
 /// listing works. "Create listing" is always one tap away.
@@ -47,7 +46,6 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
       appBar: const AppAppBar(
         leading: Padding(padding: EdgeInsets.all(Gaps.md), child: BrandMark(size: 28)),
         title: 'Orwickle',
-        actions: [ShellActions()],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _open(Routes.newListing),

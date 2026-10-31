@@ -18,8 +18,7 @@ import '../widgets/listing_widgets.dart';
 ///
 /// * Owner (the API returns the confidential details only to the owner): status banners, the
 ///   confidential section, and the actions allowed in the listing's status.
-/// * Investors and buyers: the public preview, a locked teaser of the confidential details and a
-///   "Request access" button (access requests arrive in the next phase).
+/// * Anyone else: the public preview only.
 class ListingDetailScreen extends StatefulWidget {
   const ListingDetailScreen({super.key, required this.listingId});
 
@@ -248,7 +247,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               ],
             ),
           ),
-          bottomNavigationBar: isOwner ? _ownerBar(detail.listing) : _seekerBar(detail.listing),
+          bottomNavigationBar: isOwner ? _ownerBar(detail.listing) : null,
         );
       },
     );
@@ -351,21 +350,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         ),
     ]);
   }
-
-  /// Investors and buyers: ask the owner for the confidential details.
-  // TODO: wire in Week 9 (access requests): POST /listings/:id/access-requests and show its status.
-  Widget _seekerBar(Listing l) => _barFrame([
-    AppButton(
-      label: 'Request access',
-      icon: Icons.lock_open_outlined,
-      onPressed: () => showAppToast(
-        context,
-        'Access requests are coming next. You will be able to ask ${l.ownerName.isEmpty ? 'the owner' : l.ownerName} '
-        'for the confidential details here.',
-        role: ToneRole.pending,
-      ),
-    ),
-  ]);
 }
 
 class _Body extends StatelessWidget {
@@ -470,10 +454,7 @@ class _Body extends StatelessWidget {
           onRemove: editable && !busy ? (i) => onRemovePhoto(l.photos[i]) : null,
         ),
       ],
-      if (detail.confidential != null)
-        _ConfidentialCard(detail.confidential!, isFunding: l.isFunding)
-      else
-        const _LockedTeaser(),
+      if (detail.confidential != null) _ConfidentialCard(detail.confidential!, isFunding: l.isFunding),
       const DisclaimerBanner(margin: EdgeInsets.only(top: Gaps.xl)),
     ];
 
@@ -558,7 +539,7 @@ class _ConfidentialCard extends StatelessWidget {
             ),
             const SizedBox(height: Gaps.xs),
             Text(
-              'Only you can see this. Approved investors or buyers will, once you grant access.',
+              'Stored separately from the public preview. Only you can see this section.',
               style: theme.textTheme.bodySmall,
             ),
             for (final row in rows) ...[
@@ -567,48 +548,6 @@ class _ConfidentialCard extends StatelessWidget {
               const SizedBox(height: Gaps.xs),
               Text(row.value, style: theme.textTheme.bodyMedium),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// What investors and buyers see instead of the confidential details: blurred-looking lines
-/// behind a lock, and what they get once the owner approves their request.
-class _LockedTeaser extends StatelessWidget {
-  const _LockedTeaser();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tone = AppColors.of(context).verified;
-    return Padding(
-      padding: const EdgeInsets.only(top: Gaps.xl),
-      child: AppCard(
-        padding: const EdgeInsets.all(Gaps.lg + Gaps.xs),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(Gaps.sm),
-                  decoration: BoxDecoration(color: tone.bg, shape: BoxShape.circle),
-                  child: Icon(Icons.lock_outline, color: tone.fg, size: IconSizes.md),
-                ),
-                const SizedBox(width: Gaps.md),
-                Expanded(child: Text('Confidential details', style: theme.textTheme.titleLarge)),
-              ],
-            ),
-            const SizedBox(height: Gaps.lg),
-            const ExcludeSemantics(child: SkeletonLines(lines: 4, lineHeight: 10)),
-            const SizedBox(height: Gaps.lg),
-            Text(
-              'Full description, problem, business model, financials and ownership. The owner shares them '
-              'after approving your access request.',
-              style: theme.textTheme.bodyMedium,
-            ),
           ],
         ),
       ),

@@ -24,29 +24,6 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
 
   static const _categories = ['FinTech', 'EdTech', 'HealthTech', 'E-commerce', 'AI / ML'];
 
-  static const _offers = [
-    TimelineEntry(
-      title: 'Offer from Ali (Investor)',
-      time: '2 Nov, 10:15',
-      amount: 'PKR 1,000,000',
-      detail: '10% equity · expires 9 Nov',
-      icon: Icons.local_offer_outlined,
-      status: AppStatus.countered,
-      role: ToneRole.countered,
-    ),
-    TimelineEntry(
-      title: 'Counteroffer from you',
-      time: '3 Nov, 18:40',
-      amount: 'PKR 1,400,000',
-      detail: '8% equity · expires 10 Nov',
-      icon: Icons.swap_horiz,
-      subtitle: 'Happy to go lower on equity if the amount moves up.',
-      status: AppStatus.pending,
-      role: ToneRole.pending,
-      isCurrent: true,
-    ),
-  ];
-
   @override
   void dispose() {
     _text.dispose();
@@ -199,9 +176,6 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
             icon: Icons.error_outline,
           ),
           const DisclaimerBanner(),
-
-          const SectionHeader('Offer timeline'),
-          const Timeline(entries: _offers),
 
           const SectionHeader('Skeleton'),
           const Skeleton(

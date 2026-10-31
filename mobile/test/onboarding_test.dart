@@ -39,10 +39,10 @@ void main() {
     expect(find.text('Skip'), findsOneWidget);
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
-    expect(find.text('Find the right match'), findsOneWidget);
+    expect(find.text('Get verified'), findsOneWidget);
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
-    expect(find.text('Negotiate with confidence'), findsOneWidget);
+    expect(find.text('Your secrets stay yours'), findsOneWidget);
 
     await tester.tap(find.text('Get started'));
     await tester.pumpAndSettle();

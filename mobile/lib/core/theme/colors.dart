@@ -58,11 +58,6 @@ class Palette {
   static const red300 = Color(0xFFFF8A8A);
   static const red50 = Color(0xFFFDE8E8);
   static const red950 = Color(0xFF3A1416);
-
-  static const violet700 = Color(0xFF6D3FD1);
-  static const violet300 = Color(0xFFB79CFF);
-  static const violet50 = Color(0xFFF0EAFF);
-  static const violet950 = Color(0xFF261A45);
 }
 
 /// A meaning colour: [fg] is readable as text and icons on normal surfaces and on [bg];
@@ -91,7 +86,6 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.approved,
     required this.rejected,
     required this.expired,
-    required this.countered,
     required this.verified,
     required this.info,
     required this.canvas,
@@ -110,7 +104,6 @@ class AppColors extends ThemeExtension<AppColors> {
   final Tone approved;
   final Tone rejected;
   final Tone expired;
-  final Tone countered;
   final Tone verified;
   final Tone info;
 
@@ -137,7 +130,6 @@ class AppColors extends ThemeExtension<AppColors> {
     approved: Tone(Palette.green700, Palette.green50),
     rejected: Tone(Palette.red700, Palette.red50),
     expired: Tone(Palette.slate500, Palette.slate100),
-    countered: Tone(Palette.violet700, Palette.violet50),
     verified: Tone(Palette.cobalt600, Palette.cobalt100),
     info: Tone(Palette.cobalt600, Palette.cobalt100),
     canvas: Palette.paper,
@@ -157,7 +149,6 @@ class AppColors extends ThemeExtension<AppColors> {
     approved: Tone(Palette.green300, Palette.green950),
     rejected: Tone(Palette.red300, Palette.red950),
     expired: Tone(Palette.slate400, Palette.ink700),
-    countered: Tone(Palette.violet300, Palette.violet950),
     verified: Tone(Palette.cobalt400, Palette.cobalt900),
     info: Tone(Palette.cobalt400, Palette.cobalt900),
     canvas: Palette.ink950,
@@ -180,7 +171,6 @@ class AppColors extends ThemeExtension<AppColors> {
     approved: approved,
     rejected: rejected,
     expired: expired,
-    countered: countered,
     verified: verified,
     info: info,
     canvas: canvas,
@@ -204,7 +194,6 @@ class AppColors extends ThemeExtension<AppColors> {
       approved: Tone.lerp(approved, other.approved, t),
       rejected: Tone.lerp(rejected, other.rejected, t),
       expired: Tone.lerp(expired, other.expired, t),
-      countered: Tone.lerp(countered, other.countered, t),
       verified: Tone.lerp(verified, other.verified, t),
       info: Tone.lerp(info, other.info, t),
       canvas: c(canvas, other.canvas),
