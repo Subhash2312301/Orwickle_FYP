@@ -19,7 +19,7 @@ class AnimatedCounter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = style ?? Theme.of(context).textTheme.numeric(size: 28, weight: FontWeight.w800);
+    final textStyle = style ?? Theme.of(context).textTheme.numeric(size: 28);
     String show(num n) => format?.call(n) ?? n.round().toString();
     return Semantics(
       label: semanticsLabel ?? show(value),

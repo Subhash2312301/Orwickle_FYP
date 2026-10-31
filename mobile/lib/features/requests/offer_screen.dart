@@ -102,7 +102,7 @@ class _OfferScreenState extends State<OfferScreen> {
                   ],
                 ),
                 const SizedBox(height: Gaps.sm),
-                Text(current.amount ?? '', style: theme.textTheme.numeric(size: 32, weight: FontWeight.w800)),
+                Text(current.amount ?? '', style: theme.textTheme.numeric(size: 32)),
                 const SizedBox(height: Gaps.xs),
                 Text(current.detail ?? '', style: theme.textTheme.bodyMedium),
                 const SizedBox(height: Gaps.lg),

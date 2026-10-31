@@ -40,6 +40,7 @@ class AppTypography {
 /// Extra text styles that are not part of Material's [TextTheme].
 extension AppTextStyles on TextTheme {
   /// Money, equity and counts: tabular figures so digits line up and do not jump when they animate.
+  /// Inter is bundled in weights 400–700 only, so keep [weight] at or below w700.
   TextStyle numeric({double size = 18, FontWeight weight = FontWeight.w700}) => GoogleFonts.inter(
     fontSize: size,
     fontWeight: weight,

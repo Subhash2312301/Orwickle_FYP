@@ -1,0 +1,3 @@
+tags:
+  golden:
+    # screenshot tests; run with: flutter test --tags golden

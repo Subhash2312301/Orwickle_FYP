@@ -179,7 +179,7 @@ class _StatsHeader extends StatelessWidget {
                               value: value,
                               semanticsLabel: '$value $label',
                               style: theme.textTheme
-                                  .numeric(size: 28, weight: FontWeight.w800)
+                                  .numeric(size: 28)
                                   .copyWith(color: app.onHero),
                             ),
                       const SizedBox(height: Gaps.xs),
