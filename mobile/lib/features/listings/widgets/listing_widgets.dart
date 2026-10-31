@@ -276,6 +276,8 @@ class ListingSkeletonList extends StatelessWidget {
   Widget build(BuildContext context) => Skeleton(
     child: ListView.separated(
       padding: padding,
+      // a handful of cards: sizes to them, so it also works inside another scroll view
+      shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: count,
       separatorBuilder: (_, _) => const SizedBox(height: Gaps.lg),

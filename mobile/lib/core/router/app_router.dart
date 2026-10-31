@@ -14,7 +14,8 @@ import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/auth/screens/welcome_screen.dart';
 import '../../features/auth/session/session_controller.dart';
 import '../../features/design_system/component_gallery_screen.dart';
-import '../../features/home/discover_tab.dart';
+import '../../features/discover/discover_screen.dart';
+import '../../features/discover/saved_screen.dart';
 import '../../features/home/owner_home_tab.dart';
 import '../../features/home/profile_tab.dart';
 import '../../features/listings/screens/listing_detail_screen.dart';
@@ -23,7 +24,8 @@ import '../../features/listings/screens/my_listings_screen.dart';
 import '../../features/profile/screens/profile_edit_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/settings/settings_screen.dart';
-import '../../features/shell/coming_soon.dart';
+import '../../features/requests/offer_screen.dart';
+import '../../features/requests/requests_screen.dart';
 import '../../features/system_check/system_check_screen.dart';
 import '../motion/transitions.dart';
 import '../storage/onboarding_state.dart';
@@ -104,18 +106,13 @@ GoRouter buildRouter(SessionController session, OnboardingState onboarding) => G
           routes: [GoRoute(path: Routes.myListings, builder: (context, state) => const MyListingsScreen())],
         ),
         StatefulShellBranch(
-          routes: [GoRoute(path: Routes.discover, builder: (context, state) => const DiscoverTab())],
+          routes: [GoRoute(path: Routes.discover, builder: (context, state) => const DiscoverScreen())],
         ),
         StatefulShellBranch(
-          routes: [GoRoute(path: Routes.saved, builder: (context, state) => const ComingSoonPage(savedFeature))],
+          routes: [GoRoute(path: Routes.saved, builder: (context, state) => const SavedScreen())],
         ),
         StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: Routes.requests,
-              builder: (context, state) => ComingSoonPage(requestsFeature(session.user?.role ?? 'owner')),
-            ),
-          ],
+          routes: [GoRoute(path: Routes.requests, builder: (context, state) => const RequestsScreen())],
         ),
         StatefulShellBranch(
           routes: [GoRoute(path: Routes.profile, builder: (context, state) => const ProfileTab())],
@@ -123,6 +120,10 @@ GoRouter buildRouter(SessionController session, OnboardingState onboarding) => G
       ],
     ),
 
+    GoRoute(
+      path: '/offers/:id',
+      builder: (context, state) => OfferScreen(offerId: state.pathParameters['id']!),
+    ),
     GoRoute(path: Routes.settings, builder: (context, state) => const SettingsScreen()),
     GoRoute(path: Routes.changePassword, builder: (context, state) => const ChangePasswordScreen()),
     GoRoute(
