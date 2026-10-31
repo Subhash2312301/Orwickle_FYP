@@ -35,14 +35,14 @@ void main() {
     final onboarding = OnboardingState();
     await _pumpApp(tester, onboarding);
 
-    expect(find.text('Show your project to the right people'), findsOneWidget);
+    expect(find.text('List your project'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
-    expect(find.text('Find investors and buyers'), findsOneWidget);
+    expect(find.text('Find the right match'), findsOneWidget);
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
-    expect(find.text('Verified and safe'), findsOneWidget);
+    expect(find.text('Negotiate with confidence'), findsOneWidget);
 
     await tester.tap(find.text('Get started'));
     await tester.pumpAndSettle();
@@ -77,7 +77,7 @@ void main() {
     await onboarding.markSeen();
     await _pumpApp(tester, onboarding);
 
-    expect(find.text('Show your project to the right people'), findsNothing);
+    expect(find.text('List your project'), findsNothing);
     expect(find.text('Welcome to Orwickle'), findsOneWidget);
   });
 }

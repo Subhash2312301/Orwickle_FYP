@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/widgets.dart';
 import '../data/auth_api.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/form_widgets.dart';
@@ -45,23 +47,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
+      icon: Icons.lock_reset,
       title: 'Forgot password?',
       subtitle: 'Enter your account email and we will send you a code to reset your password.',
       children: [
         Form(
           key: _form,
-          child: TextFormField(
+          child: AppTextField(
             controller: _email,
+            label: 'Email',
+            icon: Icons.mail_outline,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.email],
             validator: Validators.email,
-            onFieldSubmitted: (_) => _submit(),
-            decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+            onSubmitted: (_) => _submit(),
           ),
         ),
-        const SizedBox(height: 28),
-        LoadingButton(label: 'Send code', loading: _loading, onPressed: _submit),
+        const SizedBox(height: Gaps.xl),
+        AppButton(label: 'Send code', loading: _loading, onPressed: _submit),
       ],
     );
   }

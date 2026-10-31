@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/widgets.dart';
+
 /// Terms of use and disclaimer, shown from the register screen.
 /// Wording follows the scope and disclaimers in the project proposal.
 Future<void> showTermsDialog(BuildContext context) => showDialog<void>(
   context: context,
-  builder: (context) => AlertDialog(
-    title: const Text('Terms of Use & Disclaimer'),
+  builder: (context) => AppDialog(
+    icon: Icons.gavel_outlined,
+    title: 'Terms of Use & Disclaimer',
     content: const SingleChildScrollView(
       child: Text(
         '1. Orwickle is a platform for discovering projects, requesting access and recording '
@@ -25,6 +28,6 @@ Future<void> showTermsDialog(BuildContext context) => showDialog<void>(
         'locked for 15 minutes after 5 wrong passwords in a row.',
       ),
     ),
-    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+    actions: [AppButton.ghost(label: 'Close', onPressed: () => Navigator.pop(context))],
   ),
 );

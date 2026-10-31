@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/widgets.dart';
 import '../session/session_controller.dart';
 import '../widgets/form_widgets.dart';
 
@@ -61,10 +63,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     final user = context.read<SessionController>().user;
     return Scaffold(
-      appBar: AppBar(title: const Text('Change password')),
+      appBar: const AppAppBar(title: 'Change password'),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(Gaps.xl),
           child: Form(
             key: _form,
             child: Column(
@@ -76,7 +78,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   validator: Validators.loginPassword,
                   errorText: _serverErrors['currentPassword'],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: Gaps.lg),
                 PasswordField(
                   controller: _password,
                   label: 'New password',
@@ -90,7 +92,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 PasswordChecklist(password: _password.text),
-                const SizedBox(height: 16),
+                const SizedBox(height: Gaps.lg),
                 PasswordField(
                   controller: _confirm,
                   label: 'Confirm new password',
@@ -99,12 +101,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Changing your password logs you out on all other devices.',
-                  style: Theme.of(context).textTheme.bodySmall,
+                const SizedBox(height: Gaps.lg),
+                const AppBanner(
+                  icon: Icons.devices_other,
+                  message: 'Changing your password logs you out on all other devices.',
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: Gaps.sm),
                 LoadingButton(label: 'Change password', loading: _loading, onPressed: _submit),
               ],
             ),

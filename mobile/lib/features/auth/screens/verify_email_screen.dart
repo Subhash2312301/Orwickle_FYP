@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/widgets.dart';
 import '../data/auth_api.dart';
 import '../data/auth_models.dart';
 import '../session/session_controller.dart';
@@ -66,13 +68,14 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   Widget build(BuildContext context) {
     final api = context.read<AuthApi>();
     return AuthScaffold(
-      title: 'Verify your email',
+      icon: Icons.mark_email_unread_outlined,
+      title: 'Check your email',
       subtitle: 'Enter the 6-digit code we sent to\n${widget.email}',
       children: [
         OtpInput(controller: _code, errorText: _error, onCompleted: (_) => _verify()),
-        const SizedBox(height: 28),
-        LoadingButton(label: 'Verify', loading: _loading, onPressed: _verify),
-        const SizedBox(height: 8),
+        const SizedBox(height: Gaps.xl),
+        AppButton(label: 'Verify', loading: _loading, onPressed: _verify),
+        const SizedBox(height: Gaps.sm),
         ResendCodeButton(onResend: () => resendCode(context, api, widget.email, OtpPurpose.emailVerify)),
         Text(
           'The code is valid for 10 minutes. Check your spam folder if you cannot find it.',

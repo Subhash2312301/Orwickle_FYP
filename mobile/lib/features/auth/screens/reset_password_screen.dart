@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
 import '../data/auth_api.dart';
 import '../data/auth_models.dart';
@@ -75,12 +76,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     final api = context.read<AuthApi>();
     return AuthScaffold(
+      icon: Icons.password,
       title: 'Reset password',
       subtitle: 'If an account exists for ${widget.email}, we sent it a 6-digit code.',
       children: [
         OtpInput(controller: _code, errorText: _codeError ?? _serverErrors['otp']),
         ResendCodeButton(onResend: () => resendCode(context, api, widget.email, OtpPurpose.passwordReset)),
-        const SizedBox(height: 8),
+        const SizedBox(height: Gaps.sm),
         Form(
           key: _form,
           child: Column(
@@ -95,7 +97,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 onChanged: (_) => setState(() {}),
               ),
               PasswordChecklist(password: _password.text),
-              const SizedBox(height: 16),
+              const SizedBox(height: Gaps.lg),
               PasswordField(
                 controller: _confirm,
                 label: 'Confirm new password',
@@ -107,7 +109,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: Gaps.xl),
         LoadingButton(label: 'Change password', loading: _loading, onPressed: _submit),
       ],
     );

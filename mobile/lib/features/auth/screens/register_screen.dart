@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/widgets.dart';
 import '../data/auth_api.dart';
 import '../data/auth_models.dart';
 import '../widgets/auth_link_row.dart';
@@ -85,33 +87,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return AuthScaffold(
       title: 'Create your account',
       subtitle: 'Signing up as ${widget.role.label}',
+      footer: AuthLinkRow(
+        text: 'Already have an account?',
+        action: 'Log in',
+        onPressed: () => context.go(Routes.login),
+      ),
       children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: RoleBadge(role: widget.role.name, label: widget.role.label),
+        ),
+        const SizedBox(height: Gaps.lg),
         Form(
           key: _form,
           child: AutofillGroup(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
+                AppTextField(
                   controller: _name,
+                  label: 'Full name',
+                  icon: Icons.person_outline,
                   textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.name],
                   validator: Validators.fullName,
-                  forceErrorText: _serverErrors['fullName'],
-                  decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline)),
+                  serverError: _serverErrors['fullName'],
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
+                const SizedBox(height: Gaps.lg),
+                AppTextField(
                   controller: _email,
+                  label: 'Email',
+                  icon: Icons.mail_outline,
                   keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.email],
                   validator: Validators.email,
-                  forceErrorText: _serverErrors['email'],
-                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                  serverError: _serverErrors['email'],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: Gaps.lg),
                 PasswordField(
                   controller: _password,
                   label: 'Password',
@@ -121,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 PasswordChecklist(password: _password.text),
-                const SizedBox(height: 16),
+                const SizedBox(height: Gaps.lg),
                 PasswordField(
                   controller: _confirm,
                   label: 'Confirm password',
@@ -130,8 +142,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
                 ),
-                const SizedBox(height: 12),
-                _TermsCheckbox(
+                const SizedBox(height: Gaps.md),
+                TermsCheckbox(
                   value: _acceptedTerms,
                   error: _termsError ? (_serverErrors['acceptTerms'] ?? 'You must accept the terms to continue') : null,
                   onChanged: (v) => setState(() {
@@ -139,21 +151,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (v) _termsError = false;
                   }),
                 ),
-                const SizedBox(height: 16),
-                LoadingButton(label: 'Create account', loading: _loading, onPressed: _submit),
+                const SizedBox(height: Gaps.lg),
+                AppButton(label: 'Create account', loading: _loading, onPressed: _submit),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        AuthLinkRow(text: 'Already have an account?', action: 'Log in', onPressed: () => context.go(Routes.login)),
       ],
     );
   }
 }
 
-class _TermsCheckbox extends StatelessWidget {
-  const _TermsCheckbox({required this.value, required this.onChanged, this.error});
+/// "I agree to the Terms of Use & Disclaimer": the whole row toggles the box (48 dp tall),
+/// the link opens the terms.
+class TermsCheckbox extends StatelessWidget {
+  const TermsCheckbox({super.key, required this.value, required this.onChanged, this.error});
 
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -161,35 +173,38 @@ class _TermsCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Checkbox(value: value, onChanged: (v) => onChanged(v ?? false), isError: error != null),
-            Expanded(
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
+        MergeSemantics(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(Radii.md),
+            onTap: () => onChanged(!value),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: Sizes.tapTarget),
+              child: Row(
                 children: [
-                  const Text('I agree to the '),
-                  GestureDetector(
-                    onTap: () => showTermsDialog(context),
-                    child: Text(
-                      'Terms of Use & Disclaimer',
-                      style: TextStyle(color: colors.primary, decoration: TextDecoration.underline),
+                  Checkbox(value: value, onChanged: (v) => onChanged(v ?? false), isError: error != null),
+                  Expanded(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text('I agree to the ', style: theme.textTheme.bodyMedium),
+                        TextButton(
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                          onPressed: () => showTermsDialog(context),
+                          child: const Text('Terms of Use & Disclaimer'),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-        if (error != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: Text(error!, style: TextStyle(color: colors.error, fontSize: 12)),
           ),
+        ),
+        FieldError(error),
       ],
     );
   }

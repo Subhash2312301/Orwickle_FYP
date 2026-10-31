@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/widgets.dart';
+
 /// Six boxes for a one-time code. A single hidden text field takes the input,
 /// so typing, deleting, pasting and SMS/email autofill all work normally.
+/// The box waiting for the next digit glows; filled boxes pop their digit in.
 class OtpInput extends StatefulWidget {
   const OtpInput({super.key, required this.controller, this.onCompleted, this.errorText});
 
@@ -40,79 +44,89 @@ class _OtpInputState extends State<OtpInput> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final code = widget.controller.text;
     final hasError = widget.errorText != null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        GestureDetector(
-          onTap: () => _focus.requestFocus(),
-          child: Stack(
-            children: [
-              // invisible field that actually receives the keyboard input
-              Opacity(
-                opacity: 0,
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: _focus,
-                  autofocus: true,
-                  keyboardType: TextInputType.number,
-                  autofillHints: const [AutofillHints.oneTimeCode],
-                  maxLength: OtpInput.length,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(counterText: '', filled: false, border: InputBorder.none),
+    return Semantics(
+      label: 'Six-digit code, ${code.length} of ${OtpInput.length} entered',
+      textField: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GestureDetector(
+            onTap: () => _focus.requestFocus(),
+            child: Stack(
+              children: [
+                // invisible field that actually receives the keyboard input
+                Opacity(
+                  opacity: 0,
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: _focus,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    autofillHints: const [AutofillHints.oneTimeCode],
+                    maxLength: OtpInput.length,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(counterText: '', filled: false, border: InputBorder.none),
+                  ),
                 ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  for (var i = 0; i < OtpInput.length; i++)
-                    _Box(
-                      digit: i < code.length ? code[i] : '',
-                      active: _focus.hasFocus && i == code.length.clamp(0, OtpInput.length - 1),
-                      borderColor: hasError ? colors.error : colors.outline,
-                      activeColor: colors.primary,
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        if (hasError)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              widget.errorText!,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: colors.error, fontSize: 13),
+                ExcludeSemantics(
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < OtpInput.length; i++) ...[
+                        if (i > 0) SizedBox(width: i == OtpInput.length ~/ 2 ? Gaps.md : Gaps.sm),
+                        Expanded(
+                          child: _Box(
+                            digit: i < code.length ? code[i] : '',
+                            active: _focus.hasFocus && i == code.length.clamp(0, OtpInput.length - 1),
+                            hasError: hasError,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-      ],
+          FieldError(widget.errorText),
+        ],
+      ),
     );
   }
 }
 
 class _Box extends StatelessWidget {
-  const _Box({required this.digit, required this.active, required this.borderColor, required this.activeColor});
+  const _Box({required this.digit, required this.active, required this.hasError});
 
   final String digit;
   final bool active;
-  final Color borderColor;
-  final Color activeColor;
+  final bool hasError;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 46,
-      height: 56,
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final app = AppColors.of(context);
+    final border = hasError ? colors.error : (active ? colors.primary : app.border);
+    final duration = Motion.of(context, Motion.fast);
+    return AnimatedContainer(
+      duration: duration,
+      curve: Motion.standard,
+      height: Sizes.inputHeight + Gaps.xs,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: active ? activeColor : borderColor, width: active ? 2 : 1),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(Radii.md),
+        border: Border.all(color: border, width: active || hasError ? Sizes.focusRing : Sizes.hairline),
+        boxShadow: active ? Elevations.glow(colors.primary) : null,
       ),
-      child: Text(digit, style: Theme.of(context).textTheme.headlineSmall),
+      child: AnimatedSwitcher(
+        duration: duration,
+        transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+        child: Text(digit, key: ValueKey(digit), style: theme.textTheme.numeric(size: 24)),
+      ),
     );
   }
 }

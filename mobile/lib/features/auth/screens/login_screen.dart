@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/validators.dart';
+import '../../../core/widgets/widgets.dart';
 import '../data/auth_api.dart';
 import '../data/auth_models.dart';
 import '../session/session_controller.dart';
@@ -69,31 +71,47 @@ class _LoginScreenState extends State<LoginScreen> {
     return AuthScaffold(
       title: 'Welcome back',
       subtitle: 'Log in to your Orwickle account',
+      footer: AuthLinkRow(
+        text: "Don't have an account?",
+        action: 'Sign up',
+        onPressed: () => context.go(Routes.welcome),
+      ),
       children: [
         if (reason == LogoutReason.inactivity)
-          const InfoBanner(
+          const AppBanner(
             icon: Icons.timer_outlined,
+            role: ToneRole.pending,
             message: 'You were logged out after 15 minutes of inactivity to keep your account safe.',
           )
         else if (reason == LogoutReason.expired)
-          const InfoBanner(icon: Icons.lock_clock, message: 'Your session has expired. Please log in again.'),
-        if (_error != null) InfoBanner(message: _error!, icon: Icons.error_outline, isError: true),
+          const AppBanner(
+            icon: Icons.lock_clock,
+            role: ToneRole.pending,
+            message: 'Your session has expired. Please log in again.',
+          ),
+        AnimatedSize(
+          duration: Motion.of(context, Motion.base),
+          curve: Motion.standard,
+          child: _error == null
+              ? const SizedBox(width: double.infinity)
+              : AppBanner(message: _error!, icon: Icons.error_outline, role: ToneRole.rejected),
+        ),
         Form(
           key: _form,
           child: AutofillGroup(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
+                AppTextField(
                   controller: _email,
+                  label: 'Email',
+                  icon: Icons.mail_outline,
                   keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.email],
                   validator: Validators.email,
-                  forceErrorText: _serverErrors['email'],
-                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                  serverError: _serverErrors['email'],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: Gaps.lg),
                 PasswordField(
                   controller: _password,
                   label: 'Password',
@@ -109,14 +127,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text('Forgot password?'),
                   ),
                 ),
-                const SizedBox(height: 8),
-                LoadingButton(label: 'Log in', loading: _loading, onPressed: _submit),
+                const SizedBox(height: Gaps.sm),
+                AppButton(label: 'Log in', loading: _loading, onPressed: _submit),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        AuthLinkRow(text: "Don't have an account?", action: 'Sign up', onPressed: () => context.go(Routes.welcome)),
       ],
     );
   }
