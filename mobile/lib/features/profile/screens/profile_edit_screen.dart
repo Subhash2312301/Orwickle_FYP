@@ -213,7 +213,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         context,
         saved.reviewStatus == 'pending' ? 'Profile saved and sent to an admin for approval' : 'Profile saved',
       );
-      widget.setup ? context.go(Routes.home) : Navigator.of(context).maybePop();
+      widget.setup
+          ? context.go(Routes.homeFor(context.read<SessionController>().user?.role))
+          : Navigator.of(context).maybePop();
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.fieldErrors.isNotEmpty) {

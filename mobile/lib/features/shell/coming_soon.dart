@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/widgets/empty_state.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/widgets.dart';
 
 /// A feature planned for a later phase. Its tab or button is already visible so the app's
 /// full scope is clear; opening it explains what is coming.
@@ -32,6 +33,13 @@ UpcomingFeature requestsFeature(String role) => UpcomingFeature(
         ],
 );
 
+const savedFeature = UpcomingFeature(
+  'Saved projects',
+  Icons.bookmark_border,
+  'Keep the projects you are interested in one tap away.',
+  ['Save listings while you browse', 'Get notified when a saved listing changes'],
+);
+
 const messagesFeature = UpcomingFeature(
   'Messages',
   Icons.chat_bubble_outline,
@@ -55,21 +63,18 @@ class ComingSoonPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(feature.title)),
-      body: ListView(padding: const EdgeInsets.all(24), children: [_ComingSoonBody(feature)]),
+      appBar: AppAppBar(title: feature.title, large: true, actions: const [ShellActions()]),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.sm, Gaps.page, Gaps.xxl),
+        children: [_ComingSoonBody(feature)],
+      ),
     );
   }
 }
 
 /// The same message as a bottom sheet, for buttons (e.g. the notifications bell).
-Future<void> showComingSoon(BuildContext context, UpcomingFeature feature) => showModalBottomSheet<void>(
-  context: context,
-  showDragHandle: true,
-  isScrollControlled: true, // sized to its content, scrolls on short screens
-  builder: (context) => SafeArea(
-    child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(24, 0, 24, 24), child: _ComingSoonBody(feature)),
-  ),
-);
+Future<void> showComingSoon(BuildContext context, UpcomingFeature feature) =>
+    showAppBottomSheet<void>(context, builder: (context) => _ComingSoonBody(feature));
 
 class _ComingSoonBody extends StatelessWidget {
   const _ComingSoonBody(this.feature);
@@ -79,6 +84,7 @@ class _ComingSoonBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final approved = AppColors.of(context).approved.fg;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -88,26 +94,43 @@ class _ComingSoonBody extends StatelessWidget {
           title: feature.title,
           message: feature.description,
         ),
-        for (final point in feature.points)
-          ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.check_circle_outline, color: theme.colorScheme.primary),
-            title: Text(point),
+        AppCard(
+          padding: const EdgeInsets.symmetric(vertical: Gaps.sm),
+          child: Column(
+            children: [
+              for (final point in feature.points)
+                ListTile(
+                  dense: true,
+                  leading: Icon(Icons.check_circle_outline, color: approved, size: IconSizes.md),
+                  title: Text(point, style: theme.textTheme.bodyMedium),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }
 }
 
-/// Bell in the app bar; notifications arrive in a later phase.
-class NotificationsButton extends StatelessWidget {
-  const NotificationsButton({super.key});
+/// Chat and notifications entry points for the top bar of every tab. Both open a "Coming soon"
+/// sheet for now; when they are built they become routes, without touching the tabs.
+class ShellActions extends StatelessWidget {
+  const ShellActions({super.key});
 
   @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: 'Notifications',
-    onPressed: () => showComingSoon(context, notificationsFeature),
-    icon: const Icon(Icons.notifications_outlined),
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      IconButton(
+        tooltip: 'Messages',
+        onPressed: () => showComingSoon(context, messagesFeature),
+        icon: const Icon(Icons.chat_bubble_outline),
+      ),
+      IconButton(
+        tooltip: 'Notifications',
+        onPressed: () => showComingSoon(context, notificationsFeature),
+        icon: const Icon(Icons.notifications_outlined),
+      ),
+    ],
   );
 }

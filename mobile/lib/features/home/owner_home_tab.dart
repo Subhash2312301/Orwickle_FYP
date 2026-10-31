@@ -51,7 +51,7 @@ class _OwnerHomeTabState extends State<OwnerHomeTab> {
     final firstName = user.fullName.split(' ').first;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Orwickle'), actions: const [NotificationsButton()]),
+      appBar: AppBar(title: const Text('Orwickle'), actions: const [ShellActions()]),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

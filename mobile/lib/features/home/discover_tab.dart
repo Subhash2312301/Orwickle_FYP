@@ -18,7 +18,7 @@ class DiscoverTab extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(investor ? 'Funding opportunities' : 'Projects for sale'),
-        actions: const [NotificationsButton()],
+        actions: const [ShellActions()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),

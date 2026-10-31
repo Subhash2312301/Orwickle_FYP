@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:orwickle/core/network/api_client.dart';
+import 'package:orwickle/core/router/app_router.dart';
+import 'package:orwickle/core/router/routes.dart';
+import 'package:orwickle/core/storage/onboarding_state.dart';
+import 'package:orwickle/core/theme/app_theme.dart';
 import 'package:orwickle/features/auth/data/auth_models.dart';
 import 'package:orwickle/features/auth/session/session_controller.dart';
 import 'package:orwickle/features/home/profile_tab.dart';
@@ -8,7 +14,6 @@ import 'package:orwickle/features/listings/data/listing_api.dart';
 import 'package:orwickle/features/listings/data/listing_models.dart';
 import 'package:orwickle/features/profile/data/profile_api.dart';
 import 'package:orwickle/features/profile/data/profile_models.dart';
-import 'package:orwickle/features/shell/main_shell.dart';
 import 'package:provider/provider.dart';
 
 import 'fakes.dart';
@@ -61,17 +66,27 @@ class _RoleApi extends FakeAuthApi {
   );
 }
 
+late GoRouter _router;
+
+/// The real app (router, shell, tabs) for a logged-in user of [role].
 Future<SessionController> _pump(WidgetTester tester, String role, {String approval = 'approved', String? note}) async {
+  tester.view.physicalSize = const Size(1080, 2340);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
   final session = SessionController(api: _RoleApi(role, approval), storage: MemoryTokenStorage());
+  final onboarding = OnboardingState();
+  await onboarding.markSeen();
   await session.login(email: 'a@b.pk', password: 'x');
+  _router = buildRouter(session, onboarding);
   await tester.pumpWidget(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: session),
+        ChangeNotifierProvider.value(value: onboarding),
         Provider<ProfileApi>.value(value: _Profiles(approval, note)),
         Provider<ListingApi>.value(value: _Listings()),
       ],
-      child: const MaterialApp(home: MainShell()),
+      child: MaterialApp.router(theme: AppTheme.light, routerConfig: _router),
     ),
   );
   await tester.pumpAndSettle();
@@ -79,21 +94,33 @@ Future<SessionController> _pump(WidgetTester tester, String role, {String approv
 }
 
 void main() {
-  testWidgets('owners get Home, My Listings, Requests, Messages and Profile tabs', (tester) async {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+
+  testWidgets('owners get Home, My Listings, Requests and Profile tabs', (tester) async {
     final session = await _pump(tester, 'owner');
-    for (final label in ['Home', 'My Listings', 'Requests', 'Messages', 'Profile']) {
+    for (final label in ['Home', 'My Listings', 'Requests', 'Profile']) {
       expect(find.widgetWithText(NavigationDestination, label), findsOneWidget);
     }
+    expect(find.widgetWithText(NavigationDestination, 'Discover'), findsNothing);
     expect(find.text('Account under review'), findsNothing, reason: 'approved accounts see no banner');
     session.dispose();
   });
 
-  testWidgets('investors get Discover, Requests, Messages and Profile tabs', (tester) async {
+  testWidgets('investors get Discover, Saved, Requests and Profile tabs and land on Discover', (tester) async {
     final session = await _pump(tester, 'investor');
-    for (final label in ['Discover', 'Requests', 'Messages', 'Profile']) {
+    for (final label in ['Discover', 'Saved', 'Requests', 'Profile']) {
       expect(find.widgetWithText(NavigationDestination, label), findsOneWidget);
     }
     expect(find.widgetWithText(NavigationDestination, 'My Listings'), findsNothing);
+    expect(_router.routerDelegate.currentConfiguration.uri.path, Routes.discover);
+    session.dispose();
+  });
+
+  testWidgets('a page meant for another role sends the user to their own first tab', (tester) async {
+    final session = await _pump(tester, 'buyer');
+    _router.go(Routes.myListings);
+    await tester.pumpAndSettle();
+    expect(_router.routerDelegate.currentConfiguration.uri.path, Routes.discover);
     session.dispose();
   });
 
@@ -102,7 +129,7 @@ void main() {
     await tester.tap(find.widgetWithText(NavigationDestination, 'Profile'));
     await tester.pumpAndSettle();
     final logout = find.widgetWithText(OutlinedButton, 'Log out');
-    await tester.scrollUntilVisible(logout, 200, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(logout, 200, scrollable: find.byType(Scrollable).last);
     await tester.tap(logout);
     await tester.pumpAndSettle();
     expect(find.text('Are you sure you want to log out?'), findsOneWidget);
@@ -120,14 +147,14 @@ void main() {
 
   testWidgets('later-phase features say "Coming soon" when opened', (tester) async {
     final session = await _pump(tester, 'buyer');
-    await tester.tap(find.widgetWithText(NavigationDestination, 'Messages'));
+    await tester.tap(find.byTooltip('Messages').first);
     await tester.pumpAndSettle();
     expect(find.text('Coming soon'), findsWidgets);
     expect(find.text('Real-time chat with approved connections'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(NavigationDestination, 'Discover'));
+    await tester.tapAt(const Offset(10, 10)); // close the sheet
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Notifications'));
+
+    await tester.tap(find.byTooltip('Notifications').first);
     await tester.pumpAndSettle();
     expect(find.text('New access requests and offers'), findsOneWidget);
     session.dispose();

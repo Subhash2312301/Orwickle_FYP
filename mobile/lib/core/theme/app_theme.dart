@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion/transitions.dart';
 import 'colors.dart';
 import 'tokens.dart';
 import 'typography.dart';
@@ -109,6 +110,7 @@ class AppTheme {
       scaffoldBackgroundColor: app.canvas,
       canvasColor: app.canvas,
       splashFactory: InkSparkle.splashFactory,
+      pageTransitionsTheme: appPageTransitionsTheme,
       visualDensity: VisualDensity.standard,
       materialTapTargetSize: MaterialTapTargetSize.padded,
       dividerTheme: DividerThemeData(color: app.border, thickness: Sizes.hairline, space: Gaps.xl),
@@ -261,6 +263,7 @@ class AppTheme {
         color: colors.primary,
         linearTrackColor: colors.primaryContainer,
         circularTrackColor: Colors.transparent,
+        refreshBackgroundColor: colors.surface,
       ),
       checkboxTheme: CheckboxThemeData(shape: rounded(Radii.xs)),
       tooltipTheme: TooltipThemeData(
