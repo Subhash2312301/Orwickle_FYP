@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/motion/entrance.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../settings/server_address_sheet.dart';
 
 /// Common layout for the auth screens: a mark (the logo, or a tinted [icon] for a task such as
 /// "verify your email"), title, subtitle and the form, centred at a readable width.
@@ -34,7 +35,8 @@ class AuthScaffold extends StatelessWidget {
     final theme = Theme.of(context);
     final tone = ToneRole.info.resolve(context);
     final mark = icon == null
-        ? const BrandLogo(size: 52)
+        // hidden: long-press the logo to point the app at the laptop backend on a new Wi-Fi or hotspot
+        ? GestureDetector(onLongPress: () => showServerAddressSheet(context), child: const BrandLogo(size: 52))
         : Container(
             width: 56,
             height: 56,

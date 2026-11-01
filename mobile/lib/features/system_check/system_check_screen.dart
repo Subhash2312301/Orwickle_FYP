@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/config/app_config.dart';
+import '../../core/config/server_address.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
@@ -83,7 +83,7 @@ class _SystemCheckScreenState extends State<SystemCheckScreen> {
                 ),
               ],
               const Spacer(),
-              Text(AppConfig.apiBaseUrl, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+              Text(ServerAddress.url, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
               const SizedBox(height: 12),
               FilledButton.icon(
                 onPressed: _loading ? null : _check,

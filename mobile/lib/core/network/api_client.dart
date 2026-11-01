@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
+import '../config/server_address.dart';
 import 'api_exception.dart';
 
 /// A picked file ready to upload. Bytes instead of a file path, because the browser
@@ -22,17 +23,26 @@ typedef AccessTokenProvider = Future<String?> Function({bool forceRefresh});
 /// Every failure is converted to an [ApiException], so screens handle one error type.
 /// Requests with `auth: true` carry the access token; on a 401 the session is refreshed once and retried.
 class ApiClient {
-  ApiClient({Dio? dio})
+  ApiClient({Dio? dio, String? baseUrl})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: AppConfig.apiBaseUrl,
-              connectTimeout: AppConfig.requestTimeout,
-              receiveTimeout: AppConfig.requestTimeout,
-              contentType: Headers.jsonContentType,
-            ),
-          );
+          (Dio(
+              BaseOptions(
+                baseUrl: baseUrl ?? ServerAddress.url,
+                connectTimeout: AppConfig.requestTimeout,
+                receiveTimeout: AppConfig.requestTimeout,
+                contentType: Headers.jsonContentType,
+              ),
+            )
+            ..interceptors.add(
+              InterceptorsWrapper(
+                // follows the address chosen in the app, unless this client was pinned to one
+                onRequest: (options, handler) {
+                  if (baseUrl == null) options.baseUrl = ServerAddress.url;
+                  handler.next(options);
+                },
+              ),
+            ));
 
   final Dio _dio;
 

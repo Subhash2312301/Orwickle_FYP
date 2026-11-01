@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app.dart';
+import 'core/config/server_address.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/onboarding_state.dart';
 import 'core/storage/token_storage.dart';
@@ -18,6 +19,7 @@ Future<void> main() async {
   GoogleFonts.config.allowRuntimeFetching = false; // fonts are bundled in assets/google_fonts
   LicenseRegistry.addLicense(_fontLicences);
 
+  await ServerAddress.load(); // before the first request
   final apiClient = ApiClient();
   final authApi = AuthApi(apiClient);
   final session = SessionController(api: authApi, storage: const SecureTokenStorage());
