@@ -3,7 +3,7 @@
 import { Alert, Box, Button, Card, CardActionArea, CardContent, Chip, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { useState } from 'react';
 import { api } from '../api';
-import { Loading, PageHeader, ReviewChip, SampleChip, useLoad } from '../components/common';
+import { Loading, PageHeader, ReviewChip, useLoad } from '../components/common';
 import ProfileDetails from '../components/ProfileDetails';
 import ReviewDialog from '../components/ReviewDialog';
 import { ROLE_LABELS, accountChecklist, dateTime } from '../labels';
@@ -58,7 +58,6 @@ export default function AccountReviewsPage() {
                     <Typography variant="body2" color="text.secondary">{u.email}</Typography>
                     <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                       <Chip size="small" label={ROLE_LABELS[u.role]} />
-                      <SampleChip show={u.isSample} />
                     </Stack>
                     <Typography variant="caption" color="text.secondary">Registered {dateTime(u.registeredAt)}</Typography>
                   </CardContent>

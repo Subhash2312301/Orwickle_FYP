@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import { api } from '../api';
-import { Fields, Loading, PageHeader, SampleChip, useLoad } from '../components/common';
+import { Fields, Loading, PageHeader, useLoad } from '../components/common';
 import ReviewDialog from '../components/ReviewDialog';
 import { LISTING_CHECKLIST, LISTING_TYPES, STAGES, dateTime, pkr } from '../labels';
 
@@ -102,7 +102,6 @@ export default function ListingReviewsPage() {
                     <Typography variant="body2" color="text.secondary">{l.owner.fullName} · {pkr(l.askingAmount)}</Typography>
                     <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                       <Chip size="small" label={LISTING_TYPES[l.listingType]} color="primary" variant="outlined" />
-                      <SampleChip show={l.isSample} />
                     </Stack>
                   </CardContent>
                 </CardActionArea>

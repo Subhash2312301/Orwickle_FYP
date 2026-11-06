@@ -7,7 +7,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
-import { AccountChip, Loading, PageHeader, ReviewChip, SampleChip, useLoad } from '../components/common';
+import { AccountChip, Loading, PageHeader, ReviewChip, useLoad } from '../components/common';
 import { REVIEW_LABELS, ROLE_LABELS, dateTime } from '../labels';
 
 const FILTERS = [
@@ -74,7 +74,6 @@ export default function UsersPage() {
                       <span>{u.fullName}</span>
                       <AccountChip status={u.status} />
                       {u.locked && <Chip size="small" label="Locked" color="warning" variant="outlined" />}
-                      <SampleChip show={u.isSample} />
                     </Stack>
                   </TableCell>
                   <TableCell>{ROLE_LABELS[u.role]}</TableCell>

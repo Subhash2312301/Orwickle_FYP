@@ -1,4 +1,4 @@
-import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { Loading, PageHeader, useLoad } from '../components/common';
@@ -55,14 +55,6 @@ export default function OverviewPage() {
         <Stat label="Seeking funding" value={l.funding} />
         <Stat label="For sale" value={l.sale} />
       </Box>
-
-      {u.samples > 0 && (
-        <Stack direction="row" spacing={1}>
-          <Typography variant="body2" color="text.secondary">
-            Includes {u.samples} sample (demo) accounts, shown with a "Sample" badge.
-          </Typography>
-        </Stack>
-      )}
     </>
   );
 }

@@ -52,8 +52,6 @@ export const ReviewChip = ({ status }) => (
 export const AccountChip = ({ status }) =>
   status === 'suspended' ? <Chip size="small" label="Suspended" color="error" variant="outlined" /> : null;
 
-export const SampleChip = ({ show }) => (show ? <Chip size="small" label="Sample" variant="outlined" /> : null);
-
 /** Label / value pairs; empty values are shown as a dash, links are clickable. */
 export function Fields({ rows }) {
   return (
