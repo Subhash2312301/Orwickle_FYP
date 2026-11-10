@@ -14,6 +14,7 @@ import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
 import '../../profile/data/profile_api.dart';
 import '../../profile/data/profile_models.dart';
+import '../../profile/widgets/document_field.dart';
 import '../../profile/widgets/profile_fields.dart';
 import '../data/listing_api.dart';
 import '../data/listing_models.dart';
@@ -48,6 +49,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   bool _typeLocked = false; // only drafts may change type
   bool _isDraft = true;
   final List<UploadFile> _newPhotos = []; // picked on a new listing, uploaded after it is created
+  final List<(String kind, EvidenceChoice item)> _newEvidence = []; // same: ownership / project evidence
+  bool _hasOwnershipEvidence = false; // already saved with the listing
   String? _categoryId;
   String? _stage;
   List<String> _techStack = [];
@@ -75,6 +78,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _type = l.listingType;
     _typeLocked = l.status != 'draft';
     _isDraft = l.status == 'draft';
+    _hasOwnershipEvidence = detail.hasOwnershipEvidence;
     _categoryId = l.categoryId;
     _stage = l.projectStage;
     _techStack = [...l.techStack];
@@ -138,7 +142,16 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     if (choice is PickedImage && mounted) setState(() => _newPhotos.add(choice.file));
   }
 
-  // Photos are uploaded before publishing, so adding them does not send a just-published listing back to review.
+  Future<void> _pickEvidence(String kind) async {
+    final (title, _) = listingEvidenceKinds[kind]!;
+    final choice = await pickEvidence(context, title: 'Add ${title.toLowerCase()}', canRemove: false);
+    if (choice != null && choice is! EvidenceRemove && mounted) setState(() => _newEvidence.add((kind, choice)));
+  }
+
+  bool get _canPublishEvidence => _hasOwnershipEvidence || _newEvidence.any((e) => e.$1 == 'ownership_proof');
+
+  // Photos and evidence are uploaded before publishing, so adding them does not send a just-published listing
+  // back to review.
   Future<void> _save({bool publish = false}) async {
     setState(() => _serverErrors = const {});
     final invalid = _firstInvalidStep();
@@ -155,6 +168,17 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       for (final photo in _newPhotos) {
         await api.addPhoto(id, photo);
       }
+      for (final (kind, item) in _newEvidence) {
+        switch (item) {
+          case EvidenceFile(:final file):
+            await api.addEvidenceFile(id, kind, file);
+          case EvidenceLink(:final url):
+            await api.addEvidenceLink(id, kind, url);
+          case EvidenceRemove():
+            break;
+        }
+      }
+      _newEvidence.clear();
       if (publish) await api.changeStatus(id, 'publish');
       if (!mounted) return;
       if (_editing) {
@@ -499,19 +523,67 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
           ],
         ),
       ),
+      SectionTitle(
+        'Evidence for verification',
+        subtitle: _editing
+            ? 'Manage saved evidence on the listing page. Anything added here is saved with the listing.'
+            : 'Only Orwickle admins see it. Ownership evidence is needed to publish.',
+      ),
+      for (final MapEntry(key: kind, value: (title, help)) in listingEvidenceKinds.entries)
+        AppCard(
+          padding: const EdgeInsets.all(Gaps.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(title, style: theme.textTheme.titleMedium),
+              const SizedBox(height: Gaps.xxs),
+              Text(help, style: theme.textTheme.bodySmall),
+              for (final (i, (k, item)) in _newEvidence.indexed)
+                if (k == kind)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(item is EvidenceLink ? Icons.link : Icons.attach_file),
+                    title: Text(
+                      switch (item) {
+                        EvidenceLink(:final url) => url,
+                        EvidenceFile(:final file) => file.name,
+                        EvidenceRemove() => '',
+                      },
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: IconButton(
+                      tooltip: 'Remove',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() => _newEvidence.removeAt(i)),
+                    ),
+                  ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _newEvidence.length >= maxListingEvidence ? null : () => _pickEvidence(kind),
+                  icon: const Icon(Icons.add),
+                  label: Text('Add ${title.toLowerCase()}'),
+                ),
+              ),
+            ],
+          ),
+        ),
       const SizedBox(height: Gaps.xl),
       if (_isDraft) ...[
         AppButton(
           label: 'Save & publish',
           icon: Icons.publish,
           loading: _saving,
-          onPressed: approved ? () => _save(publish: true) : null,
+          onPressed: approved && _canPublishEvidence ? () => _save(publish: true) : null,
         ),
         const SizedBox(height: Gaps.sm),
         Text(
-          approved
-              ? 'Publishing sends the listing to an admin for review.'
-              : 'You can publish once an admin approves your account. Save it as a draft for now.',
+          !approved
+              ? 'You can publish once an admin verifies your account. Save it as a draft for now.'
+              : !_canPublishEvidence
+              ? 'Add ownership evidence above to publish, or save it as a draft for now.'
+              : 'Publishing sends the listing to an admin for verification.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall,
         ),

@@ -16,8 +16,8 @@ const owners = [
   { key: 'hamza', name: 'Hamza Siddiqui', headline: 'Self-taught developer shipping small business tools', student: false, skills: ['React', 'Express', 'UI/UX'] },
 ];
 const investors = [
-  { key: 'farhan', name: 'Farhan Malik', type: 'angel', experience: '4_10', min: 500000, max: 2000000, cats: ['edtech', 'fintech', 'healthtech'] },
-  { key: 'sana', name: 'Sana Iqbal', type: 'firm', experience: '10_plus', min: 2000000, max: 10000000, cats: ['agritech', 'saas', 'fintech'], company: 'Karachi Seed Ventures' },
+  { key: 'farhan', name: 'Farhan Malik', org: 'Independent angel investor', designation: 'Angel Investor', stages: ['prototype', 'mvp'], min: 500000, max: 2000000, cats: ['edtech', 'fintech', 'healthtech'], evidence: ['network_affiliation', 'investment_portfolio'] },
+  { key: 'sana', name: 'Sana Iqbal', org: 'Karachi Seed Ventures', designation: 'Managing Partner', website: true, stages: ['mvp', 'launched'], min: 2000000, max: 10000000, cats: ['agritech', 'saas', 'fintech'], evidence: ['company_registration', 'investment_portfolio', 'professional_credential'] },
 ];
 const buyers = [
   { key: 'imran', name: 'Imran Sheikh', type: 'small_business', affiliation: 'company', company: 'Sheikh Traders', cats: ['saas', 'e-commerce'] },
@@ -91,17 +91,21 @@ async function main() {
     for (const i of investors) {
       const id = await createUser(client, i.key, 'investor', i.name, hash);
       await client.query(
-        `UPDATE profiles SET phone = '03001234567', linkedin_url = $2 WHERE user_id = $1`,
+        `UPDATE profiles SET city = NULL, linkedin_url = $2 WHERE user_id = $1`,
         [id, `https://www.linkedin.com/in/sample-${i.key}`]);
       await client.query(
-        `INSERT INTO investor_profiles (user_id, investor_type, cnic_number, organization_name, company_website, company_email,
-                                        investment_experience, min_ticket, max_ticket,
-                                        professional_affiliation, investment_history)
-         VALUES ($1, $2, '4210100000000', $3, $4, $5, $6, $7, $8,
-                 'Sample affiliation for demonstration', 'Sample investment history for demonstration.')`,
-        [id, i.type, i.company ?? null, i.company ? 'https://example.com' : null,
-          i.company ? `invest${DOMAIN}` : null, i.experience, i.min, i.max]);
+        `INSERT INTO investor_profiles (user_id, organization_name, designation, company_website, investment_interests,
+                                        investment_stages, min_ticket, max_ticket)
+         VALUES ($1, $2, $3, $4, 'Sample interests for demonstration: student-built products with early users.',
+                 $5::project_stage[], $6, $7)`,
+        [id, i.org, i.designation, i.website ? 'https://example.com' : null, i.stages, i.min, i.max]);
       for (const c of i.cats) await client.query('INSERT INTO user_category_interests VALUES ($1, $2)', [id, cat[c]]);
+      for (const kind of i.evidence) {
+        await client.query(
+          `INSERT INTO evidence_submissions (submitted_by, subject_user_id, kind, external_url, status)
+           VALUES ($1, $1, $2, $3, 'approved')`,
+          [id, kind, `https://example.com/sample-${i.key}/${kind}`]);
+      }
     }
     for (const b of buyers) {
       const id = await createUser(client, b.key, 'buyer', b.name, hash);
@@ -128,6 +132,10 @@ async function main() {
         [listing.id, `Sample listing for demonstration. ${l.short} Full details are shared with approved requesters.`,
           l.type === 'funding' ? l.equity : null,
           l.type === 'sale' ? 'Full source code, database schema, deployment guide and one month of support.' : null]);
+      await client.query(
+        `INSERT INTO evidence_submissions (submitted_by, subject_listing_id, kind, external_url, status)
+         VALUES ($1, $2, 'ownership_proof', $3, 'approved')`,
+        [ids[l.owner], listing.id, `https://github.com/sample-${l.owner}`]);
     }
   });
 

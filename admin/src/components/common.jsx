@@ -45,8 +45,9 @@ export function Loading({ error, onRetry }) {
   );
 }
 
-export const ReviewChip = ({ status }) => (
-  <Chip size="small" label={REVIEW_LABELS[status] || status} color={REVIEW_COLORS[status] || 'default'} />
+/** Verification status chip; pass labels={LISTING_REVIEW_LABELS} for listings. */
+export const ReviewChip = ({ status, labels = REVIEW_LABELS }) => (
+  <Chip size="small" label={labels[status] || status} color={REVIEW_COLORS[status] || 'default'} />
 );
 
 export const AccountChip = ({ status }) =>

@@ -8,9 +8,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { AccountChip, Loading, PageHeader, ReviewChip, useLoad } from '../components/common';
+import { Loading, PageHeader, ReviewChip, useLoad } from '../components/common';
 import ProfileDetails from '../components/ProfileDetails';
-import { DECISION_LABELS, LISTING_TYPES, dateTime, pkr } from '../labels';
+import { DecisionHistory } from '../components/Verification';
+import { LISTING_REVIEW_LABELS, LISTING_TYPES, dateTime, pkr, verificationStatus } from '../labels';
 
 function StatusDialog({ user, onClose, onDone }) {
   const suspend = user.status !== 'suspended';
@@ -74,15 +75,14 @@ export default function UserDetailPage() {
         }
       />
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        <ReviewChip status={profile.reviewStatus} />
-        <AccountChip status={user.status} />
+        <ReviewChip status={verificationStatus(profile.reviewStatus, user.status)} />
         {user.locked && <Chip size="small" label="Locked after wrong passwords" color="warning" variant="outlined" />}
       </Stack>
       {done && <Alert severity="success" onClose={() => setDone(null)} sx={{ mb: 2 }}>{done}</Alert>}
       {profile.reviewNote && <Alert severity="info" sx={{ mb: 2 }}>Note sent to the user: {profile.reviewNote}</Alert>}
 
       <Stack spacing={2}>
-        <ProfileDetails profile={profile} email={user.email} />
+        <ProfileDetails profile={profile} user={user} />
 
         {user.role === 'owner' && (
           <Card>
@@ -97,7 +97,7 @@ export default function UserDetailPage() {
                         <TableCell>{l.title}</TableCell>
                         <TableCell>{LISTING_TYPES[l.listingType]}</TableCell>
                         <TableCell>{pkr(l.askingAmount)}</TableCell>
-                        <TableCell>{l.status}{l.status === 'published' && ` · ${l.reviewStatus}`}</TableCell>
+                        <TableCell>{l.status} · {LISTING_REVIEW_LABELS[l.reviewStatus] || l.reviewStatus}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -110,21 +110,7 @@ export default function UserDetailPage() {
         <Card>
           <CardContent>
             <Typography variant="subtitle1" fontWeight={600} gutterBottom>Review history</Typography>
-            {decisions.length === 0 ? <Typography color="text.secondary">No decisions yet.</Typography> : (
-              <Table size="small">
-                <TableHead><TableRow><TableCell>When</TableCell><TableCell>Decision</TableCell><TableCell>Reason</TableCell><TableCell>By</TableCell></TableRow></TableHead>
-                <TableBody>
-                  {decisions.map(d => (
-                    <TableRow key={d.at + d.decision}>
-                      <TableCell>{dateTime(d.at)}</TableCell>
-                      <TableCell>{DECISION_LABELS[d.decision] || d.decision}</TableCell>
-                      <TableCell>{d.reason}</TableCell>
-                      <TableCell>{d.reviewer || '—'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <DecisionHistory decisions={decisions} />
           </CardContent>
         </Card>
       </Stack>

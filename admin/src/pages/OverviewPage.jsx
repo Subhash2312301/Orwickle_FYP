@@ -30,10 +30,21 @@ export default function OverviewPage() {
 
       <Typography variant="h6" gutterBottom>Needs your attention</Typography>
       <Box sx={grid}>
-        <Stat label="Accounts waiting for review" value={u.pending} color="warning.main" to="/reviews/accounts" />
-        <Stat label="Listings waiting for review" value={l.pending} color="warning.main" to="/reviews/listings" />
+        <Stat label="Investors waiting for verification" value={u.investorsPending} color="warning.main" to="/reviews/investors" />
+        <Stat label="Projects waiting for verification" value={l.pending} color="warning.main" to="/reviews/listings" />
+        <Stat label="Owners & buyers waiting" value={u.pending - u.investorsPending} color="warning.main" to="/reviews/accounts" />
         <Stat label="Locked (wrong passwords)" value={u.locked} color="error.main" />
-        <Stat label="Suspended accounts" value={u.suspended} color="error.main" to="/users?status=suspended" />
+      </Box>
+
+      <Typography variant="h6" gutterBottom>Account verification status</Typography>
+      <Box sx={grid}>
+        <Stat label="Pending" value={u.pending} color="warning.main" to="/users?review=pending" />
+        <Stat label="Under Review" value={u.underReview} color="info.main" to="/users?review=under_review" />
+        <Stat label="More evidence requested" value={u.needsEvidence} to="/users?review=needs_evidence" />
+        <Stat label="Verified" value={u.approved} color="success.main" to="/users?review=approved" />
+        <Stat label="Rejected" value={u.rejected} color="error.main" to="/users?review=rejected" />
+        <Stat label="Suspended" value={u.suspended} color="error.main" to="/users?status=suspended" />
+        <Stat label="Expired" value={u.expired} to="/users?review=expired" />
       </Box>
 
       <Typography variant="h6" gutterBottom>Users</Typography>
@@ -41,8 +52,6 @@ export default function OverviewPage() {
         <Stat label="Project owners" value={u.owners} to="/users?role=owner" />
         <Stat label="Investors" value={u.investors} to="/users?role=investor" />
         <Stat label="Buyers" value={u.buyers} to="/users?role=buyer" />
-        <Stat label="Approved" value={u.approved} color="success.main" />
-        <Stat label="Not approved yet" value={u.notApproved} />
         <Stat label="Email not verified" value={u.unverifiedEmail} />
         <Stat label="Registered today" value={u.newToday} color="primary.main" />
       </Box>
@@ -50,6 +59,8 @@ export default function OverviewPage() {
       <Typography variant="h6" gutterBottom>Listings</Typography>
       <Box sx={grid}>
         <Stat label="Live" value={l.live} color="success.main" />
+        <Stat label="Under Review" value={l.underReview} color="info.main" to="/reviews/listings" />
+        <Stat label="Changes requested" value={l.needsChanges} />
         <Stat label="Drafts" value={l.drafts} />
         <Stat label="Closed" value={l.closed} />
         <Stat label="Seeking funding" value={l.funding} />

@@ -36,11 +36,16 @@ enum ToneRole {
 /// Colour is never the only cue: every status also has an icon and a word.
 enum AppStatus {
   draft('Draft', ToneRole.neutral, Icons.edit_note),
-  inReview('In review', ToneRole.pending, Icons.hourglass_top),
+  inReview('Pending review', ToneRole.pending, Icons.hourglass_top),
+  underReview('Under review', ToneRole.info, Icons.manage_search),
   live('Live', ToneRole.approved, Icons.check_circle_outline),
   approved('Approved', ToneRole.approved, Icons.check_circle_outline),
+  // an account whose evidence an admin checked: verified, not a guarantee
+  verified('Profile Verified', ToneRole.verified, Icons.verified),
   rejected('Rejected', ToneRole.rejected, Icons.cancel_outlined),
-  needsInfo('More info needed', ToneRole.rejected, Icons.help_outline),
+  needsInfo('More evidence needed', ToneRole.rejected, Icons.help_outline),
+  changesRequested('Changes requested', ToneRole.rejected, Icons.edit_note),
+  expired('Expired', ToneRole.expired, Icons.timer_off_outlined),
   closed('Closed', ToneRole.expired, Icons.lock_outline),
   suspended('Suspended', ToneRole.rejected, Icons.block);
 
@@ -152,8 +157,8 @@ class RoleBadge extends StatelessWidget {
   }
 }
 
-/// Cobalt seal for verified owners, investors and listings.
-/// Reserved: verification badges arrive in FYP-II, the slot is already in the cards.
+/// Cobalt seal for verified owners, investors and listings: an admin checked their evidence.
+/// It means "Profile Verified", never a guarantee.
 class VerifiedBadge extends StatelessWidget {
   const VerifiedBadge({super.key, this.size = IconSizes.sm, this.showLabel = false});
 
@@ -167,8 +172,8 @@ class VerifiedBadge extends StatelessWidget {
     return Semantics(
       label: 'Verified',
       child: Tooltip(
-        message: 'Verified by Orwickle',
-        child: showLabel ? const StatusChip('Verified', role: ToneRole.verified, icon: Icons.verified) : icon,
+        message: 'Profile verified by an Orwickle admin',
+        child: showLabel ? const StatusChip('Profile Verified', role: ToneRole.verified, icon: Icons.verified) : icon,
       ),
     );
   }

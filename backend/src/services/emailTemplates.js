@@ -32,15 +32,16 @@ function otpEmail({ type, name, code, validMinutes }) {
 // Result of an admin review of an account or a listing.
 const REVIEW_TEXT = {
   account: {
-    approve: { subject: 'Your Orwickle account is approved', line: 'Good news — your account has been approved. You now have full access to Orwickle.' },
-    reject: { subject: 'Your Orwickle account was not approved', line: 'Your account was not approved. Please update your profile and it will be reviewed again.' },
-    request_more: { subject: 'More information needed for your Orwickle account', line: 'An administrator needs more information before approving your account. Please update your profile.' },
+    approve: { subject: 'Your Orwickle profile is verified', line: 'Good news — your profile has been verified. You now have full access to Orwickle.' },
+    reject: { subject: 'Your Orwickle profile was not verified', line: 'Your profile was not verified. Please update your profile and it will be reviewed again.' },
+    request_more: { subject: 'More evidence needed for your Orwickle profile', line: 'An administrator needs more evidence before verifying your profile. Please update your profile within 30 days, otherwise the verification request expires.' },
     suspend: { subject: 'Your Orwickle account has been suspended', line: 'Your account has been suspended by an administrator. You cannot log in until it is reinstated.' },
     reinstate: { subject: 'Your Orwickle account is active again', line: 'Your account has been reinstated. You can log in again.' },
   },
   listing: {
     approve: { subject: 'Your listing is live on Orwickle', line: 'Your listing has been approved and is now visible to investors and buyers.' },
-    reject: { subject: 'Your listing needs changes', line: 'Your listing was not approved and has been moved back to draft. Please update it and publish again.' },
+    reject: { subject: 'Your listing was not approved', line: 'Your listing was not approved and has been moved back to draft. Please update it and publish again.' },
+    request_more: { subject: 'Your listing needs changes', line: 'An administrator has asked for changes to your listing. It has been moved back to draft. Please update it and publish again within 30 days, otherwise the review request expires.' },
   },
 };
 

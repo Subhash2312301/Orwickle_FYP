@@ -5,7 +5,9 @@ const { Router } = require('express');
 const validate = require('../../middleware/validate');
 const imageUpload = require('../../middleware/imageUpload');
 const { requireAuth, requireRole } = require('../../middleware/auth');
+const { documentUpload } = imageUpload;
 const { listingSchema } = require('./listing.validation');
+const { evidenceLinkSchema } = require('../profiles/profile.validation');
 const controller = require('./listing.controller');
 
 const router = Router();
@@ -24,5 +26,9 @@ router.put('/:id/cover', ownerOnly, imageUpload, controller.setCover);
 router.delete('/:id/cover', ownerOnly, controller.removeCover);
 router.post('/:id/photos', ownerOnly, imageUpload, controller.addPhoto);
 router.delete('/:id/photos/:photoId', ownerOnly, controller.removePhoto);
+// evidence for the admin; :kind = ownership_proof | project_evidence (file in field "file", or { "url" })
+router.post('/:id/evidence/:kind', ownerOnly, documentUpload, controller.addEvidenceFile);
+router.post('/:id/evidence/:kind/link', ownerOnly, validate(evidenceLinkSchema), controller.addEvidenceLink);
+router.delete('/:id/evidence/:evidenceId', ownerOnly, controller.removeEvidence);
 
 module.exports = router;

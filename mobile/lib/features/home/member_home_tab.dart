@@ -20,12 +20,8 @@ class MemberHomeTab extends StatelessWidget {
     final app = AppColors.of(context);
     final user = context.watch<SessionController>().user!;
     final firstName = user.fullName.split(' ').first;
-    final status = switch (user.approvalStatus) {
-      'approved' => AppStatus.approved,
-      'rejected' => AppStatus.rejected,
-      'needs_evidence' => AppStatus.needsInfo,
-      _ => AppStatus.inReview,
-    };
+    final status = accountStatus(user.approvalStatus);
+    final investor = user.role == 'investor';
 
     final sections = <Widget>[
       const ApprovalBanner(),
@@ -82,10 +78,26 @@ class MemberHomeTab extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: Gaps.sm),
         child: Column(
           children: [
-            for (final (i, (icon, title, body)) in const [
-              (Icons.person_outline, 'Profile completed', 'Your details and verification documents are saved.'),
-              (Icons.verified_outlined, 'Admin review', 'An admin checks your profile and documents.'),
-              (Icons.mark_email_read_outlined, 'Approval email', 'You get an email once your account is approved.'),
+            for (final (i, (icon, title, body)) in [
+              (
+                Icons.person_outline,
+                'Profile completed',
+                investor
+                    ? 'Your professional details and supporting evidence are saved.'
+                    : 'Your details and verification documents are saved.',
+              ),
+              (
+                Icons.manage_search,
+                'Admin review',
+                investor
+                    ? 'An admin checks your evidence: approve, reject or ask for more.'
+                    : 'An admin checks your profile and documents.',
+              ),
+              (
+                Icons.verified_outlined,
+                'Profile Verified',
+                'You get an email and a "Profile Verified" badge. It shows your evidence was checked, not a guarantee.',
+              ),
             ].indexed)
               ListTile(
                 leading: Container(

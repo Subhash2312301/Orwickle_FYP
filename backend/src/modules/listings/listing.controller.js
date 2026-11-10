@@ -25,4 +25,10 @@ module.exports = {
     res.status(201).json(await service.addPhoto(req.params.id, owner(req), req.image, context(req))),
   removePhoto: async (req, res) =>
     res.json(await service.removePhoto(req.params.id, req.params.photoId, owner(req), context(req))),
+  addEvidenceFile: async (req, res) =>
+    res.status(201).json(await service.addEvidence(req.params.id, owner(req), req.params.kind, { file: req.image }, context(req))),
+  addEvidenceLink: async (req, res) =>
+    res.status(201).json(await service.addEvidence(req.params.id, owner(req), req.params.kind, { url: req.body.url }, context(req))),
+  removeEvidence: async (req, res) =>
+    res.json(await service.removeEvidence(req.params.id, req.params.evidenceId, owner(req), context(req))),
 };

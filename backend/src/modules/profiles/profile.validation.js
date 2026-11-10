@@ -1,5 +1,5 @@
 // Request body rules for PUT /api/profile/me, one schema per role. Role-specific fields sit in
-// `details`. Required documents (CNIC, university ID, company certificate) are uploaded separately
+// `details`. Documents (owner/buyer ID cards, investor evidence) are uploaded separately
 // and checked by the service when the profile is saved. The Flutter form applies the same rules.
 
 const { z } = require('zod');
@@ -44,12 +44,7 @@ const phone = z.string(required('Phone number'))
   .transform(v => v.replace(/[\s-]/g, '').replace(/^\+92/, '0'))
   .refine(v => /^03[0-9]{9}$/.test(v), 'Enter a mobile number like 03001234567');
 
-// 42101-1234567-1 or 4210112345671 → 4210112345671
-const cnic = z.string(required('CNIC number'))
-  .transform(v => v.replace(/[\s-]/g, ''))
-  .refine(v => /^[0-9]{13}$/.test(v), 'Enter the 13-digit CNIC number, e.g. 42101-1234567-1');
-
-// format only; required for investment firms and company buyers
+// format only; required for company buyers
 const companyEmail = z.string().trim().toLowerCase().max(254)
   .refine(v => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Enter a valid company email')
   .nullable().optional().transform(v => v || null);
@@ -86,39 +81,28 @@ const owner = z.object({
   }),
 });
 
-// Company details are required only for investment firms; individual and angel investors may have none.
+const PROJECT_STAGES = ['idea', 'prototype', 'mvp', 'launched'];
+
+// Investors are verified by their professional identity and supporting evidence, not by CNIC
+// or proof of funds; "interests" are their sector preferences (categories).
 const investor = z.object({
   fullName,
-  city,
-  phone,
   linkedinUrl: requiredUrl('LinkedIn profile'),
-  websiteUrl: optionalUrl('website URL'),
   details: z.object({
-    investorType: z.enum(['individual', 'angel', 'firm', 'other'], { error: 'Choose an investor type' }),
-    cnicNumber: cnic,
-    companyName: optionalText('Company name', 150),
+    organization: text('Organization or company', 150),
+    designation: text('Professional designation', 100),
     companyWebsite: optionalUrl('company website'),
-    companyEmail,
-    investmentExperience: z.enum(['first_time', '1_3', '4_10', '10_plus'], { error: 'Choose your investment experience' }),
-    professionalAffiliation: text('Professional affiliation', 300),
-    investmentHistory: optionalText('Investment history', 2000),
-    portfolioUrl: optionalUrl('portfolio URL'),
+    investmentInterests: text('Investment interests', 1000, 10),
+    investmentStages: z.array(z.enum(PROJECT_STAGES, { error: 'Invalid stage' }), required('Investment stages'))
+      .min(1, 'Choose at least one stage')
+      .transform(list => [...new Set(list)]),
     // ranges come from preset chips; a missing maximum means "and above" (1 crore+)
     minTicket: z.number({ error: 'Choose an investment range' }).min(0).max(1e12),
     maxTicket: z.number().min(0).max(1e12).nullable().optional().transform(v => v ?? null),
     interests,
   }, required('Details')).superRefine((d, ctx) => {
-    if (d.investmentExperience !== 'first_time' && (d.investmentHistory ?? '').length < 10) {
-      ctx.addIssue({ code: 'custom', path: ['investmentHistory'], message: 'Describe your past investments' });
-    }
     if (d.maxTicket != null && d.maxTicket < d.minTicket) {
       ctx.addIssue({ code: 'custom', path: ['maxTicket'], message: 'Maximum investment must be greater than or equal to the minimum' });
-    }
-    if (d.investorType === 'firm') {
-      const need = { companyName: 'Company name', companyWebsite: 'Company website', companyEmail: 'Company email' };
-      for (const [field, label] of Object.entries(need)) {
-        if (!d[field]) ctx.addIssue({ code: 'custom', path: [field], message: `${label} is required for investment firms` });
-      }
     }
   }),
 });
@@ -143,18 +127,15 @@ const buyer = z.object({
 
 const profileSchemas = { owner, investor, buyer };
 
-// Documents each role must upload before the profile can be submitted for review.
-// Investors: a firm proves the company; anyone else proves they have the money to invest.
-// Anyone who has invested before also proves one past investment.
+// Investor supporting evidence: a file or a link each, at least MIN_INVESTOR_EVIDENCE different kinds.
+const INVESTOR_EVIDENCE = [
+  'company_registration', 'network_affiliation', 'accelerator_affiliation', 'investment_portfolio', 'professional_credential',
+];
+const MIN_INVESTOR_EVIDENCE = 2;
+
+// Identity documents owners and buyers must upload before the profile can be submitted for review.
 function requiredDocuments(role, details) {
   if (role === 'owner') return details.isStudent ? ['university_id_front', 'university_id_back'] : ['cnic_front', 'cnic_back'];
-  if (role === 'investor') {
-    return [
-      'cnic_front', 'cnic_back',
-      details.investorType === 'firm' ? 'company_certificate' : 'funds_proof',
-      ...(details.investmentExperience === 'first_time' ? [] : ['investment_proof']),
-    ];
-  }
   if (role === 'buyer') return details.affiliation === 'university' ? ['university_id_front', 'university_id_back'] : [];
   return [];
 }
@@ -164,16 +145,24 @@ const DOCUMENT_LABELS = {
   cnic_back: 'the back of your CNIC',
   university_id_front: 'the front of your university ID card',
   university_id_back: 'the back of your university ID card',
-  company_certificate: 'your company registration certificate',
-  funds_proof: 'proof of funds (bank statement, bank letter or tax return)',
-  investment_proof: 'proof of a past investment (share certificate, investment agreement or letter from the startup)',
+  company_registration: 'company registration or business profile',
+  network_affiliation: 'VC or angel network affiliation',
+  accelerator_affiliation: 'accelerator or incubator affiliation',
+  investment_portfolio: 'publicly verifiable investment portfolio',
+  professional_credential: 'professional credentials',
 };
 
-// Which document kinds each role may upload at all.
+// Which document kinds each role may upload at all, and which may be given as a link instead of a file.
 const ALLOWED_DOCUMENTS = {
   owner: ['university_id_front', 'university_id_back', 'cnic_front', 'cnic_back'],
-  investor: ['cnic_front', 'cnic_back', 'company_certificate', 'funds_proof', 'investment_proof'],
+  investor: INVESTOR_EVIDENCE,
   buyer: ['university_id_front', 'university_id_back'],
 };
+const LINK_DOCUMENTS = INVESTOR_EVIDENCE;
 
-module.exports = { profileSchemas, requiredDocuments, DOCUMENT_LABELS, ALLOWED_DOCUMENTS };
+const evidenceLinkSchema = z.object({ url: requiredUrl('Link') });
+
+module.exports = {
+  profileSchemas, requiredDocuments, DOCUMENT_LABELS, ALLOWED_DOCUMENTS, LINK_DOCUMENTS, INVESTOR_EVIDENCE,
+  MIN_INVESTOR_EVIDENCE, PROJECT_STAGES, evidenceLinkSchema,
+};

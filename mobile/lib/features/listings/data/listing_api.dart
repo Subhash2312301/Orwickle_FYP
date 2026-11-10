@@ -37,4 +37,14 @@ class ListingApi {
 
   Future<ListingDetail> removePhoto(String id, String photoId) async =>
       ListingDetail.fromJson(await _api.delete('/listings/$id/photos/$photoId', auth: true));
+
+  /// [kind]: ownership_proof | project_evidence.
+  Future<ListingDetail> addEvidenceFile(String id, String kind, UploadFile file) async =>
+      ListingDetail.fromJson(await _api.uploadImage('/listings/$id/evidence/$kind', file, field: 'file', post: true));
+
+  Future<ListingDetail> addEvidenceLink(String id, String kind, String url) async =>
+      ListingDetail.fromJson(await _api.post('/listings/$id/evidence/$kind/link', auth: true, body: {'url': url}));
+
+  Future<ListingDetail> removeEvidence(String id, String evidenceId) async =>
+      ListingDetail.fromJson(await _api.delete('/listings/$id/evidence/$evidenceId', auth: true));
 }

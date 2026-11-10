@@ -10,6 +10,7 @@
     "create-admin": "node --env-file=.env scripts/create-admin.js",
     "approve": "node --env-file=.env scripts/approve.js",
     "seed:demo": "node --env-file=.env scripts/seed-demo.js",
+    "cleanup:investor-documents": "node --env-file=.env scripts/cleanup-investor-documents.js",
     "test": "node --env-file=.env --test --test-concurrency=1 \"tests/**/*.test.js\""
   },
   "engines": {

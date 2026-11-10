@@ -102,7 +102,7 @@ void main() {
       expect(find.widgetWithText(NavigationDestination, label), findsOneWidget);
     }
     expect(find.widgetWithText(NavigationDestination, 'Requests'), findsNothing, reason: 'only phases 1-3');
-    expect(find.text('Account under review'), findsNothing, reason: 'approved accounts see no banner');
+    expect(find.text('Waiting for verification'), findsNothing, reason: 'verified accounts see no banner');
     session.dispose();
   });
 
@@ -148,7 +148,7 @@ void main() {
 
   testWidgets('a pending account sees the review banner; the logout note is in Profile only', (tester) async {
     final session = await _pump(tester, 'owner', approval: 'pending');
-    expect(find.text('Account under review'), findsOneWidget);
+    expect(find.text('Waiting for verification'), findsOneWidget);
     expect(find.textContaining('logged out after'), findsNothing);
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Profile'));
@@ -163,12 +163,28 @@ void main() {
     session.dispose();
   });
 
-  testWidgets('a request for more information shows the admin note', (tester) async {
+  testWidgets('a request for more evidence shows the admin note and the 30-day limit', (tester) async {
     final session = await _pump(tester, 'owner', approval: 'needs_evidence', note: 'Please add your GitHub link.');
     await tester.tap(find.widgetWithText(NavigationDestination, 'Profile'));
     await tester.pumpAndSettle();
-    expect(find.text('Please add your GitHub link.'), findsOneWidget);
+    expect(find.text('More evidence needed'), findsWidgets);
+    expect(find.textContaining('Please add your GitHub link.'), findsOneWidget);
+    expect(find.textContaining('within 30 days'), findsOneWidget);
     expect(find.text('Update profile'), findsOneWidget);
     session.dispose();
+  });
+
+  testWidgets('under review, expired and verified accounts show their verification status', (tester) async {
+    for (final (approval, banner, chip) in [
+      ('under_review', 'Profile under review', 'Under review'),
+      ('expired', 'Verification request expired', 'Expired'),
+      ('approved', null, 'Profile Verified'),
+    ]) {
+      final session = await _pump(tester, 'investor', approval: approval);
+      if (banner != null) expect(find.text(banner), findsOneWidget, reason: approval);
+      expect(find.text(chip), findsWidgets, reason: approval);
+      expect(find.text('Update profile'), approval == 'expired' ? findsOneWidget : findsNothing, reason: approval);
+      session.dispose();
+    }
   });
 }

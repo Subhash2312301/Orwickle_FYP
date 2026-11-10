@@ -8,8 +8,7 @@ const HttpError = require('../../utils/httpError');
 const { userReviewSchema, listingReviewSchema, accountStatusSchema } = require('./admin.validation');
 const service = require('./admin.service');
 
-const USER_QUEUES = ['pending', 'approved', 'rejected', 'needs_evidence'];
-const LISTING_QUEUES = ['pending', 'approved'];
+const QUEUES = ['pending', 'under_review', 'needs_evidence', 'approved', 'rejected', 'expired'];
 
 function queue(allowed) {
   return (req, res, next) => {
@@ -36,14 +35,23 @@ router.post('/users/:id/reinstate', validate(accountStatusSchema), async (req, r
 
 router.get('/audit', async (req, res) => res.json(await service.auditLog(req.query)));
 
-router.get('/reviews/users', queue(USER_QUEUES), async (req, res) =>
-  res.json(await service.listUserReviews(req.queue, baseUrl(req))));
+router.get('/reviews/decisions', async (req, res) => res.json(await service.verificationTrail(req.query)));
+
+// ?role=investor (investor verification queue) or ?role=others (owners and buyers)
+router.get('/reviews/users', queue(QUEUES), async (req, res) =>
+  res.json(await service.listUserReviews(req.queue, req.query.role, baseUrl(req))));
+
+router.post('/users/:id/review/start', async (req, res) =>
+  res.json(await service.startUserReview(req.user.id, req.params.id, { ip: req.ip })));
 
 router.post('/users/:id/review', validate(userReviewSchema), async (req, res) =>
   res.json(await service.reviewUser(req.user.id, req.params.id, req.body, { ip: req.ip })));
 
-router.get('/reviews/listings', queue(LISTING_QUEUES), async (req, res) =>
+router.get('/reviews/listings', queue(QUEUES), async (req, res) =>
   res.json(await service.listListingReviews(req.queue, req.user, baseUrl(req))));
+
+router.post('/listings/:id/review/start', async (req, res) =>
+  res.json(await service.startListingReview(req.user.id, req.params.id, { ip: req.ip })));
 
 router.post('/listings/:id/review', validate(listingReviewSchema), async (req, res) =>
   res.json(await service.reviewListing(req.user, req.params.id, req.body, { ip: req.ip, baseUrl: baseUrl(req) })));

@@ -56,13 +56,14 @@ class _ProfileTabState extends State<ProfileTab> {
     final user = session.user!;
     final theme = Theme.of(context);
     final app = AppColors.of(context);
-    final subtitle = [_profile?.headline, _profile?.city].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
-    final status = switch (user.approvalStatus) {
-      'approved' => AppStatus.approved,
-      'rejected' => AppStatus.rejected,
-      'needs_evidence' => AppStatus.needsInfo,
-      _ => AppStatus.inReview,
-    };
+    // investors: "Managing Partner · Karachi Seed Ventures"
+    final subtitle = [
+      _profile?.headline,
+      _profile?.city,
+      _profile?.detailText('designation'),
+      _profile?.detailText('organization'),
+    ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
+    final status = accountStatus(user.approvalStatus);
 
     final sections = <Widget>[
       const ApprovalBanner(),
@@ -86,12 +87,6 @@ class _ProfileTabState extends State<ProfileTab> {
             ],
             const SizedBox(height: Gaps.xxs),
             Text(user.email, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
-            if (user.role == 'investor' && _profile != null)
-              Text(
-                'CNIC ${maskCnic(_profile!.detailText('cnicNumber'))} · ${_profile!.phone ?? ''}',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall,
-              ),
             const SizedBox(height: Gaps.md),
             Wrap(
               alignment: WrapAlignment.center,

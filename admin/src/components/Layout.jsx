@@ -5,7 +5,9 @@ import {
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import HowToRegIcon from '@mui/icons-material/HowToReg';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PeopleIcon from '@mui/icons-material/People';
 import HistoryIcon from '@mui/icons-material/History';
 import KeyIcon from '@mui/icons-material/Key';
@@ -17,9 +19,11 @@ const WIDTH = 240;
 
 const LINKS = [
   { to: '/', label: 'Overview', icon: <DashboardIcon />, end: true },
-  { to: '/reviews/accounts', label: 'Account reviews', icon: <HowToRegIcon /> },
-  { to: '/reviews/listings', label: 'Listing reviews', icon: <FactCheckIcon /> },
+  { to: '/reviews/investors', label: 'Investor verification', icon: <VerifiedUserIcon /> },
+  { to: '/reviews/listings', label: 'Project verification', icon: <FactCheckIcon /> },
+  { to: '/reviews/accounts', label: 'Owners & buyers', icon: <HowToRegIcon /> },
   { to: '/users', label: 'Users', icon: <PeopleIcon /> },
+  { to: '/reviews/history', label: 'Verification history', icon: <ManageSearchIcon /> },
   { to: '/audit', label: 'Audit log', icon: <HistoryIcon /> },
   { to: '/password', label: 'Change password', icon: <KeyIcon /> },
 ];

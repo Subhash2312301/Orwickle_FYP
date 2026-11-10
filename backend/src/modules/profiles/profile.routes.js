@@ -5,7 +5,7 @@ const validate = require('../../middleware/validate');
 const imageUpload = require('../../middleware/imageUpload');
 const { documentUpload } = imageUpload;
 const { requireAuth, requireRole } = require('../../middleware/auth');
-const { profileSchemas } = require('./profile.validation');
+const { profileSchemas, evidenceLinkSchema } = require('./profile.validation');
 const controller = require('./profile.controller');
 
 const profileRouter = Router();
@@ -19,8 +19,10 @@ profileRouter.put(
 );
 profileRouter.put('/me/avatar', imageUpload, controller.setAvatar);
 profileRouter.delete('/me/avatar', controller.removeAvatar);
-// verification documents: CNIC, university ID, company certificate (multipart field "file")
+// verification documents: owner/buyer ID cards, investor evidence (multipart field "file"),
+// or investor evidence as a link ({ "url": "https://..." })
 profileRouter.put('/me/documents/:kind', requireRole('owner', 'investor', 'buyer'), documentUpload, controller.setDocument);
+profileRouter.put('/me/documents/:kind/link', requireRole('investor'), validate(evidenceLinkSchema), controller.setDocumentLink);
 profileRouter.delete('/me/documents/:kind', requireRole('owner', 'investor', 'buyer'), controller.removeDocument);
 
 const categoryRouter = Router();

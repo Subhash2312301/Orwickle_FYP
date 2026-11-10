@@ -9,10 +9,11 @@ const request = require('supertest');
 const app = require('../src/app');
 const { pool } = require('../src/db/pool');
 const { outbox } = require('../src/services/mailer');
+const { expireOverdue } = require('../src/services/verification');
 const { createVerifiedUser, cleanup } = require('./helpers');
 
 const api = request(app);
-let admin, owner, ownerEmail, ownerId, investor, categoryId;
+let admin, owner, ownerEmail, ownerId, investor, investorId, investorToken, categoryId;
 
 const as = token => ({
   get: url => api.get(url).set('Authorization', `Bearer ${token}`),
@@ -70,7 +71,10 @@ before(async () => {
   }
   ownerEmail = o.email;
   ownerId = o.id;
-  investor = (await loginAs('investor')).client;
+  const i = await loginAs('investor', 'Farhan Malik');
+  investor = i.client;
+  investorId = i.id;
+  investorToken = i.session.accessToken;
 });
 after(async () => {
   await cleanup();
@@ -119,22 +123,50 @@ test('approval unlocks publishing and is emailed', async () => {
   const draft = (await owner.post('/api/listings', listing())).body.listing.id;
   assert.equal((await owner.post(`/api/listings/${draft}/publish`)).status, 403);
 
+  // starting the review marks the account as under review by this admin
+  const started = await admin.post(`/api/admin/users/${ownerId}/review/start`);
+  assert.equal(started.body.started, true);
+  const underReview = await admin.get('/api/admin/reviews/users?status=under_review');
+  const entry = underReview.body.users.find(u => u.id === ownerId);
+  assert.equal(entry.reviewStatus, 'under_review');
+  assert.equal(entry.reviewStartedBy, 'Test Admin');
+  assert.equal(entry.decisions.length, 1, 'the earlier request for more information is shown');
+
   const res = await admin.post(`/api/admin/users/${ownerId}/review`,
     { decision: 'approve', checklist: { 'University ID matches name': true, 'GitHub profile opens': true } });
   assert.equal(res.body.reviewStatus, 'approved');
-  assert.match(lastMailTo(ownerEmail).subject, /approved/);
+  assert.match(lastMailTo(ownerEmail).subject, /verified/);
 
+  const noEvidence = await owner.post(`/api/listings/${draft}/publish`);
+  assert.equal(noEvidence.body.error.code, 'EVIDENCE_REQUIRED');
+  await owner.post(`/api/listings/${draft}/evidence/ownership_proof/link`, { url: 'https://github.com/sara/fees' });
   const published = await owner.post(`/api/listings/${draft}/publish`);
   assert.equal(published.status, 200);
   assert.equal(published.body.listing.reviewStatus, 'pending');
 });
 
-test('admins review published listings; rejection sends the listing back to draft', async () => {
+test('admins verify projects: owner, evidence and claims; changes or rejection send it back to draft', async () => {
   const queue = await admin.get('/api/admin/reviews/listings');
   const pending = queue.body.listings.find(l => l.listing.title === 'School fee tracker');
   assert.ok(pending.confidential.fullDescription, 'admins see the confidential details to review them');
+  assert.equal(pending.owner.email, ownerEmail, 'admins see who owns the project');
+  assert.equal(pending.owner.reviewStatus, 'approved');
+  assert.equal(pending.owner.details.githubUrl, 'https://github.com/sara');
+  assert.deepEqual(pending.evidence.map(e => e.kind), ['ownership_proof']);
   const id = pending.listing.id;
 
+  assert.equal((await admin.post(`/api/admin/listings/${id}/review/start`)).body.started, true);
+  assert.equal((await owner.get(`/api/listings/${id}`)).body.listing.reviewStatus, 'under_review');
+
+  const changes = await admin.post(`/api/admin/listings/${id}/review`,
+    { decision: 'request_more', reason: 'Add a demo video as project evidence.' });
+  assert.equal(changes.status, 200);
+  assert.equal(changes.body.listing.status, 'draft');
+  assert.equal(changes.body.listing.reviewStatus, 'needs_evidence');
+  assert.equal(lastMailTo(ownerEmail).subject, 'Your listing needs changes');
+
+  await owner.post(`/api/listings/${id}/evidence/project_evidence/link`, { url: 'https://youtu.be/demo' });
+  await owner.post(`/api/listings/${id}/publish`);
   const rejected = await admin.post(`/api/admin/listings/${id}/review`,
     { decision: 'reject', reason: 'Add a screenshot of the admin panel as the cover.' });
   assert.equal(rejected.body.listing.status, 'draft');
@@ -152,17 +184,90 @@ test('admins review published listings; rejection sends the listing back to draf
   const approved = await admin.post(`/api/admin/listings/${id}/review`, { decision: 'approve' });
   assert.equal(approved.body.listing.reviewStatus, 'approved');
   assert.equal((await investor.get(`/api/listings/${id}`)).status, 200, 'visible once approved');
+
+  const { rows } = await pool.query(
+    `SELECT decision, evidence_reviewed FROM review_decisions WHERE subject_listing_id = $1 ORDER BY created_at`, [id]);
+  assert.deepEqual(rows.map(r => r.decision), ['request_more', 'reject', 'approve']);
+  assert.deepEqual(rows[0].evidence_reviewed.map(e => e.kind), ['ownership_proof']);
+  assert.deepEqual(rows[2].evidence_reviewed.map(e => e.kind), ['ownership_proof', 'project_evidence']);
 });
 
-test('every decision is recorded with the reviewer and reason', async () => {
+test('every decision is recorded with the reviewer, reason and the evidence reviewed', async () => {
   const { rows } = await pool.query(
-    `SELECT decision, reason FROM review_decisions WHERE subject_user_id = $1 ORDER BY created_at`, [ownerId]);
+    `SELECT decision, reason, evidence_reviewed FROM review_decisions WHERE subject_user_id = $1 ORDER BY created_at`,
+    [ownerId]);
   assert.deepEqual(rows.map(r => r.decision), ['request_more', 'approve']);
+  assert.deepEqual(rows[1].evidence_reviewed.map(e => e.kind).sort(), ['university_id_back', 'university_id_front']);
   const checklist = await pool.query(
     `SELECT checklist FROM review_decisions WHERE subject_user_id = $1 AND decision = 'approve'`, [ownerId]);
   assert.equal(checklist.rows[0].checklist['University ID matches name'], true);
   const audit = await pool.query(`SELECT action FROM audit_logs WHERE action LIKE 'admin.%' AND entity_id = $1`, [ownerId]);
-  assert.deepEqual(audit.rows.map(r => r.action).sort(), ['admin.user_approved', 'admin.user_needs_evidence']);
+  assert.deepEqual(audit.rows.map(r => r.action).sort(),
+    ['admin.user_approved', 'admin.user_needs_evidence', 'admin.user_review_started']);
+
+  const trail = await admin.get('/api/admin/reviews/decisions?subject=users');
+  const mine = trail.body.decisions.filter(d => d.subject.id === ownerId);
+  assert.deepEqual(mine.map(d => d.decision), ['approve', 'request_more']);
+  assert.equal(mine[0].reviewer, 'Test Admin');
+  assert.equal(mine[0].subject.name, 'Sara Ahmed');
+  assert.equal(mine[0].evidenceReviewed.length, 2);
+  const projects = await admin.get('/api/admin/reviews/decisions?subject=listings');
+  assert.ok(projects.body.decisions.every(d => d.subject.type === 'listing'));
+});
+
+test('investors are verified in their own queue from their professional details and evidence', async () => {
+  for (const [kind, url] of [['network_affiliation', 'https://angels.pk/farhan'], ['investment_portfolio', 'https://angel.co/farhan']]) {
+    await api.put(`/api/profile/me/documents/${kind}/link`).set('Authorization', `Bearer ${investorToken}`).send({ url });
+  }
+  const saved = await investor.put('/api/profile/me', {
+    fullName: 'Farhan Malik',
+    linkedinUrl: 'https://www.linkedin.com/in/farhan',
+    details: {
+      organization: 'Karachi Angel Network', designation: 'Angel Investor',
+      investmentInterests: 'EdTech apps built by students.', investmentStages: ['prototype'],
+      minTicket: 500000, maxTicket: 2000000, interests: [categoryId],
+    },
+  });
+  assert.equal(saved.body.profile.reviewStatus, 'pending');
+
+  const investors = await admin.get('/api/admin/reviews/users?role=investor');
+  assert.ok(investors.body.users.every(u => u.role === 'investor'));
+  const entry = investors.body.users.find(u => u.id === investorId);
+  assert.equal(entry.details.organization, 'Karachi Angel Network');
+  assert.equal(entry.documents.length, 2);
+  assert.equal(entry.emailVerified, true);
+  const others = await admin.get('/api/admin/reviews/users?role=others');
+  assert.ok(!others.body.users.some(u => u.role === 'investor'));
+
+  const stats = await admin.get('/api/admin/stats');
+  assert.ok(stats.body.users.investorsPending >= 1);
+
+  const asked = await admin.post(`/api/admin/users/${investorId}/review`,
+    { decision: 'request_more', reason: 'Add your company registration.' });
+  assert.equal(asked.body.reviewStatus, 'needs_evidence');
+  assert.equal(lastMailTo(entry.email).subject, 'More evidence needed for your Orwickle profile');
+});
+
+test('a request for more evidence expires after 30 days without an answer; resubmitting starts again', async () => {
+  await pool.query(`UPDATE profiles SET reviewed_at = now() - interval '31 days' WHERE user_id = $1`, [investorId]);
+  const expired = await expireOverdue();
+  assert.ok(expired.users >= 1);
+  assert.equal((await investor.get('/api/profile/me')).body.profile.reviewStatus, 'expired');
+  const { rows } = await pool.query(`SELECT action, actor_id FROM audit_logs WHERE entity_id = $1 AND action = 'verification.expired'`,
+    [investorId]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].actor_id, null, 'expired by the system');
+
+  const filtered = await admin.get('/api/admin/users?review=expired');
+  assert.ok(filtered.body.users.some(u => u.id === investorId));
+
+  const me = (await investor.get('/api/profile/me')).body.profile;
+  const resubmitted = await investor.put('/api/profile/me', {
+    fullName: me.fullName, linkedinUrl: me.linkedinUrl,
+    details: { ...me.details, interests: me.details.interests.map(c => c.id) },
+  });
+  assert.equal(resubmitted.status, 200);
+  assert.equal(resubmitted.body.profile.reviewStatus, 'pending');
 });
 
 test('the overview counts users and listings', async () => {
@@ -190,6 +295,7 @@ test('admins search users and open one with documents, listings and past decisio
   assert.equal(detail.body.profile.documents.length, 2);
   assert.ok(detail.body.listings.length >= 1);
   assert.deepEqual(detail.body.decisions.map(d => d.decision), ['approve', 'request_more']);
+  assert.equal(detail.body.decisions[0].evidenceReviewed.length, 2);
 });
 
 test('suspending needs a reason, logs the user out and blocks login until reinstated', async () => {

@@ -27,6 +27,7 @@ const getProfile = token => api.get('/api/profile/me').set(...auth(token));
 const putProfile = (token, body) => api.put('/api/profile/me').set(...auth(token)).send(body);
 const upload = (token, kind, file = PNG, name = 'doc.png') =>
   api.put(`/api/profile/me/documents/${kind}`).set(...auth(token)).attach('file', file, name);
+const link = (token, kind, url) => api.put(`/api/profile/me/documents/${kind}/link`).set(...auth(token)).send({ url });
 
 const ownerBody = {
   fullName: 'Ayesha Khan',
@@ -44,16 +45,13 @@ const ownerBody = {
 };
 const investorBody = overrides => ({
   fullName: 'Farhan Malik',
-  city: 'Karachi',
-  phone: '0300-1234567',
   linkedinUrl: 'https://www.linkedin.com/in/farhan',
   details: {
-    investorType: 'angel',
-    cnicNumber: '42101-1234567-1',
-    investmentExperience: '1_3',
-    professionalAffiliation: 'Partner at Malik & Co; member of Karachi Angel Network',
-    investmentHistory: 'Invested in two Karachi EdTech startups in 2024 and 2025.',
-    portfolioUrl: 'https://angel.co/farhan',
+    organization: 'Karachi Seed Ventures',
+    designation: 'Managing Partner',
+    companyWebsite: 'https://ksv.pk',
+    investmentInterests: 'Student-built SaaS and EdTech products with early users.',
+    investmentStages: ['mvp', 'launched', 'mvp'],
     minTicket: 500000,
     maxTicket: 2000000,
     interests: [categories[0].id, categories[1].id],
@@ -157,93 +155,75 @@ test('an owner must upload both sides of the university ID card', async () => {
   assert.deepEqual(saved.body.profile.details.skills, ['Flutter', 'Node.js']);
 });
 
-test('documents are checked: right kind for the role, image or PDF only', async () => {
+test('documents are checked: right kind for the role, image or PDF only, links for investor evidence only', async () => {
   const owner = await loginAs('owner');
-  const wrongKind = await upload(owner.accessToken, 'company_certificate');
+  const wrongKind = await upload(owner.accessToken, 'company_registration');
   assert.equal(wrongKind.body.error.details.kind, 'This document is not needed for your role');
+  assert.equal((await link(owner.accessToken, 'cnic_front', 'https://x.pk')).status, 403, 'owners give files, not links');
 
   const investor = await loginAs('investor');
-  const text = await upload(investor.accessToken, 'cnic_front', Buffer.from('hello'), 'x.png');
+  const text = await upload(investor.accessToken, 'company_registration', Buffer.from('hello'), 'x.png');
   assert.equal(text.body.error.details.file, 'Only JPEG, PNG, WebP or PDF files are allowed');
-  assert.equal((await upload(investor.accessToken, 'company_certificate', PDF, 'cert.pdf')).status, 200);
+  assert.equal((await upload(investor.accessToken, 'company_registration', PDF, 'cert.pdf')).status, 200);
+  const cnic = await upload(investor.accessToken, 'cnic_front');
+  assert.equal(cnic.body.error.details.kind, 'This document is not needed for your role', 'investors give no CNIC');
+  const badLink = await link(investor.accessToken, 'investment_portfolio', 'angel.co/farhan');
+  assert.equal(badLink.body.error.details.url, 'Enter a full Link starting with https://');
 });
 
-test('investor: phone, CNIC, LinkedIn, experience and range are required', async () => {
+test('investor: organization, designation, LinkedIn, interests, stages, range and sectors are required; no CNIC or phone', async () => {
   const session = await loginAs('investor');
-  const res = await putProfile(session.accessToken, { fullName: 'Farhan Malik', city: 'Karachi', details: { investorType: 'angel' } });
+  const res = await putProfile(session.accessToken, { fullName: 'Farhan Malik', details: {} });
   const d = res.body.error.details;
-  assert.equal(d.phone, 'Phone number is required');
   assert.equal(d.linkedinUrl, 'LinkedIn profile is required');
-  assert.equal(d['details.cnicNumber'], 'CNIC number is required');
-  assert.equal(d['details.investmentExperience'], 'Choose your investment experience');
+  assert.equal(d['details.organization'], 'Organization or company is required');
+  assert.equal(d['details.designation'], 'Professional designation is required');
+  assert.equal(d['details.investmentInterests'], 'Investment interests is required');
+  assert.equal(d['details.investmentStages'], 'Investment stages is required');
   assert.equal(d['details.minTicket'], 'Choose an investment range');
+  assert.equal(d['details.interests'], 'Interests is required');
+  for (const gone of ['phone', 'city', 'details.cnicNumber', 'details.investorType', 'details.investmentExperience']) {
+    assert.equal(d[gone], undefined, `${gone} is no longer asked`);
+  }
 
-  const badFormats = await putProfile(session.accessToken, {
-    ...investorBody(), phone: '12345', details: { ...investorBody().details, cnicNumber: '123' },
-  });
-  assert.equal(badFormats.body.error.details.phone, 'Enter a mobile number like 03001234567');
-  assert.equal(badFormats.body.error.details['details.cnicNumber'], 'Enter the 13-digit CNIC number, e.g. 42101-1234567-1');
+  const noStage = await putProfile(session.accessToken, investorBody({ investmentStages: [], companyWebsite: 'ksv.pk' }));
+  assert.equal(noStage.body.error.details['details.investmentStages'], 'Choose at least one stage');
+  assert.equal(noStage.body.error.details['details.companyWebsite'], 'Enter a full company website starting with https://');
 });
 
-test('an angel investor proves identity, funds and a past investment, but needs no company details', async () => {
+test('an investor needs at least two pieces of supporting evidence, each a file or a link', async () => {
   const session = await loginAs('investor');
-  const missing = await putProfile(session.accessToken, investorBody());
-  const d = missing.body.error.details;
-  assert.equal(d['documents.cnic_front'], 'Upload the front of your CNIC');
-  assert.equal(d['documents.funds_proof'], 'Upload proof of funds (bank statement, bank letter or tax return)');
-  assert.equal(d['documents.investment_proof'],
-    'Upload proof of a past investment (share certificate, investment agreement or letter from the startup)');
-  assert.equal(d['documents.company_certificate'], undefined);
+  const none = await putProfile(session.accessToken, investorBody());
+  assert.equal(none.status, 400);
+  assert.equal(none.body.error.details.documents, 'Add at least 2 pieces of supporting evidence');
 
-  for (const kind of ['cnic_front', 'cnic_back', 'investment_proof']) await upload(session.accessToken, kind);
-  await upload(session.accessToken, 'funds_proof', PDF, 'statement.pdf');
-  const withWebsite = { ...investorBody(), websiteUrl: 'https://farhan.pk' };
-  const saved = await putProfile(session.accessToken, withWebsite);
+  await upload(session.accessToken, 'company_registration', PDF, 'registration.pdf');
+  const one = await putProfile(session.accessToken, investorBody());
+  assert.equal(one.body.error.details.documents, 'Add at least 2 pieces of supporting evidence');
+
+  const linked = await link(session.accessToken, 'investment_portfolio', 'https://angel.co/farhan');
+  assert.equal(linked.status, 200);
+  const portfolio = linked.body.profile.documents.find(x => x.kind === 'investment_portfolio');
+  assert.equal(portfolio.isLink, true);
+  assert.equal(portfolio.url, 'https://angel.co/farhan');
+
+  const saved = await putProfile(session.accessToken, { ...investorBody(), city: 'ignored', phone: '03001234567' });
   assert.equal(saved.status, 200);
   const p = saved.body.profile;
-  assert.equal(p.phone, '03001234567', 'phone normalised');
-  assert.equal(p.websiteUrl, 'https://farhan.pk', 'investors may add a website');
-  assert.equal(p.details.cnicNumber, '4210112345671', 'CNIC stored as 13 digits');
-  assert.equal(p.details.maxTicket, 2000000);
-  assert.equal(p.details.professionalAffiliation, 'Partner at Malik & Co; member of Karachi Angel Network');
-  assert.equal(p.details.portfolioUrl, 'https://angel.co/farhan');
   assert.equal(p.reviewStatus, 'pending');
+  assert.equal(p.details.organization, 'Karachi Seed Ventures');
+  assert.equal(p.details.designation, 'Managing Partner');
+  assert.equal(p.details.companyWebsite, 'https://ksv.pk');
+  assert.deepEqual(p.details.investmentStages, ['mvp', 'launched'], 'duplicates removed');
+  assert.equal(p.details.maxTicket, 2000000);
+  assert.equal(p.details.cnicNumber, undefined);
+  assert.equal(p.phone, null, 'investors give no phone');
+  assert.equal(p.city, null, 'investors give no city');
+  assert.deepEqual(p.documents.map(x => x.kind).sort(), ['company_registration', 'investment_portfolio']);
 
-  const noHistory = await putProfile(session.accessToken, investorBody({ investmentHistory: '' }));
-  assert.equal(noHistory.body.error.details['details.investmentHistory'], 'Describe your past investments');
-  const noAffiliation = await putProfile(session.accessToken, investorBody({ professionalAffiliation: undefined }));
-  assert.equal(noAffiliation.body.error.details['details.professionalAffiliation'], 'Professional affiliation is required');
-
-  // first-time investors have no past investment to prove; the old proof is removed
-  const firstTime = await putProfile(session.accessToken,
-    investorBody({ investmentExperience: 'first_time', investmentHistory: '', portfolioUrl: '' }));
-  assert.equal(firstTime.status, 200, 'first-time investors have no history to describe');
-  assert.equal(firstTime.body.profile.details.investmentHistory, null);
-  assert.deepEqual(firstTime.body.profile.documents.map(x => x.kind).sort(), ['cnic_back', 'cnic_front', 'funds_proof']);
-});
-
-test('an investment firm must give company details and the registration certificate', async () => {
-  const session = await loginAs('investor');
-  await upload(session.accessToken, 'cnic_front');
-  await upload(session.accessToken, 'cnic_back');
-  const res = await putProfile(session.accessToken, investorBody({ investorType: 'firm' }));
-  const d = res.body.error.details;
-  assert.equal(d['details.companyName'], 'Company name is required for investment firms');
-  assert.equal(d['details.companyWebsite'], 'Company website is required for investment firms');
-  assert.equal(d['details.companyEmail'], 'Company email is required for investment firms');
-
-  const firm = investorBody({
-    investorType: 'firm', companyName: 'Karachi Seed Ventures', companyWebsite: 'https://ksv.pk', companyEmail: 'deals@ksv.pk',
-  });
-  const noCertificate = await putProfile(session.accessToken, firm);
-  assert.equal(noCertificate.body.error.details['documents.company_certificate'], 'Upload your company registration certificate');
-  assert.equal(noCertificate.body.error.details['documents.funds_proof'], undefined, 'the certificate replaces proof of funds');
-
-  await upload(session.accessToken, 'company_certificate', PDF, 'cert.pdf');
-  await upload(session.accessToken, 'investment_proof', PDF, 'agreement.pdf');
-  const saved = await putProfile(session.accessToken, firm);
-  assert.equal(saved.status, 200);
-  assert.equal(saved.body.profile.details.companyEmail, 'deals@ksv.pk');
+  // replacing the link keeps one item of that kind
+  const replaced = await link(session.accessToken, 'investment_portfolio', 'https://www.crunchbase.com/person/farhan');
+  assert.equal(replaced.body.profile.documents.length, 2);
 });
 
 test('a buyer from a company gives phone, LinkedIn, company name and email; no budget, headline or website', async () => {

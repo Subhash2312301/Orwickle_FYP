@@ -1,14 +1,17 @@
 // Decision dialog for an account or listing review. Approving needs every checklist item ticked;
 // any other decision needs a reason, which is emailed to the user. The ticked checklist is stored
-// with the decision.
+// with the decision, and the backend stores the evidence that was in front of the reviewer.
 
 import {
   Alert, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel,
   FormGroup, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material';
 import { useState } from 'react';
+import { evidenceSummary } from './Verification';
 
-export default function ReviewDialog({ open, title, checklist, decisions, onClose, onSubmit }) {
+const COLORS = { approve: 'success', request_more: 'warning', reject: 'error' };
+
+export default function ReviewDialog({ open, title, checklist, decisions, evidence, onClose, onSubmit }) {
   const [decision, setDecision] = useState('approve');
   const [checked, setChecked] = useState({});
   const [reason, setReason] = useState('');
@@ -40,6 +43,11 @@ export default function ReviewDialog({ open, title, checklist, decisions, onClos
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
+          {evidence && (
+            <Typography variant="body2" color="text.secondary">
+              Evidence reviewed ({evidence.length}): {evidenceSummary(evidence)}
+            </Typography>
+          )}
           <Typography variant="subtitle2">Checklist</Typography>
           <FormGroup>
             {checklist.map(item => (
@@ -61,7 +69,7 @@ export default function ReviewDialog({ open, title, checklist, decisions, onClos
             value={reason}
             onChange={e => setReason(e.target.value)}
             required={!approving}
-            helperText={approving ? '' : 'Tell the user exactly what to change, e.g. "Upload a clearer photo of the CNIC back".'}
+            helperText={approving ? '' : 'Tell the user exactly what to change, e.g. "Add a link to your angel network membership".'}
           />
           {approving && !allChecked && <Alert severity="info">Tick every checklist item to approve.</Alert>}
           {error && <Alert severity="error">{error}</Alert>}
@@ -69,7 +77,7 @@ export default function ReviewDialog({ open, title, checklist, decisions, onClos
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={saving}>Cancel</Button>
-        <Button variant="contained" color={approving ? 'success' : 'error'} onClick={submit} disabled={!canSubmit || saving}>
+        <Button variant="contained" color={COLORS[decision] || 'primary'} onClick={submit} disabled={!canSubmit || saving}>
           {saving ? 'Saving…' : decisions.find(d => d.value === decision)?.label}
         </Button>
       </DialogActions>

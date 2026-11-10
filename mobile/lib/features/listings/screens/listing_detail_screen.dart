@@ -10,6 +10,8 @@ import '../../../core/widgets/image_widgets.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/session/session_controller.dart';
 import '../../auth/widgets/form_widgets.dart';
+import '../../profile/data/profile_models.dart';
+import '../../profile/widgets/document_field.dart';
 import '../data/listing_api.dart';
 import '../data/listing_models.dart';
 import '../widgets/listing_widgets.dart';
@@ -102,6 +104,27 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     }
     if (!await _confirmLiveChange(listing, 'remove a photo')) return;
     await _run(() => _api.removePhoto(listing.id, photo.id), 'Photo removed');
+  }
+
+  Future<void> _addEvidence(Listing listing, String kind) async {
+    final (title, _) = listingEvidenceKinds[kind]!;
+    if (!await _confirmLiveChange(listing, 'add evidence') || !mounted) return;
+    final choice = await pickEvidence(context, title: 'Add ${title.toLowerCase()}', canRemove: false);
+    if (choice == null || !mounted) return;
+    await _run(
+      () => switch (choice) {
+        EvidenceFile(:final file) => _api.addEvidenceFile(listing.id, kind, file),
+        EvidenceLink(:final url) => _api.addEvidenceLink(listing.id, kind, url),
+        EvidenceRemove() => _api.get(listing.id),
+      },
+      'Evidence added',
+    );
+  }
+
+  Future<void> _removeEvidence(Listing listing, ProfileDocument item) async {
+    if (!await _confirm('Remove evidence?', 'It is deleted from this listing.', 'Remove', destructive: true)) return;
+    if (!await _confirmLiveChange(listing, 'remove evidence')) return;
+    await _run(() => _api.removeEvidence(listing.id, item.id!), 'Evidence removed');
   }
 
   Future<void> _publish() async {
@@ -239,6 +262,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           busy: _busy,
                           onAddPhoto: () => _addPhoto(detail.listing),
                           onRemovePhoto: (p) => _removePhoto(detail.listing, p),
+                          onAddEvidence: (kind) => _addEvidence(detail.listing, kind),
+                          onRemoveEvidence: (e) => _removeEvidence(detail.listing, e),
                         ),
                       ),
                     ),
@@ -247,7 +272,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               ],
             ),
           ),
-          bottomNavigationBar: isOwner ? _ownerBar(detail.listing) : null,
+          bottomNavigationBar: isOwner ? _ownerBar(detail) : null,
         );
       },
     );
@@ -308,12 +333,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   );
 
   /// Owner: the one main action for the status (publish a draft, edit a published listing),
-  /// and "More" for the rest.
-  Widget? _ownerBar(Listing l) {
+  /// and "More" for the rest. Publishing needs a verified account and ownership evidence.
+  Widget? _ownerBar(ListingDetail detail) {
+    final l = detail.listing;
     final editable = l.status == 'draft' || l.status == 'published';
     if (!editable) return null;
     final approved = context.read<SessionController>().user?.isApproved ?? false;
     final draft = l.status == 'draft';
+    final canPublish = approved && detail.hasOwnershipEvidence;
     return _barFrame([
       if (_busy) ...[const LinearProgressIndicator(), const SizedBox(height: Gaps.sm)],
       Row(
@@ -334,16 +361,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           if (draft) ...[
             const SizedBox(width: Gaps.sm),
             Expanded(
-              child: AppButton(label: 'Publish', icon: Icons.publish, onPressed: _busy || !approved ? null : _publish),
+              child: AppButton(
+                label: 'Publish',
+                icon: Icons.publish,
+                onPressed: _busy || !canPublish ? null : _publish,
+              ),
             ),
           ],
         ],
       ),
-      if (draft && !approved)
+      if (draft && !canPublish)
         Padding(
           padding: const EdgeInsets.only(top: Gaps.sm),
           child: Text(
-            'You can publish once an admin approves your account.',
+            !approved
+                ? 'You can publish once an admin verifies your account.'
+                : 'Add ownership evidence below before publishing.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -359,6 +392,8 @@ class _Body extends StatelessWidget {
     required this.busy,
     required this.onAddPhoto,
     required this.onRemovePhoto,
+    required this.onAddEvidence,
+    required this.onRemoveEvidence,
   });
 
   final ListingDetail detail;
@@ -366,6 +401,8 @@ class _Body extends StatelessWidget {
   final bool busy;
   final VoidCallback onAddPhoto;
   final ValueChanged<ListingPhoto> onRemovePhoto;
+  final ValueChanged<String> onAddEvidence;
+  final ValueChanged<ProfileDocument> onRemoveEvidence;
 
   @override
   Widget build(BuildContext context) {
@@ -454,6 +491,18 @@ class _Body extends StatelessWidget {
           onRemove: editable && !busy ? (i) => onRemovePhoto(l.photos[i]) : null,
         ),
       ],
+      if (isOwner) ...[
+        SectionHeader(
+          'Evidence for verification',
+          subtitle: 'Only Orwickle admins see it · ${detail.evidence.length} of $maxListingEvidence',
+        ),
+        _EvidenceSection(
+          evidence: detail.evidence,
+          canChange: editable && !busy,
+          onAdd: onAddEvidence,
+          onRemove: onRemoveEvidence,
+        ),
+      ],
       if (detail.confidential != null) _ConfidentialCard(detail.confidential!, isFunding: l.isFunding),
       const DisclaimerBanner(margin: EdgeInsets.only(top: Gaps.xl)),
     ];
@@ -482,13 +531,45 @@ class _Body extends StatelessWidget {
             margin: EdgeInsets.zero,
           ),
         ),
+      if (isOwner && l.reviewStatus == 'needs_evidence' && l.status == 'draft')
+        banner(
+          AppBanner(
+            role: ToneRole.rejected,
+            icon: Icons.edit_note,
+            title: 'Changes requested',
+            message:
+                '${l.reviewNote ?? 'An admin asked for changes.'} '
+                'Update the listing or its evidence and publish again within 30 days.',
+            margin: EdgeInsets.zero,
+          ),
+        ),
+      if (isOwner && l.reviewStatus == 'expired' && l.status == 'draft')
+        banner(
+          const AppBanner(
+            role: ToneRole.expired,
+            icon: Icons.timer_off_outlined,
+            title: 'Review request expired',
+            message: 'The requested changes were not made within 30 days. Update the listing and publish it again.',
+            margin: EdgeInsets.zero,
+          ),
+        ),
       if (isOwner && l.status == 'published' && l.reviewStatus == 'pending')
         banner(
           const AppBanner(
             role: ToneRole.pending,
             icon: Icons.hourglass_top,
             title: 'Waiting for admin review',
-            message: 'Investors and buyers will see it once it is approved.',
+            message: 'An admin will check the project, its evidence and its claims. Investors and buyers see it once verified.',
+            margin: EdgeInsets.zero,
+          ),
+        ),
+      if (isOwner && l.status == 'published' && l.reviewStatus == 'under_review')
+        banner(
+          const AppBanner(
+            role: ToneRole.info,
+            icon: Icons.manage_search,
+            title: 'Under review',
+            message: 'An admin is checking this listing and its evidence right now.',
             margin: EdgeInsets.zero,
           ),
         ),
@@ -503,6 +584,76 @@ class _Body extends StatelessWidget {
           ),
         ),
     ];
+  }
+}
+
+/// Ownership and project evidence, grouped by kind, each with an "Add" button. Tapping an item removes it.
+class _EvidenceSection extends StatelessWidget {
+  const _EvidenceSection({
+    required this.evidence,
+    required this.canChange,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final List<ProfileDocument> evidence;
+  final bool canChange;
+  final ValueChanged<String> onAdd;
+  final ValueChanged<ProfileDocument> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final full = evidence.length >= maxListingEvidence;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final MapEntry(key: kind, value: (title, help)) in listingEvidenceKinds.entries) ...[
+          AppCard(
+            padding: const EdgeInsets.all(Gaps.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(title, style: theme.textTheme.titleMedium),
+                const SizedBox(height: Gaps.xxs),
+                Text(help, style: theme.textTheme.bodySmall),
+                for (final item in evidence.where((e) => e.kind == kind))
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      item.isLink ? Icons.link : (item.isPdf ? Icons.picture_as_pdf_outlined : Icons.image_outlined),
+                    ),
+                    title: Text(
+                      item.isLink ? (item.url ?? 'Link') : (item.isPdf ? 'PDF document' : 'Photo'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: canChange
+                        ? IconButton(
+                            tooltip: 'Remove',
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () => onRemove(item),
+                          )
+                        : null,
+                  ),
+                if (canChange && !full) ...[
+                  const SizedBox(height: Gaps.sm),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => onAdd(kind),
+                      icon: const Icon(Icons.add),
+                      label: Text('Add ${title.toLowerCase()}'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: Gaps.md),
+        ],
+      ],
+    );
   }
 }
 

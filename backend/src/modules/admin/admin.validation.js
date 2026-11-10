@@ -12,13 +12,14 @@ const reasonError = { message: 'Give a reason so the user knows what to change',
 const checklist = z.record(z.string().max(200), z.boolean()).default({});
 
 const userReviewSchema = z.object({
-  decision: z.enum(['approve', 'reject', 'request_more'], { error: 'Choose approve, reject or request more information' }),
+  decision: z.enum(['approve', 'reject', 'request_more'], { error: 'Choose approve, reject or request more evidence' }),
   reason,
   checklist,
 }).refine(needsReason, reasonError);
 
+// request_more on a listing = "request changes"
 const listingReviewSchema = z.object({
-  decision: z.enum(['approve', 'reject'], { error: 'Choose approve or reject' }),
+  decision: z.enum(['approve', 'reject', 'request_more'], { error: 'Choose approve, reject or request changes' }),
   reason,
   checklist,
 }).refine(needsReason, reasonError);

@@ -173,6 +173,51 @@ class RangeChipsField extends FormField<AmountRange?> {
        );
 }
 
+/// Project stages an investor invests in (at least one).
+class StagesField extends FormField<Set<String>> {
+  StagesField({
+    super.key,
+    required Set<String> initial,
+    required ValueChanged<Set<String>> onChanged,
+    String? serverError,
+  }) : super(
+         initialValue: initial,
+         forceErrorText: serverError,
+         validator: (stages) => stages == null || stages.isEmpty ? 'Choose at least one stage' : null,
+         builder: (state) {
+           final selected = state.value ?? {};
+           return Padding(
+             padding: const EdgeInsets.only(bottom: Gaps.lg),
+             child: Column(
+               crossAxisAlignment: CrossAxisAlignment.start,
+               children: [
+                 Text('Investment stage', style: Theme.of(state.context).textTheme.titleSmall),
+                 const SizedBox(height: Gaps.sm),
+                 Wrap(
+                   spacing: Gaps.sm,
+                   runSpacing: Gaps.xs,
+                   children: [
+                     for (final e in investmentStages.entries)
+                       FilterChip(
+                         label: Text(e.value),
+                         selected: selected.contains(e.key),
+                         onSelected: (on) {
+                           final next = {...selected};
+                           on ? next.add(e.key) : next.remove(e.key);
+                           state.didChange(next);
+                           onChanged(next);
+                         },
+                       ),
+                   ],
+                 ),
+                 FieldError(state.errorText),
+               ],
+             ),
+           );
+         },
+       );
+}
+
 /// Category chips for investor and buyer interests (1–10).
 class InterestsField extends FormField<Set<String>> {
   InterestsField({

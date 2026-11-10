@@ -14,6 +14,12 @@ const notFound = () => new HttpError(404, 'NOT_FOUND', 'Listing not found');
 
 const MAX_PHOTOS = 6;
 
+// Evidence for the admin's project verification (never shown to other users):
+//   ownership_proof   the owner made / owns the project, e.g. repository, design files, registration (one needed to publish)
+//   project_evidence  the project exists as described, e.g. demo video, live link, screenshots, report
+const EVIDENCE_KINDS = ['ownership_proof', 'project_evidence'];
+const MAX_EVIDENCE = 8;
+
 // Pictures are part of the public preview, so changing them (like editing) sends a published listing back for review.
 const BACK_TO_REVIEW = `review_status = CASE WHEN status = 'published' THEN 'pending'::review_status ELSE review_status END`;
 
@@ -98,6 +104,21 @@ async function assertOwnerApproved(db, ownerId) {
   }
 }
 
+async function loadEvidence(db, listingId, baseUrl) {
+  const { rows } = await db.query(
+    `SELECT id, kind, storage_path, external_url, content_type, created_at FROM evidence_submissions
+      WHERE subject_listing_id = $1 ORDER BY created_at`,
+    [listingId]);
+  return Promise.all(rows.map(async r => ({
+    id: r.id,
+    kind: r.kind,
+    url: r.external_url ?? await storage.signedUrl(r.storage_path, baseUrl),
+    isLink: Boolean(r.external_url),
+    contentType: r.content_type,
+    uploadedAt: r.created_at,
+  })));
+}
+
 const confidentialValues = c => [
   c.fullDescription, c.problemStatement, c.businessModel, c.financialSummary, c.ipOwnershipNotes,
   c.equityOfferedPercent ?? null, c.transferDetails,
@@ -118,6 +139,7 @@ async function getListing(listingId, user, baseUrl) {
   if (canSeeAll) {
     const { rows: [c] } = await pool.query('SELECT * FROM listing_confidential WHERE listing_id = $1', [listingId]);
     result.confidential = c ? toConfidential(c) : null;
+    result.evidence = await loadEvidence(pool, listingId, baseUrl);
   }
   return result;
 }
@@ -178,6 +200,15 @@ async function updateListing(listingId, ownerId, body, { ip, baseUrl }) {
   return getListing(listingId, { id: ownerId, role: 'owner' }, baseUrl);
 }
 
+async function assertOwnershipEvidence(db, listingId) {
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM evidence_submissions WHERE subject_listing_id = $1 AND kind = 'ownership_proof'`, [listingId]);
+  if (!rowCount) {
+    throw new HttpError(409, 'EVIDENCE_REQUIRED',
+      'Add at least one ownership evidence (for example your code repository) before publishing');
+  }
+}
+
 // Allowed status moves: draft → published (review pending), published → draft, draft/published → closed.
 const TRANSITIONS = {
   publish: {
@@ -196,7 +227,10 @@ async function changeStatus(listingId, ownerId, action, { ip, baseUrl }) {
     if (!t.from.includes(row.status)) {
       throw new HttpError(409, 'INVALID_STATUS', `A ${row.status} listing cannot be ${t.done}`);
     }
-    if (action === 'publish') await assertOwnerApproved(client, ownerId);
+    if (action === 'publish') {
+      await assertOwnerApproved(client, ownerId);
+      await assertOwnershipEvidence(client, listingId);
+    }
     await client.query(`UPDATE listings SET status = $2 ${t.set} WHERE id = $1`, [listingId, t.to]);
     await audit(client, { actorId: ownerId, action: `listing.${t.done}`, entityType: 'listing', entityId: listingId, ip });
   });
@@ -213,9 +247,11 @@ async function deleteListing(listingId, ownerId, { ip }) {
         throw new HttpError(409, 'INVALID_STATUS', 'Only draft listings can be deleted. Close the listing instead.');
       }
       const { rows: photos } = await client.query('SELECT path FROM listing_photos WHERE listing_id = $1', [listingId]);
+      const { rows: evidence } = await client.query(
+        'DELETE FROM evidence_submissions WHERE subject_listing_id = $1 RETURNING storage_path', [listingId]);
       await client.query('DELETE FROM listings WHERE id = $1', [listingId]);
       await audit(client, { actorId: ownerId, action: 'listing.deleted', entityType: 'listing', entityId: listingId, ip });
-      return [row.thumbnail_path, ...photos.map(p => p.path)];
+      return [row.thumbnail_path, ...photos.map(p => p.path), ...evidence.map(e => e.storage_path)];
     });
   } catch (err) {
     // 23503 = foreign key violation: an admin review (or later an access request or offer) refers to the listing,
@@ -285,7 +321,55 @@ async function removePhoto(listingId, photoId, ownerId, { ip, baseUrl }) {
   return getListing(listingId, { id: ownerId, role: 'owner' }, baseUrl);
 }
 
+// ---------- evidence for the admin (owner only) ----------
+
+// Adds one evidence item: an uploaded file ({ file }) or a link ({ url }). Like photos, a change
+// sends a published listing back for review.
+async function addEvidence(listingId, ownerId, kind, { file, url }, { ip, baseUrl }) {
+  if (!EVIDENCE_KINDS.includes(kind)) {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'Choose ownership evidence or project evidence', { kind: 'Unknown evidence type' });
+  }
+  const filePath = file && `listings/${listingId}/evidence-${crypto.randomUUID()}.${file.ext}`;
+  await withTransaction(async client => {
+    const row = await loadOwned(client, listingId, ownerId);
+    assertEditable(row);
+    const { rows: [{ count }] } = await client.query(
+      'SELECT count(*)::int AS count FROM evidence_submissions WHERE subject_listing_id = $1', [listingId]);
+    if (count >= MAX_EVIDENCE) {
+      throw new HttpError(409, 'TOO_MUCH_EVIDENCE', `A listing can have at most ${MAX_EVIDENCE} evidence items. Remove one first.`);
+    }
+    if (file) await storage.upload(filePath, file.buffer, file.contentType);
+    await client.query(
+      `INSERT INTO evidence_submissions (submitted_by, subject_listing_id, kind, storage_path, external_url, content_type)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [ownerId, listingId, kind, filePath ?? null, url ?? null, file?.contentType ?? null]);
+    await client.query(`UPDATE listings SET ${BACK_TO_REVIEW} WHERE id = $1`, [listingId]);
+    await audit(client, { actorId: ownerId, action: 'listing.evidence_added', entityType: 'listing', entityId: listingId, ip,
+      details: { kind, ...(url && { url }) } });
+  });
+  return getListing(listingId, { id: ownerId, role: 'owner' }, baseUrl);
+}
+
+async function removeEvidence(listingId, evidenceId, ownerId, { ip, baseUrl }) {
+  const filePath = await withTransaction(async client => {
+    const row = await loadOwned(client, listingId, ownerId);
+    assertEditable(row);
+    const evidenceNotFound = new HttpError(404, 'NOT_FOUND', 'Evidence not found');
+    if (!UUID.test(evidenceId)) throw evidenceNotFound;
+    const { rows: [item] } = await client.query(
+      `DELETE FROM evidence_submissions WHERE id = $1 AND subject_listing_id = $2 RETURNING kind, storage_path`,
+      [evidenceId, listingId]);
+    if (!item) throw evidenceNotFound;
+    await client.query(`UPDATE listings SET ${BACK_TO_REVIEW} WHERE id = $1`, [listingId]);
+    await audit(client, { actorId: ownerId, action: 'listing.evidence_removed', entityType: 'listing', entityId: listingId, ip,
+      details: { kind: item.kind } });
+    return item.storage_path;
+  });
+  await storage.remove(filePath);
+  return getListing(listingId, { id: ownerId, role: 'owner' }, baseUrl);
+}
+
 module.exports = {
   getListing, listMine, createListing, updateListing, changeStatus, deleteListing, setCover, removeCover,
-  addPhoto, removePhoto,
+  addPhoto, removePhoto, addEvidence, removeEvidence, loadEvidence, EVIDENCE_KINDS,
 };

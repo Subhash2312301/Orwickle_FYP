@@ -23,10 +23,17 @@ class ProfileApi {
     Map<String, dynamic>.from((await _api.delete('/profile/me/avatar', auth: true))['profile'] as Map),
   );
 
-  /// [kind]: cnic_front, cnic_back, university_id_front, university_id_back or company_certificate.
+  /// [kind]: an ID card side (cnic_front, university_id_back, ...) or one of [investorEvidence].
   Future<MyProfile> uploadDocument(String kind, UploadFile file) async => MyProfile.fromJson(
     Map<String, dynamic>.from(
       (await _api.uploadImage('/profile/me/documents/$kind', file, field: 'file'))['profile'] as Map,
+    ),
+  );
+
+  /// Investor evidence given as a link instead of a file.
+  Future<MyProfile> linkDocument(String kind, String url) async => MyProfile.fromJson(
+    Map<String, dynamic>.from(
+      (await _api.put('/profile/me/documents/$kind/link', auth: true, body: {'url': url}))['profile'] as Map,
     ),
   );
 

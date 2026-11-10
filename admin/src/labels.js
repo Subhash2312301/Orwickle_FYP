@@ -2,57 +2,73 @@
 
 export const ROLE_LABELS = { owner: 'Project Owner', investor: 'Investor', buyer: 'Buyer' };
 
+// Verification status. "Suspended" comes from the account (or listing) status, not the review.
 export const REVIEW_LABELS = {
-  unreviewed: 'Profile not submitted',
-  pending: 'Waiting for review',
-  approved: 'Approved',
+  unreviewed: 'Not submitted',
+  pending: 'Pending',
+  under_review: 'Under Review',
+  needs_evidence: 'More evidence requested',
+  approved: 'Verified',
   rejected: 'Rejected',
-  needs_evidence: 'More information requested',
+  expired: 'Expired',
+  suspended: 'Suspended',
 };
+
+// Listings use the same statuses; "more evidence" is "changes requested" for a project.
+export const LISTING_REVIEW_LABELS = { ...REVIEW_LABELS, needs_evidence: 'Changes requested' };
 
 export const REVIEW_COLORS = {
   unreviewed: 'default',
   pending: 'warning',
+  under_review: 'info',
+  needs_evidence: 'secondary',
   approved: 'success',
   rejected: 'error',
-  needs_evidence: 'info',
+  expired: 'default',
+  suspended: 'error',
 };
 
+/** The status an admin should see: a suspended account is "Suspended" whatever its review says. */
+export const verificationStatus = (reviewStatus, accountStatus) => (accountStatus === 'suspended' ? 'suspended' : reviewStatus);
+
 export const DECISION_LABELS = {
-  approve: 'Approved',
+  approve: 'Verified',
   reject: 'Rejected',
-  request_more: 'Asked for more information',
+  request_more: 'Requested more evidence',
   suspend: 'Suspended',
   reinstate: 'Reinstated',
 };
+
+export const LISTING_DECISION_LABELS = { ...DECISION_LABELS, request_more: 'Requested changes' };
 
 export const DOCUMENT_LABELS = {
   cnic_front: 'CNIC (front)',
   cnic_back: 'CNIC (back)',
   university_id_front: 'University ID (front)',
   university_id_back: 'University ID (back)',
-  company_certificate: 'Company registration certificate',
-  funds_proof: 'Proof of funds',
-  investment_proof: 'Proof of a past investment',
+  company_registration: 'Company registration / business profile',
+  network_affiliation: 'VC / angel network affiliation',
+  accelerator_affiliation: 'Accelerator / incubator affiliation',
+  investment_portfolio: 'Public investment portfolio',
+  professional_credential: 'Professional credentials',
+  ownership_proof: 'Ownership evidence',
+  project_evidence: 'Project evidence',
 };
 
-export const INVESTOR_TYPES = { individual: 'Individual investor', angel: 'Angel investor', firm: 'Investment firm / VC', other: 'Other' };
 export const BUYER_TYPES = { individual: 'Individual', small_business: 'Small business', agency: 'Software agency', other: 'Other' };
-export const EXPERIENCE = { first_time: 'First investment', '1_3': '1–3 startups', '4_10': '4–10 startups', '10_plus': 'More than 10 startups' };
 export const STAGES = { idea: 'Idea', prototype: 'Prototype', mvp: 'MVP', launched: 'Launched' };
 export const LISTING_TYPES = { funding: 'Seeking Funding', sale: 'Available for Purchase' };
 
 /** 1500000 → "PKR 1,500,000" */
 export const pkr = n => (n == null ? '—' : `PKR ${Math.round(n).toLocaleString('en-PK')}`);
 
-export const dateTime = iso => (iso ? new Date(iso).toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
+export const range = (min, max) => (min == null ? null : `${pkr(min)} – ${max == null ? 'and above' : pkr(max)}`);
 
-/** 4210112345671 → 42101-1234567-1 (admins see the full number to compare with the photo) */
-export const cnic = v => (v && v.length === 13 ? `${v.slice(0, 5)}-${v.slice(5, 12)}-${v.slice(12)}` : v || '—');
+export const dateTime = iso => (iso ? new Date(iso).toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 
 // ---------- checklists ----------
 
-/** What the admin must confirm before approving an account; depends on the role and its answers. */
+/** What the admin must confirm before verifying an account; depends on the role and its answers. */
 export function accountChecklist(profile) {
   const d = profile.details || {};
   const items = [];
@@ -65,19 +81,15 @@ export function accountChecklist(profile) {
     items.push('LinkedIn profile opens and belongs to this person', 'GitHub profile shows real work', 'Portfolio link works');
   } else if (profile.role === 'investor') {
     items.push(
-      'CNIC photos are clear and the name matches',
-      'CNIC number matches the CNIC photo',
-      'LinkedIn profile opens and belongs to this person',
-      'Professional affiliation looks genuine',
+      'Identity: the name matches the LinkedIn profile',
+      'Organization and designation match LinkedIn',
     );
-    if (d.investorType === 'firm') {
-      items.push('Company certificate matches the company name', 'Company website works and matches the company email');
-    } else {
-      items.push('Proof of funds is recent, in this name and fits the chosen range');
-    }
-    if (d.investmentExperience && d.investmentExperience !== 'first_time') {
-      items.push('Past investment proof matches the investment history');
-    }
+    if (d.companyWebsite) items.push('Company website works and belongs to the organization');
+    items.push(
+      'Every piece of evidence opens and is in this person\'s or organization\'s name',
+      'The evidence supports the claimed affiliations and portfolio',
+      'Investment stages and range are consistent with the evidence',
+    );
   } else if (profile.role === 'buyer') {
     items.push('Phone number looks valid', 'LinkedIn profile opens and belongs to this person');
     if (d.affiliation === 'university') items.push('University ID card is clear and the name matches');
@@ -87,10 +99,23 @@ export function accountChecklist(profile) {
 }
 
 export const LISTING_CHECKLIST = [
+  'The owner\'s account is verified and matches the project',
+  'Ownership evidence shows the owner made or owns the project',
+  'Project evidence shows the project exists as described',
+  'Every claim requiring review is backed by the evidence',
   'The public preview contains no confidential information',
-  'Title, description and category describe the project honestly',
-  'Photos are appropriate and show this project',
-  'Amount and equity look reasonable',
-  'Confidential details are complete',
-  'Ownership notes are believable',
+  'Title, description, category and photos describe the project honestly',
 ];
+
+/** The statements in a listing an admin must check against the evidence. */
+export function listingClaims(l, c) {
+  return [
+    ['Stage', `${STAGES[l.projectStage]}${l.projectStage === 'launched' ? ' (should have a live link or users)' : ''}`],
+    [l.listingType === 'funding' ? 'Funding needed' : 'Asking price', pkr(l.askingAmount)],
+    l.listingType === 'funding' && ['Equity offered', c?.equityOfferedPercent == null ? null : `${c.equityOfferedPercent}%`],
+    ['Tech stack', l.techStack.join(', ')],
+    ['Financial summary', c?.financialSummary],
+    ['Ownership notes', c?.ipOwnershipNotes],
+    l.listingType === 'sale' && ['What the buyer receives', c?.transferDetails],
+  ];
+}

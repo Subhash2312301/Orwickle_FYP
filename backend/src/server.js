@@ -3,9 +3,11 @@
 const env = require('./config/env');
 const app = require('./app');
 const { pool } = require('./db/pool');
+const { scheduleExpiry } = require('./services/verification');
 
 const server = app.listen(env.port, () => {
   console.log(`Orwickle API listening on http://localhost:${env.port} (${env.nodeEnv})`);
+  scheduleExpiry();
 });
 
 function shutdown(signal) {

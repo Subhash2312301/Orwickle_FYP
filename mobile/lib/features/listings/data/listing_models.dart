@@ -1,3 +1,5 @@
+import '../../profile/data/profile_models.dart';
+
 /// Public preview of a listing (anyone logged in may see it once published).
 class Listing {
   const Listing({
@@ -55,8 +57,9 @@ class Listing {
   final String? coverUrl;
   final List<ListingPhoto> photos; // extra project photos, part of the public preview
   final String status; // draft | published | closed | suspended
-  final String reviewStatus; // unreviewed | pending | approved | rejected | needs_evidence
-  final String? reviewNote; // admin's reason for a rejection (owner only)
+  // unreviewed | pending | under_review | approved | rejected | needs_evidence (changes requested) | expired
+  final String reviewStatus;
+  final String? reviewNote; // admin's reason for a rejection or requested changes (owner only)
   final String ownerName;
 
   final bool isSample; // demonstration data, shown with a "Sample" badge
@@ -93,16 +96,38 @@ class ListingConfidential {
 }
 
 class ListingDetail {
-  const ListingDetail(this.listing, this.confidential);
+  const ListingDetail(this.listing, this.confidential, {this.evidence = const []});
 
   factory ListingDetail.fromJson(Map<String, dynamic> j) => ListingDetail(
     Listing.fromJson(Map<String, dynamic>.from(j['listing'] as Map)),
     j['confidential'] is Map ? ListingConfidential.fromJson(Map<String, dynamic>.from(j['confidential'] as Map)) : null,
+    evidence: [
+      for (final e in j['evidence'] as List? ?? const []) ProfileDocument.fromJson(Map<String, dynamic>.from(e as Map)),
+    ],
   );
 
   final Listing listing;
   final ListingConfidential? confidential;
+
+  /// Ownership and project evidence for the admin (owner only).
+  final List<ProfileDocument> evidence;
+
+  bool get hasOwnershipEvidence => evidence.any((e) => e.kind == 'ownership_proof');
 }
+
+/// Evidence an owner gives with a listing: kind → (title, what to add).
+const listingEvidenceKinds = {
+  'ownership_proof': (
+    'Ownership evidence',
+    'Shows you made or own the project: code repository, design files, commit history or a registration. '
+        'At least one is needed to publish.',
+  ),
+  'project_evidence': (
+    'Project evidence',
+    'Shows the project works as described: demo video, live link, screenshots or a report.',
+  ),
+};
+const maxListingEvidence = 8;
 
 // ---------- labels ----------
 
@@ -118,10 +143,12 @@ const projectStages = {
 const statusLabels = {'draft': 'Draft', 'published': 'Published', 'closed': 'Closed', 'suspended': 'Suspended'};
 
 const reviewLabels = {
-  'pending': 'Awaiting review',
-  'approved': 'Approved',
+  'pending': 'Pending review',
+  'under_review': 'Under review',
+  'approved': 'Verified',
   'rejected': 'Rejected',
-  'needs_evidence': 'More evidence needed',
+  'needs_evidence': 'Changes requested',
+  'expired': 'Expired',
 };
 
 /// Confidential fields in display order: API key → label.

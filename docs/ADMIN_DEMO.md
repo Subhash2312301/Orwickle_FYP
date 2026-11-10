@@ -9,26 +9,34 @@ Admin login: the admin account created with `npm run create-admin` (email `orwic
 
 ## Demo story (about 5 minutes)
 1. **Only admins get in.** Try logging in to the dashboard with an owner account → "Only administrators can use this dashboard."
-2. **Overview.** Counts of owners, investors, buyers, accounts and listings waiting for review, locked and suspended accounts.
-3. **Account review.** On the phone, register a new owner, verify the OTP, fill in the profile and upload the
-   ID card → "Submit for review". In the dashboard, Overview shows 1 account waiting.
-   Account reviews → open it → profile, links and documents (click to open full size) →
-   "Review this account" → tick the checklist → Approve. The owner gets an email; in the app the
-   "Account under review" banner disappears after pulling to refresh.
-   Also show "Ask for more information" with a reason: the app shows the note and an "Update profile" button.
-4. **Listing review.** The approved owner creates a listing with "Save & publish". Listing reviews → open it →
-   public preview and confidential details side by side → checklist → Approve. The listing is now live.
-   Reject instead sends it back to draft with the reason.
-5. **Suspend.** Users → search the owner → Suspend with a reason. Within about 2 minutes the app logs out,
+2. **Overview.** Investors and projects waiting for verification, and every verification status: Pending,
+   Under Review, More evidence requested, Verified, Rejected, Suspended, Expired (each card opens the list).
+3. **Investor verification.** On the phone, register a new investor, verify the OTP, fill in organization,
+   designation, LinkedIn, interests, stages, range and sectors, and add at least two pieces of evidence (a file or
+   a link each) → "Submit for review". In the dashboard: Investor verification → open it → identity, professional
+   information and supporting evidence → "Start review" (status becomes Under Review) → tick the checklist →
+   Approve. The app now shows "Profile Verified" (the evidence was checked; not a guaranteed investor).
+   Also show "Request more evidence" with a reason: the app shows the note and the 30-day limit.
+4. **Project verification.** A verified owner creates a listing, adds ownership evidence (e.g. the GitHub
+   repository) and uses "Save & publish". Project verification → open it → owner information, ownership and
+   project evidence, claims requiring review, public preview → "Start review" → checklist → Approve, Request
+   changes or Reject (the last two send it back to draft with the reason).
+5. **Owners & buyers.** Same flow for owner and buyer accounts (ID card checks).
+6. **Suspend.** Users → search the owner → Suspend with a reason. Within about 2 minutes the app logs out,
    and logging in again says "This account has been suspended". Reinstate → can log in again.
-6. **Audit log.** Every decision above is listed with the admin, time and reason; the log cannot be edited.
+7. **Verification history.** Every decision with the reviewer, time, decision, reason and the evidence reviewed;
+   decisions cannot be edited. The Audit log lists everything else (logins, changes, expiries).
 
-## What the admin can do (v0.1)
+## What the admin can do
 | Area | Actions |
 |---|---|
-| Accounts | Approve, reject or ask for more information, with a per-role checklist; every decision is emailed and stored |
-| Listings | Approve or reject (back to draft) published listings, with a checklist |
-| Users | Search and filter, see profile, documents, listings and review history, suspend / reinstate |
+| Investor verification | Identity, professional information and evidence; approve, reject or request more evidence, with a checklist |
+| Project verification | Owner, ownership and project evidence, claims; approve, reject or request changes, with a checklist |
+| Owners & buyers | Approve, reject or request more evidence, with a per-role checklist |
+| Statuses | Pending, Under Review, Verified, Rejected, Suspended, Expired (no answer to a request within 30 days) |
+| Users | Search and filter by role and status, see profile, documents, listings and review history, suspend / reinstate |
+| Verification history | Who reviewed it, when, decision, reason, evidence reviewed |
 | Audit log | Read-only history of admin decisions, logins and changes |
 
-Later (FYP-II, Feature 11): verification badges, reports and moderation, offer and agreement monitoring.
+Later (FYP-II): reports (fake profile, misleading project, impersonation, suspicious communication),
+offer and agreement monitoring.

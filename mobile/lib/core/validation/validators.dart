@@ -80,17 +80,10 @@ class Validators {
   static String normalizePhone(String value) =>
       value.replaceAll(RegExp(r'[\s-]'), '').replaceFirst(RegExp(r'^\+92'), '0');
 
-  static String? cnic(String? value) {
-    final digits = (value ?? '').replaceAll(RegExp('[^0-9]'), '');
-    if (digits.isEmpty) return 'CNIC number is required';
-    return digits.length == 13 ? null : 'Enter the 13-digit CNIC number, e.g. 42101-1234567-1';
-  }
-
-  /// Company email: required when [required] says so (investment firms, company buyers),
-  /// otherwise only the format is checked.
+  /// Company email: required when [required] says so (company buyers), otherwise only the format is checked.
   static String? Function(String?) companyEmail({
     required bool Function() required,
-    String requiredMessage = 'Company email is required for investment firms',
+    String requiredMessage = 'Company email is required',
   }) => (value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return required() ? requiredMessage : null;

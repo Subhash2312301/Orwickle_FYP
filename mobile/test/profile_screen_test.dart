@@ -232,82 +232,75 @@ void main() {
     await _finish(tester);
   });
 
-  testWidgets('investor must give phone, LinkedIn, CNIC, experience, range and documents', (tester) async {
-    await _pump(tester, 'investor');
+  testWidgets('investor gives professional details and at least two pieces of evidence; no CNIC, phone or city', (
+    tester,
+  ) async {
+    final api = await _pump(tester, 'investor');
     expect(find.text('PKR'), findsNothing, reason: 'no currency choice');
     expect(find.text('Headline'), findsNothing, reason: 'investors have no headline');
+    for (final gone in ['CNIC number', 'Phone number', 'City', 'Investor type']) {
+      expect(find.text(gone, skipOffstage: false), findsNothing, reason: '$gone is no longer asked');
+    }
+    expect(find.textContaining('CNIC', skipOffstage: false), findsNothing);
+    expect(find.textContaining('proof of funds', skipOffstage: false), findsNothing);
     await _tapSave(tester);
 
     for (final message in [
-      'Phone number is required',
+      'Organization or company is required',
+      'Professional designation is required',
       'LinkedIn profile is required',
-      'Choose an investor type',
-      'Choose your investment experience',
-      'Professional affiliation is required',
+      'Investment interests is required',
+      'Choose at least one stage',
       'Choose an investment range',
       'Choose at least one category',
-      'CNIC number is required',
-      'Upload the front of your CNIC',
-      'Upload the back of your CNIC',
+      'Add at least 2 pieces of supporting evidence',
     ]) {
       expect(find.text(message, skipOffstage: false), findsOneWidget, reason: message);
     }
-    expect(find.text('Company name', skipOffstage: false), findsNothing, reason: 'company fields only for firms');
-    expect(find.text('Website (optional)', skipOffstage: false), findsOneWidget);
-    await _finish(tester);
-  });
-
-  testWidgets('an individual investor proves funds; past investments need proof too', (tester) async {
-    await _pump(tester, 'investor');
-    await _step(tester, 'Investing');
-    await tester.tap(find.text('Investor type'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Individual investor').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Investment experience'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('1–3 startups').last);
-    await tester.pumpAndSettle();
-
-    await _tapSave(tester);
-    for (final message in [
-      'Upload proof of funds (bank statement, bank letter or tax return)',
-      'Upload proof of a past investment',
-      'Describe your past investments',
-    ]) {
-      expect(find.text(message, skipOffstage: false), findsOneWidget, reason: message);
+    expect(find.text('Company website (optional)', skipOffstage: false), findsOneWidget);
+    expect(find.text('Sector preferences', skipOffstage: false), findsOneWidget);
+    for (final (label, _) in investorEvidence.values) {
+      final title = label[0].toUpperCase() + label.substring(1);
+      expect(find.text(title, skipOffstage: false), findsOneWidget, reason: title);
     }
-    expect(find.text('Upload your company registration certificate', skipOffstage: false), findsNothing);
+    expect(api.savedBody, isNull);
     await _finish(tester);
   });
 
-  testWidgets('choosing "Investment firm" asks for company details and the certificate', (tester) async {
-    await _pump(tester, 'investor');
+  testWidgets('a complete investor profile with two pieces of evidence is saved', (tester) async {
+    final api = await _pump(tester, 'investor', documents: ['company_registration', 'investment_portfolio']);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Organization / company'), 'Karachi Seed Ventures');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Professional designation'), 'Managing Partner');
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'LinkedIn profile'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'LinkedIn profile'), 'https://linkedin.com/in/a');
     await _step(tester, 'Investing');
-    await tester.tap(find.text('Investor type'));
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Investment interests'),
+      'Student-built SaaS with early users',
+    );
+    FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Investment firm / VC').last);
-    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilterChip, 'MVP'));
+    await tester.tap(find.widgetWithText(ChoiceChip, '5 – 20 lakh'));
+    await _step(tester, 'Sectors');
+    await tester.tap(find.widgetWithText(FilterChip, 'FinTech'));
+    await _step(tester, 'Evidence');
+    expect(find.text('2 of at least 2 added'), findsOneWidget);
 
-    expect(find.text('Company email', skipOffstage: false), findsOneWidget);
     await _tapSave(tester);
-    expect(find.text('Company email is required for investment firms', skipOffstage: false), findsOneWidget);
-    expect(find.text('Upload your company registration certificate', skipOffstage: false), findsOneWidget);
-    expect(find.textContaining('proof of funds', skipOffstage: false), findsNothing, reason: 'firms prove the company');
-    await _finish(tester);
-  });
-
-  testWidgets('phone and CNIC formats are checked; CNIC gets dashes while typing', (tester) async {
-    await _pump(tester, 'investor');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Phone number'), '12345');
-    final cnic = find.widgetWithText(TextFormField, 'CNIC number');
-    await _step(tester, 'Verification');
-    await tester.enterText(cnic, '4210112345671');
-    final typed = tester.widget<EditableText>(find.descendant(of: cnic, matching: find.byType(EditableText)));
-    expect(typed.controller.text, '42101-1234567-1');
-    await _tapSave(tester);
-    expect(find.text('Enter a mobile number like 03001234567', skipOffstage: false), findsOneWidget);
-    expect(find.text('CNIC number is required', skipOffstage: false), findsNothing);
+    expect(api.savedBody, isNotNull);
+    final details = api.savedBody!['details'] as Map;
+    expect(details['organization'], 'Karachi Seed Ventures');
+    expect(details['designation'], 'Managing Partner');
+    expect(details['investmentStages'], ['mvp']);
+    expect(details['minTicket'], 500000);
+    expect(details['interests'], ['c1']);
+    expect(details.containsKey('cnicNumber'), isFalse);
+    expect(api.savedBody!.containsKey('phone'), isFalse);
     await _finish(tester);
   });
 

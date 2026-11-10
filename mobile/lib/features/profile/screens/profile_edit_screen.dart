@@ -19,8 +19,9 @@ import '../widgets/profile_fields.dart';
 /// Profile form for owners, investors and buyers, in four steps (about you, role details,
 /// skills or interests, verification). The fields follow
 /// backend/src/modules/profiles/profile.validation.js:
-///  - owner: headline, bio, links, education, skills + university ID card
-///  - investor: phone, LinkedIn, CNIC (+ photos), type, experience, range, interests; company details for firms
+///  - owner: headline, bio, links, education, skills + university ID card or CNIC
+///  - investor: organization, designation, LinkedIn, company website, investment interests, stages,
+///    range, sector preferences + at least two pieces of supporting evidence (files or links)
 ///  - buyer: type, university or company (company name / university ID card), interests
 /// Documents and the photo are uploaded as soon as they are picked; the rest is saved with the button.
 /// [setup] = first time after sign-up (no back button, goes home after saving).
@@ -42,9 +43,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late Future<void> _loading;
   List<Category> _categories = const [];
   List<String> _skills = [];
-  Set<String> _interests = {};
-  String? _type; // investorType / buyerType
-  String? _experience; // investor
+  Set<String> _interests = {}; // categories; "sector preferences" for investors
+  Set<String> _stages = {}; // investor
+  String? _type; // buyerType
   String? _affiliation; // buyer: university | company
   String? _ownerKind; // owner: student | independent
   AmountRange? _range; // investor ticket size
@@ -55,8 +56,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   bool _avatarBusy = false;
 
   String get _role => context.read<SessionController>().user!.role;
-  bool get _isFirm => _type == 'firm';
   bool get _isStudent => _ownerKind == 'student';
+  int get _evidenceCount => _documents.keys.where(investorEvidence.containsKey).length;
 
   TextEditingController _ctl(String key) => _c.putIfAbsent(key, TextEditingController.new);
 
@@ -87,19 +88,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       'companyName',
       'companyWebsite',
       'companyEmail',
-      'professionalAffiliation',
-      'investmentHistory',
+      'organization',
+      'designation',
+      'investmentInterests',
     ]) {
       _ctl(key).text = profile.detailText(key) ?? '';
     }
-    _ctl('cnicNumber').text = formatCnic(profile.detailText('cnicNumber'));
     final isStudent = profile.details['isStudent'] as bool?;
     // a new owner has not chosen yet
     _ownerKind = !profile.completed || isStudent == null ? null : (isStudent ? 'student' : 'independent');
     _skills = profile.skills;
     _interests = profile.interestIds;
-    _type = profile.detailText(_role == 'investor' ? 'investorType' : 'buyerType');
-    _experience = profile.detailText('investmentExperience');
+    _stages = profile.stages;
+    _type = profile.detailText('buyerType');
     _affiliation = profile.detailText('affiliation');
     _range = AmountRange.match(profile.detailNumber('minTicket'), profile.detailNumber('maxTicket'));
     _documents = {for (final d in profile.documents) d.kind: d};
@@ -154,20 +155,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     },
     'investor' => {
       'fullName': _t('fullName'),
-      'city': _t('city'),
-      'phone': Validators.normalizePhone(_t('phone')),
       'linkedinUrl': _t('linkedinUrl'),
-      'websiteUrl': _t('websiteUrl'),
       'details': {
-        'investorType': _type,
-        'cnicNumber': _t('cnicNumber'),
-        'companyName': _t('companyName'),
+        'organization': _t('organization'),
+        'designation': _t('designation'),
         'companyWebsite': _t('companyWebsite'),
-        'companyEmail': _t('companyEmail'),
-        'investmentExperience': _experience,
-        'professionalAffiliation': _t('professionalAffiliation'),
-        'investmentHistory': _experience == 'first_time' ? null : _t('investmentHistory'),
-        'portfolioUrl': _t('portfolioUrl'),
+        'investmentInterests': _t('investmentInterests'),
+        'investmentStages': _stages.toList(),
         'minTicket': _range?.min,
         'maxTicket': _range?.max,
         'interests': _interests.toList(),
@@ -211,7 +205,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       );
       showInfoSnack(
         context,
-        saved.reviewStatus == 'pending' ? 'Profile saved and sent to an admin for approval' : 'Profile saved',
+        saved.reviewStatus == 'pending' ? 'Profile saved and sent to an admin for verification' : 'Profile saved',
       );
       widget.setup
           ? context.go(Routes.homeFor(context.read<SessionController>().user?.role))
@@ -307,22 +301,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ),
   );
 
-  Widget _document(String kind, String label, {bool required = true}) => DocumentField(
-    key: ValueKey(kind),
-    label: label,
-    initial: _documents[kind],
-    required: required,
-    serverError: _serverErrors[kind],
-    onUpload: (file) async {
-      final profile = await context.read<ProfileApi>().uploadDocument(kind, file);
-      _documents = {for (final d in profile.documents) d.kind: d};
+  /// [linkable]: investor evidence, which may be a link instead of a file.
+  Widget _document(String kind, String label, {bool required = true, bool linkable = false, String? hint}) {
+    final api = context.read<ProfileApi>();
+    ProfileDocument? keep(MyProfile profile) {
+      if (!mounted) return null;
+      setState(() {
+        _documents = {for (final d in profile.documents) d.kind: d};
+        _serverErrors = {..._serverErrors}..remove('documents');
+      });
       return _documents[kind];
-    },
-    onRemove: () async {
-      final profile = await context.read<ProfileApi>().removeDocument(kind);
-      _documents = {for (final d in profile.documents) d.kind: d};
-    },
-  );
+    }
+
+    return DocumentField(
+      key: ValueKey(kind),
+      label: label,
+      hint: hint,
+      initial: _documents[kind],
+      required: required,
+      serverError: _serverErrors[kind],
+      onUpload: (file) async => keep(await api.uploadDocument(kind, file)),
+      onLink: linkable ? (url) async => keep(await api.linkDocument(kind, url)) : null,
+      onRemove: () async => keep(await api.removeDocument(kind)),
+    );
+  }
 
   Widget _interestsField() => InterestsField(
     categories: _categories,
@@ -343,10 +345,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       _ProfileStep('Verification', _ownerVerification()),
     ],
     'investor' => [
-      _ProfileStep('About you', [..._aboutYou(), ..._contactFields(), _investorWebsite()]),
+      _ProfileStep('About you', [..._aboutYou(), ..._investorProfessional()]),
       _ProfileStep('Investing', _investorDetails()),
-      _ProfileStep('Interests', _interestsStep()),
-      _ProfileStep('Verification', _investorVerification()),
+      _ProfileStep('Sectors', _interestsStep(title: 'Sector preferences')),
+      _ProfileStep('Evidence', _investorEvidence()),
     ],
     _ => [
       _ProfileStep('About you', [..._aboutYou(), ..._contactFields()]),
@@ -356,7 +358,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ],
   };
 
-  /// Photo, name and (for investors and buyers) city: the start of every role's first step.
+  /// Photo, name and (for buyers) city: the start of every role's first step.
   List<Widget> _aboutYou() {
     final session = context.watch<SessionController>();
     return [
@@ -374,13 +376,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         icon: Icons.person_outline,
         validator: Validators.requiredText('Full name', max: 100),
       ),
-      if (_role != 'owner')
+      if (_role == 'buyer')
         _text('city', 'City', icon: Icons.location_city_outlined, validator: Validators.requiredText('City', max: 80)),
     ];
   }
 
-  List<Widget> _interestsStep() => [
-    const SectionTitle('Interested categories', subtitle: 'Choose up to 10'),
+  List<Widget> _interestsStep({String title = 'Interested categories'}) => [
+    SectionTitle(title, subtitle: 'Choose up to 10'),
     _interestsField(),
   ];
 
@@ -499,7 +501,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       ),
   ];
 
-  // investors and buyers
+  // buyers
   List<Widget> _contactFields() => [
     _text(
       'phone',
@@ -519,130 +521,77 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     ),
   ];
 
-  Widget _investorWebsite() => _text(
-    'websiteUrl',
-    'Website (optional)',
-    icon: Icons.language,
-    keyboard: TextInputType.url,
-    hint: 'Your personal or professional website',
-    validator: Validators.optionalUrl('website URL'),
-  );
+  // investors are verified by who they are professionally and by evidence, not by CNIC
+  List<Widget> _investorProfessional() => [
+    _text(
+      'organization',
+      'Organization / company',
+      icon: Icons.business_outlined,
+      hint: 'e.g. Karachi Seed Ventures, or "Independent angel investor"',
+      validator: Validators.requiredText('Organization or company', max: 150),
+    ),
+    _text(
+      'designation',
+      'Professional designation',
+      icon: Icons.work_outline,
+      hint: 'e.g. Managing Partner, Angel Investor',
+      validator: Validators.requiredText('Professional designation', max: 100),
+    ),
+    _text(
+      'linkedinUrl',
+      'LinkedIn profile',
+      icon: Icons.link,
+      keyboard: TextInputType.url,
+      hint: 'https://www.linkedin.com/in/...',
+      validator: Validators.requiredUrl('LinkedIn profile'),
+    ),
+    _text(
+      'companyWebsite',
+      'Company website (optional)',
+      icon: Icons.language,
+      keyboard: TextInputType.url,
+      validator: Validators.optionalUrl('company website'),
+    ),
+  ];
 
   List<Widget> _investorDetails() => [
-    const SectionTitle('Investor details'),
-    _dropdown(
-      'Investor type',
-      _type,
-      investorTypes,
-      (v) => _type = v,
-      errorKey: 'investorType',
-      requiredError: 'Choose an investor type',
-    ),
-    _dropdown(
-      'Investment experience',
-      _experience,
-      investmentExperiences,
-      (v) => _experience = v,
-      errorKey: 'investmentExperience',
-      requiredError: 'Choose your investment experience',
-      icon: Icons.timeline,
-    ),
+    const SectionTitle('How you invest'),
     _text(
-      'professionalAffiliation',
-      'Professional affiliation',
-      icon: Icons.work_outline,
-      hint: 'e.g. Manager at HBL; member of an angel network',
-      validator: Validators.requiredText('Professional affiliation', max: 300),
+      'investmentInterests',
+      'Investment interests',
+      maxLines: 4,
+      hint: 'What kind of projects and founders are you looking for?',
+      validator: Validators.requiredText('Investment interests', min: 10, max: 1000),
     ),
-    if (_experience != null && _experience != 'first_time')
-      _text(
-        'investmentHistory',
-        'Investment history',
-        maxLines: 4,
-        hint: 'Which startups did you invest in, when, and how much (roughly)?',
-        validator: (v) => (v?.trim().length ?? 0) < 10
-            ? 'Describe your past investments'
-            : Validators.optionalText('Investment history', max: 2000)(v),
-      ),
-    _text(
-      'portfolioUrl',
-      'Investment portfolio (optional)',
-      icon: Icons.pie_chart_outline,
-      keyboard: TextInputType.url,
-      hint: 'Link to your portfolio, e.g. AngelList or a website',
-      validator: Validators.optionalUrl('portfolio URL'),
-    ),
+    StagesField(initial: _stages, onChanged: (s) => _stages = s, serverError: _serverErrors['investmentStages']),
     RangeChipsField(
-      label: 'How much do you usually invest in one project? (PKR)',
+      label: 'Approximate investment range per project (PKR)',
       initial: _range,
       required: true,
       requiredError: 'Choose an investment range',
       onChanged: (r) => _range = r,
       serverError: _serverErrors['minTicket'] ?? _serverErrors['maxTicket'],
     ),
-    if (_isFirm) ...[
-      const SectionTitle('Company', subtitle: 'Required for investment firms'),
-      _text(
-        'companyName',
-        'Company name',
-        icon: Icons.business_outlined,
-        validator: (v) => (v?.trim().isEmpty ?? true) ? 'Company name is required for investment firms' : null,
-      ),
-      _text(
-        'companyWebsite',
-        'Company website',
-        icon: Icons.language,
-        keyboard: TextInputType.url,
-        validator: (v) => (v?.trim().isEmpty ?? true)
-            ? 'Company website is required for investment firms'
-            : Validators.optionalUrl('company website')(v),
-      ),
-      _text(
-        'companyEmail',
-        'Company email',
-        icon: Icons.alternate_email,
-        keyboard: TextInputType.emailAddress,
-        validator: Validators.companyEmail(required: () => _isFirm),
-      ),
-    ],
   ];
 
-  List<Widget> _investorVerification() => [
-    const SectionTitle('Identity verification'),
+  List<Widget> _investorEvidence() => [
+    const SectionTitle(
+      'Supporting evidence',
+      subtitle: 'Add at least $minInvestorEvidence. Each one can be a file or a link to a public page.',
+    ),
     const PrivacyNote(
-      'Your CNIC is used only to verify your identity. It is stored privately and only Orwickle admins can see it.',
+      'Only Orwickle admins see your evidence. Once checked, your profile shows "Profile Verified" — '
+      'it confirms your evidence was reviewed, not that you will invest.',
     ),
-    _text(
-      'cnicNumber',
-      'CNIC number',
-      icon: Icons.badge_outlined,
-      keyboard: TextInputType.number,
-      hint: '42101-1234567-1',
-      formatters: [CnicInputFormatter()],
-      validator: Validators.cnic,
+    const SizedBox(height: Gaps.md),
+    for (final MapEntry(key: kind, value: (label, hint)) in investorEvidence.entries)
+      _document(kind, label, required: false, linkable: true, hint: hint),
+    EvidenceCountField(
+      key: ValueKey(_evidenceCount),
+      count: _evidenceCount,
+      min: minInvestorEvidence,
+      serverError: _serverErrors['documents'],
     ),
-    _document('cnic_front', 'the front of your CNIC'),
-    _document('cnic_back', 'the back of your CNIC'),
-    if (_type != null) ...[
-      SectionTitle(
-        _isFirm ? 'Company verification' : 'Proof of funds',
-        subtitle: _isFirm
-            ? 'Shows that the company is registered'
-            : 'Shows that you can invest the amount you chose. You may cover account numbers.',
-      ),
-      if (_isFirm)
-        _document('company_certificate', 'your company registration certificate')
-      else
-        _document('funds_proof', 'proof of funds (bank statement, bank letter or tax return)'),
-    ],
-    if (_experience != null && _experience != 'first_time') ...[
-      const SectionTitle(
-        'Investment experience proof',
-        subtitle: 'One past investment: share certificate, investment agreement or a letter from the startup',
-      ),
-      _document('investment_proof', 'proof of a past investment'),
-    ],
-    if (_type == null) _chooseFirst('Choose your investor type in step 2 to see which other documents you need.'),
   ];
 
   /// Two or more mutually exclusive options as side-by-side tiles that take part in form validation.

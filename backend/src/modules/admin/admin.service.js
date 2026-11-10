@@ -1,5 +1,6 @@
-// Admin review of accounts and listings. Every decision is stored in review_decisions
-// (append-only, with the reviewer and the reason), written to the audit log and emailed to the user.
+// Admin verification of accounts and listings. Opening a submission marks it under_review; every
+// decision is stored in review_decisions (append-only: reviewer, reason, checklist and the evidence
+// that was reviewed), written to the audit log and emailed to the user.
 
 const { pool, withTransaction } = require('../../db/pool');
 const HttpError = require('../../utils/httpError');
@@ -23,21 +24,71 @@ async function notify(to, mail) {
   }
 }
 
+// The evidence in front of the reviewer when they decided, kept with the decision because
+// the user may later replace or remove an item.
+async function evidenceSnapshot(client, column, id) {
+  const { rows } = await client.query(
+    `SELECT id, kind, external_url, storage_path IS NOT NULL AS is_file, created_at FROM evidence_submissions
+      WHERE ${column} = $1 ORDER BY created_at`,
+    [id]);
+  return {
+    ids: rows.map(r => r.id),
+    items: rows.map(r => ({ id: r.id, kind: r.kind, link: r.external_url, file: r.is_file, addedAt: r.created_at })),
+  };
+}
+
+const toDecision = d => ({
+  decision: d.decision,
+  reason: d.reason,
+  checklist: d.checklist,
+  evidenceReviewed: d.evidence_reviewed,
+  reviewer: d.reviewer,
+  at: d.created_at,
+});
+
+async function decisionsFor(column, id) {
+  const { rows } = await pool.query(
+    `SELECT d.decision, d.reason, d.checklist, d.evidence_reviewed, d.created_at, p.full_name AS reviewer
+       FROM review_decisions d LEFT JOIN profiles p ON p.user_id = d.reviewer_id
+      WHERE d.${column} = $1
+      ORDER BY d.created_at DESC`,
+    [id]);
+  return rows.map(toDecision);
+}
+
 // ---------- accounts ----------
 
-async function listUserReviews(status, baseUrl) {
+// role 'investor' = the investor verification queue, 'others' = owners and buyers, anything else = all
+const ROLE_GROUPS = { investor: ['investor'], others: ['owner', 'buyer'] };
+
+async function listUserReviews(status, role, baseUrl) {
   const { rows } = await pool.query(
-    `SELECT u.id, u.role, u.created_at
+    `SELECT u.id, u.role, u.created_at, u.email_verified_at, sp.full_name AS review_started_by
        FROM users u JOIN profiles p ON p.user_id = u.id
-      WHERE u.role <> 'admin' AND p.review_status = $1
+       LEFT JOIN profiles sp ON sp.user_id = p.review_started_by
+      WHERE u.role <> 'admin' AND p.review_status = $1 AND u.role = ANY($2::user_role[])
       ORDER BY coalesce(p.updated_at, u.created_at)`,
-    [status]);
+    [status, ROLE_GROUPS[role] ?? ['owner', 'investor', 'buyer']]);
   const users = await Promise.all(rows.map(async r => ({
     id: r.id,
     registeredAt: r.created_at,
+    emailVerified: Boolean(r.email_verified_at),
+    reviewStartedBy: r.review_started_by,
     ...(await profileService.getMyProfile(r.id, r.role, { baseUrl })).profile,
+    decisions: await decisionsFor('subject_user_id', r.id),
   })));
   return { users };
+}
+
+// Opening a pending submission marks it as under review by this admin.
+async function startUserReview(adminId, userId, { ip }) {
+  if (!UUID.test(userId)) throw new HttpError(404, 'NOT_FOUND', 'User not found');
+  const { rows: [p] } = await pool.query(
+    `UPDATE profiles SET review_status = 'under_review', review_started_by = $2
+      WHERE user_id = $1 AND review_status = 'pending' RETURNING review_status`,
+    [userId, adminId]);
+  if (p) await audit(pool, { actorId: adminId, action: 'admin.user_review_started', entityId: userId, ip });
+  return { userId, started: Boolean(p) };
 }
 
 async function reviewUser(adminId, userId, { decision, reason, checklist = {} }, { ip }) {
@@ -52,15 +103,17 @@ async function reviewUser(adminId, userId, { decision, reason, checklist = {} },
     if (!u.profile_completed_at) {
       throw new HttpError(409, 'PROFILE_INCOMPLETE', 'This user has not completed their profile yet');
     }
+    const evidence = await evidenceSnapshot(client, 'subject_user_id', userId);
     await client.query(
-      `UPDATE profiles SET review_status = $2, review_note = $3, reviewed_at = now() WHERE user_id = $1`,
+      `UPDATE profiles SET review_status = $2, review_note = $3, reviewed_at = now(), review_started_by = NULL
+        WHERE user_id = $1`,
       [userId, USER_STATUS[decision], decision === 'approve' ? null : reason]);
     await client.query(
-      `INSERT INTO review_decisions (reviewer_id, subject_user_id, decision, reason, checklist)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [adminId, userId, decision, reason ?? 'Approved', checklist]);
+      `INSERT INTO review_decisions (reviewer_id, subject_user_id, decision, reason, checklist, evidence_ids, evidence_reviewed)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [adminId, userId, decision, reason ?? 'Approved', checklist, evidence.ids, JSON.stringify(evidence.items)]);
     await audit(client, { actorId: adminId, action: `admin.user_${USER_STATUS[decision]}`, entityId: userId, ip,
-      details: { reason } });
+      details: { reason, evidenceReviewed: evidence.items.map(e => e.kind) } });
     return u;
   });
 
@@ -70,12 +123,44 @@ async function reviewUser(adminId, userId, { decision, reason, checklist = {} },
 
 // ---------- listings ----------
 
+// Waiting, being checked or verified listings are published; rejected, changes-requested and
+// expired ones went back to draft for the owner.
+const PUBLISHED_QUEUES = ['pending', 'under_review', 'approved'];
+
+// The owner as the admin needs to see them next to the project: identity, verification and documents.
+async function ownerForReview(ownerId, baseUrl) {
+  const { rows: [u] } = await pool.query('SELECT email, status FROM users WHERE id = $1', [ownerId]);
+  const { profile } = await profileService.getMyProfile(ownerId, 'owner', { baseUrl });
+  return { id: ownerId, email: u.email, accountStatus: u.status, ...profile };
+}
+
 async function listListingReviews(status, admin, baseUrl) {
   const { rows } = await pool.query(
-    `SELECT id FROM listings WHERE status = 'published' AND review_status = $1 ORDER BY published_at`,
+    `SELECT l.id, l.owner_id, sp.full_name AS review_started_by
+       FROM listings l LEFT JOIN profiles sp ON sp.user_id = l.review_started_by
+      WHERE l.review_status = $1 AND ${PUBLISHED_QUEUES.includes(status) ? "l.status = 'published'" : "l.status <> 'closed'"}
+      ORDER BY coalesce(l.published_at, l.updated_at)`,
     [status]);
-  return { listings: await Promise.all(rows.map(r => listingService.getListing(r.id, admin, baseUrl))) };
+  const listings = await Promise.all(rows.map(async r => ({
+    ...(await listingService.getListing(r.id, admin, baseUrl)),
+    owner: await ownerForReview(r.owner_id, baseUrl),
+    reviewStartedBy: r.review_started_by,
+    decisions: await decisionsFor('subject_listing_id', r.id),
+  })));
+  return { listings };
 }
+
+async function startListingReview(adminId, listingId, { ip }) {
+  if (!UUID.test(listingId)) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+  const { rows: [l] } = await pool.query(
+    `UPDATE listings SET review_status = 'under_review', review_started_by = $2
+      WHERE id = $1 AND status = 'published' AND review_status = 'pending' RETURNING id`,
+    [listingId, adminId]);
+  if (l) await audit(pool, { actorId: adminId, action: 'admin.listing_review_started', entityType: 'listing', entityId: listingId, ip });
+  return { listingId, started: Boolean(l) };
+}
+
+const LISTING_STATUS = { approve: 'approved', reject: 'rejected', request_more: 'needs_evidence' };
 
 async function reviewListing(admin, listingId, { decision, reason, checklist = {} }, { ip, baseUrl }) {
   if (!UUID.test(listingId)) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
@@ -89,18 +174,22 @@ async function reviewListing(admin, listingId, { decision, reason, checklist = {
     if (l.status !== 'published') {
       throw new HttpError(409, 'INVALID_STATUS', 'Only published listings can be reviewed');
     }
-    // a rejected listing goes back to draft so the owner can fix it and publish again
+    const evidence = await evidenceSnapshot(client, 'subject_listing_id', listingId);
+    // a rejected listing, or one that needs changes, goes back to draft so the owner can fix it and publish again
     await client.query(
       decision === 'approve'
-        ? `UPDATE listings SET review_status = 'approved', review_note = NULL, reviewed_at = now() WHERE id = $1`
-        : `UPDATE listings SET review_status = 'rejected', review_note = $2, reviewed_at = now(), status = 'draft' WHERE id = $1`,
-      decision === 'approve' ? [listingId] : [listingId, reason]);
+        ? `UPDATE listings SET review_status = 'approved', review_note = NULL, reviewed_at = now(), review_started_by = NULL
+            WHERE id = $1`
+        : `UPDATE listings SET review_status = $2, review_note = $3, reviewed_at = now(), review_started_by = NULL,
+                  status = 'draft'
+            WHERE id = $1`,
+      decision === 'approve' ? [listingId] : [listingId, LISTING_STATUS[decision], reason]);
     await client.query(
-      `INSERT INTO review_decisions (reviewer_id, subject_listing_id, decision, reason, checklist)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [admin.id, listingId, decision, reason ?? 'Approved', checklist]);
-    await audit(client, { actorId: admin.id, action: `admin.listing_${decision === 'approve' ? 'approved' : 'rejected'}`,
-      entityType: 'listing', entityId: listingId, ip, details: { reason } });
+      `INSERT INTO review_decisions (reviewer_id, subject_listing_id, decision, reason, checklist, evidence_ids, evidence_reviewed)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [admin.id, listingId, decision, reason ?? 'Approved', checklist, evidence.ids, JSON.stringify(evidence.items)]);
+    await audit(client, { actorId: admin.id, action: `admin.listing_${LISTING_STATUS[decision]}`,
+      entityType: 'listing', entityId: listingId, ip, details: { reason, evidenceReviewed: evidence.items.map(e => e.kind) } });
     return l;
   });
 
@@ -117,7 +206,12 @@ async function stats() {
             count(*) FILTER (WHERE u.role = 'buyer')                             AS buyers,
             count(*) FILTER (WHERE p.review_status = 'approved')                 AS approved,
             count(*) FILTER (WHERE p.review_status = 'pending')                  AS pending,
-            count(*) FILTER (WHERE p.review_status IN ('unreviewed', 'rejected', 'needs_evidence')) AS not_approved,
+            count(*) FILTER (WHERE p.review_status = 'pending' AND u.role = 'investor') AS investors_pending,
+            count(*) FILTER (WHERE p.review_status = 'under_review')             AS under_review,
+            count(*) FILTER (WHERE p.review_status = 'needs_evidence')           AS needs_evidence,
+            count(*) FILTER (WHERE p.review_status = 'rejected')                 AS rejected,
+            count(*) FILTER (WHERE p.review_status = 'expired')                  AS expired,
+            count(*) FILTER (WHERE p.review_status IN ('unreviewed', 'rejected', 'needs_evidence', 'expired')) AS not_approved,
             count(*) FILTER (WHERE u.email_verified_at IS NULL)                  AS unverified_email,
             count(*) FILTER (WHERE u.created_at >= date_trunc('day', now()))     AS new_today,
             count(*) FILTER (WHERE u.locked_until > now())                       AS locked,
@@ -128,6 +222,8 @@ async function stats() {
   const { rows: [l] } = await pool.query(
     `SELECT count(*) FILTER (WHERE status = 'published' AND review_status = 'approved') AS live,
             count(*) FILTER (WHERE status = 'published' AND review_status = 'pending')  AS pending,
+            count(*) FILTER (WHERE status = 'published' AND review_status = 'under_review') AS under_review,
+            count(*) FILTER (WHERE review_status = 'needs_evidence')                    AS needs_changes,
             count(*) FILTER (WHERE status = 'draft')                                    AS drafts,
             count(*) FILTER (WHERE status = 'closed')                                   AS closed,
             count(*) FILTER (WHERE listing_type = 'funding')                            AS funding,
@@ -141,7 +237,8 @@ async function stats() {
 
 const USER_FILTERS = {
   role: v => ['owner', 'investor', 'buyer'].includes(v) && ['u.role = $', v],
-  review: v => ['unreviewed', 'pending', 'approved', 'rejected', 'needs_evidence'].includes(v) && ['p.review_status = $', v],
+  review: v => ['unreviewed', 'pending', 'under_review', 'approved', 'rejected', 'needs_evidence', 'expired'].includes(v)
+    && ['p.review_status = $', v],
   status: v => ['active', 'suspended'].includes(v) && ['u.status = $', v],
 };
 
@@ -191,12 +288,6 @@ async function getUser(userId, admin, baseUrl) {
     `SELECT id, email, role, status, created_at, email_verified_at, locked_until FROM users WHERE id = $1`, [userId]);
   if (!u || u.role === 'admin') throw new HttpError(404, 'NOT_FOUND', 'User not found');
   const { profile } = await profileService.getMyProfile(u.id, u.role, { baseUrl });
-  const { rows: decisions } = await pool.query(
-    `SELECT d.decision, d.reason, d.checklist, d.created_at, p.full_name AS reviewer
-       FROM review_decisions d LEFT JOIN profiles p ON p.user_id = d.reviewer_id
-      WHERE d.subject_user_id = $1
-      ORDER BY d.created_at DESC`,
-    [userId]);
   const listings = u.role === 'owner' ? (await listingService.listMine(u.id, baseUrl)).listings : [];
   return {
     user: {
@@ -210,9 +301,7 @@ async function getUser(userId, admin, baseUrl) {
     },
     profile,
     listings,
-    decisions: decisions.map(d => ({
-      decision: d.decision, reason: d.reason, checklist: d.checklist, reviewer: d.reviewer, at: d.created_at,
-    })),
+    decisions: await decisionsFor('subject_user_id', userId),
   };
 }
 
@@ -274,7 +363,42 @@ async function auditLog(query) {
   };
 }
 
+// ---------- verification audit trail ----------
+
+// Every verification decision: who reviewed what, when, the decision, the reason and the evidence reviewed.
+async function verificationTrail(query) {
+  const limit = Math.min(Math.max(Number.parseInt(query.limit, 10) || 100, 1), 300);
+  const params = [limit];
+  let where = '';
+  if (query.subject === 'users') where = 'WHERE d.subject_user_id IS NOT NULL';
+  if (query.subject === 'listings') where = 'WHERE d.subject_listing_id IS NOT NULL';
+  const { rows } = await pool.query(
+    `SELECT d.decision, d.reason, d.checklist, d.evidence_reviewed, d.created_at,
+            rp.full_name AS reviewer, ru.email AS reviewer_email,
+            d.subject_user_id, su.role AS subject_role, sp.full_name AS subject_name, su.email AS subject_email,
+            d.subject_listing_id, l.title AS listing_title
+       FROM review_decisions d
+       LEFT JOIN users ru ON ru.id = d.reviewer_id
+       LEFT JOIN profiles rp ON rp.user_id = d.reviewer_id
+       LEFT JOIN users su ON su.id = d.subject_user_id
+       LEFT JOIN profiles sp ON sp.user_id = d.subject_user_id
+       LEFT JOIN listings l ON l.id = d.subject_listing_id
+       ${where}
+      ORDER BY d.created_at DESC
+      LIMIT $1`,
+    params);
+  return {
+    decisions: rows.map(r => ({
+      ...toDecision(r),
+      reviewerEmail: r.reviewer_email,
+      subject: r.subject_user_id
+        ? { type: 'user', id: r.subject_user_id, role: r.subject_role, name: r.subject_name, email: r.subject_email }
+        : { type: 'listing', id: r.subject_listing_id, title: r.listing_title },
+    })),
+  };
+}
+
 module.exports = {
-  listUserReviews, reviewUser, listListingReviews, reviewListing,
-  stats, listUsers, getUser, setAccountStatus, auditLog,
+  listUserReviews, startUserReview, reviewUser, listListingReviews, startListingReview, reviewListing,
+  stats, listUsers, getUser, setAccountStatus, auditLog, verificationTrail,
 };

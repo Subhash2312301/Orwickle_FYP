@@ -50,15 +50,11 @@ npm run approve -- --email you+owner@gmail.com --more "what is missing"
 2. Saving the profile puts it back "Under review".
 
 **D. Investor and buyer**
-1. Investor: phone (03XXXXXXXXX), LinkedIn, CNIC number (dashes added while typing), CNIC front + back photos,
-   investor type, experience, range chips, categories — all required; no headline, no currency choice.
-2. Investor type "Investment firm": company name, website, email and registration certificate become required.
-   Any other type: proof of funds (bank statement, bank letter or tax return) is required instead.
-   Experience other than "first investment": proof of a past investment is required.
-   Documents can be a photo or a PDF. Website is optional.
-   Professional affiliation is required; investment history is required unless it is the first investment;
-   investment portfolio link is optional.
-3. Profile tab shows the CNIC masked (`*****-*******-1`).
+1. Investor: organization, professional designation, LinkedIn, investment interests, investment stage,
+   range chips and sector preferences — all required; company website optional. No CNIC, phone, city or headline.
+2. Evidence step: at least 2 of company registration, VC / angel network, accelerator / incubator,
+   investment portfolio, professional credentials. Each can be a photo, a PDF or a link.
+3. Profile tab shows "designation · organization"; once approved the status is "Profile Verified".
 4. Buyer: phone and LinkedIn required; University or Company; Company → company name and company email;
    University → university ID front + back. No headline, website or budget.
    Discover says "projects", not "software projects".

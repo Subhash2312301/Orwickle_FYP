@@ -10,9 +10,12 @@ import { api } from '../api';
 import { AccountChip, Loading, PageHeader, ReviewChip, useLoad } from '../components/common';
 import { REVIEW_LABELS, ROLE_LABELS, dateTime } from '../labels';
 
+// "Suspended" is an account status, filtered with the Account filter
+const { suspended: _suspended, ...REVIEW_FILTER } = REVIEW_LABELS;
+
 const FILTERS = [
   ['role', 'Role', ROLE_LABELS],
-  ['review', 'Review status', REVIEW_LABELS],
+  ['review', 'Verification status', REVIEW_FILTER],
   ['status', 'Account', { active: 'Active', suspended: 'Suspended' }],
 ];
 

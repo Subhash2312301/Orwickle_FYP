@@ -306,15 +306,17 @@ class ListingChips extends StatelessWidget {
   }
 }
 
-/// The one status an owner needs to see: draft, in review, live, closed, suspended,
-/// or rejected / more info (shown on the draft it went back to).
+/// The one status an owner needs to see: draft, pending / under review, live, closed, suspended,
+/// or rejected / changes requested / expired (shown on the draft it went back to).
 AppStatus listingStatus(Listing l) => switch ((l.status, l.reviewStatus)) {
   ('published', 'approved') => AppStatus.live,
+  ('published', 'under_review') => AppStatus.underReview,
   ('published', _) => AppStatus.inReview,
   ('closed', _) => AppStatus.closed,
   ('suspended', _) => AppStatus.suspended,
   (_, 'rejected') => AppStatus.rejected,
-  (_, 'needs_evidence') => AppStatus.needsInfo,
+  (_, 'needs_evidence') => AppStatus.changesRequested,
+  (_, 'expired') => AppStatus.expired,
   _ => AppStatus.draft,
 };
 

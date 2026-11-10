@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import OverviewPage from './pages/OverviewPage';
 import UserDetailPage from './pages/UserDetailPage';
 import UsersPage from './pages/UsersPage';
+import VerificationHistoryPage from './pages/VerificationHistoryPage';
 
 export default function App() {
   const { user } = useAuth();
@@ -17,8 +18,10 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<OverviewPage />} />
-        <Route path="reviews/accounts" element={<AccountReviewsPage />} />
+        <Route path="reviews/investors" element={<AccountReviewsPage key="investor" role="investor" />} />
+        <Route path="reviews/accounts" element={<AccountReviewsPage key="others" role="others" />} />
         <Route path="reviews/listings" element={<ListingReviewsPage />} />
+        <Route path="reviews/history" element={<VerificationHistoryPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="audit" element={<AuditPage />} />

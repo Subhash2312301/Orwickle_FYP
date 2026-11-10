@@ -74,34 +74,54 @@ class MyProfile {
 
   List<String> get skills => [for (final s in (details['skills'] as List? ?? const [])) '$s'];
 
+  Set<String> get stages => {for (final s in (details['investmentStages'] as List? ?? const [])) '$s'};
+
   Set<String> get interestIds => {
     for (final i in (details['interests'] as List? ?? const [])) (i as Map)['id'] as String,
   };
 }
 
-/// An uploaded verification document (CNIC, university ID, company certificate).
+/// An uploaded verification document (ID card photo) or a piece of evidence, which may be a file or a link.
+/// Listing evidence (ownership / project evidence) uses the same shape.
 class ProfileDocument {
-  const ProfileDocument({required this.kind, required this.url, required this.contentType});
+  const ProfileDocument({
+    this.id,
+    required this.kind,
+    required this.url,
+    required this.contentType,
+    this.isLink = false,
+  });
 
-  factory ProfileDocument.fromJson(Map<String, dynamic> j) =>
-      ProfileDocument(kind: j['kind'] as String, url: j['url'] as String?, contentType: j['contentType'] as String?);
+  factory ProfileDocument.fromJson(Map<String, dynamic> j) => ProfileDocument(
+    id: j['id'] as String?,
+    kind: j['kind'] as String,
+    url: j['url'] as String?,
+    contentType: j['contentType'] as String?,
+    isLink: j['isLink'] as bool? ?? false,
+  );
 
+  final String? id;
   final String kind;
-  final String? url; // short-lived link
+  final String? url; // short-lived link to the file, or the link the user gave
   final String? contentType;
+  final bool isLink;
 
   bool get isPdf => contentType == 'application/pdf';
 }
 
-/// 4210112345671 → "*****-*******-1": only the last digit is shown in the app.
-String maskCnic(String? cnic) => cnic == null || cnic.length != 13 ? '—' : '*****-*******-${cnic.substring(12)}';
-
-const investmentExperiences = {
-  'first_time': 'This will be my first investment',
-  '1_3': '1–3 startups',
-  '4_10': '4–10 startups',
-  '10_plus': 'More than 10 startups',
+/// Investor supporting evidence: label (written to follow "Add …") and an example.
+/// At least [minInvestorEvidence] different kinds are needed before the profile can be submitted.
+const investorEvidence = {
+  'company_registration': ('company registration or business profile', 'Registration certificate or company profile'),
+  'network_affiliation': ('VC or angel network affiliation', 'Membership page or letter from the network'),
+  'accelerator_affiliation': ('accelerator or incubator affiliation', 'Programme page or mentor / partner letter'),
+  'investment_portfolio': ('publicly verifiable investment portfolio', 'AngelList, Crunchbase or a portfolio page'),
+  'professional_credential': ('professional credentials', 'Certification, licence or professional membership'),
 };
+const minInvestorEvidence = 2;
+
+/// Project stages an investor may prefer (same values as a listing's stage).
+const investmentStages = {'idea': 'Idea', 'prototype': 'Prototype', 'mvp': 'MVP', 'launched': 'Launched'};
 
 const affiliations = {'university': 'University', 'company': 'Company'};
 
@@ -109,13 +129,6 @@ const affiliations = {'university': 'University', 'company': 'Company'};
 const ownerKinds = {'student': 'University student', 'independent': 'Independent developer'};
 
 /// Labels for the API's enum values.
-const investorTypes = {
-  'individual': 'Individual investor',
-  'angel': 'Angel investor',
-  'firm': 'Investment firm / VC',
-  'other': 'Other',
-};
-
 const buyerTypes = {
   'individual': 'Individual',
   'small_business': 'Small business',

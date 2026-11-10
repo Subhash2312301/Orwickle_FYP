@@ -1,12 +1,14 @@
 // Reads and saves the logged-in user's profile: common fields, role details, category interests
-// and verification documents (CNIC, university ID, company certificate).
+// and verification documents (owner/buyer ID cards, investor supporting evidence).
 
 const crypto = require('node:crypto');
 const { pool, withTransaction } = require('../../db/pool');
 const HttpError = require('../../utils/httpError');
 const { audit } = require('../../services/audit');
 const storage = require('../../services/storage');
-const { requiredDocuments, DOCUMENT_LABELS, ALLOWED_DOCUMENTS } = require('./profile.validation');
+const {
+  requiredDocuments, DOCUMENT_LABELS, ALLOWED_DOCUMENTS, LINK_DOCUMENTS, INVESTOR_EVIDENCE, MIN_INVESTOR_EVIDENCE,
+} = require('./profile.validation');
 
 const toNumber = v => (v == null ? null : Number(v));
 
@@ -19,15 +21,18 @@ async function loadInterests(db, userId) {
   return rows;
 }
 
-// Uploaded verification documents with short-lived links (only the user and admins ever get these).
-async function loadDocuments(db, userId, baseUrl) {
+// Uploaded documents and evidence links (only the user and admins ever get these).
+// A file comes with a short-lived link; evidence given as a link has isLink = true.
+async function loadDocuments(db, userId, role, baseUrl) {
   const { rows } = await db.query(
-    `SELECT kind, storage_path, content_type, created_at FROM evidence_submissions
+    `SELECT id, kind, storage_path, external_url, content_type, created_at FROM evidence_submissions
       WHERE subject_user_id = $1 AND kind = ANY($2::text[]) ORDER BY created_at`,
-    [userId, Object.keys(DOCUMENT_LABELS)]);
+    [userId, ALLOWED_DOCUMENTS[role] ?? []]);
   return Promise.all(rows.map(async r => ({
+    id: r.id,
     kind: r.kind,
-    url: await storage.signedUrl(r.storage_path, baseUrl),
+    url: r.external_url ?? await storage.signedUrl(r.storage_path, baseUrl),
+    isLink: Boolean(r.external_url),
     contentType: r.content_type,
     uploadedAt: r.created_at,
   })));
@@ -36,7 +41,7 @@ async function loadDocuments(db, userId, baseUrl) {
 async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
   const { rows: [p] } = await db.query(
     `SELECT u.email, p.full_name, p.headline, p.bio, p.city, p.phone, p.linkedin_url, p.website_url, p.avatar_path,
-            p.review_status, p.review_note, p.completed_deal_count, p.profile_completed_at, p.is_sample
+            p.review_status, p.review_note, p.reviewed_at, p.completed_deal_count, p.profile_completed_at, p.is_sample
        FROM users u JOIN profiles p ON p.user_id = u.id WHERE u.id = $1`,
     [userId]);
   if (!p) throw new HttpError(404, 'NOT_FOUND', 'Profile not found');
@@ -52,14 +57,16 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
     phone: p.phone,
     linkedinUrl: p.linkedin_url,
     websiteUrl: p.website_url,
-    // admin approval of the account; reviewNote explains a rejection or a request for more information
+    // admin verification of the account: pending → under_review → approved ("Profile Verified") / rejected /
+    // needs_evidence (→ expired after 30 days without an answer); reviewNote explains the last decision
     reviewStatus: role === 'admin' ? 'approved' : p.review_status,
     reviewNote: p.review_note,
+    reviewedAt: p.reviewed_at,
     completedDealCount: p.completed_deal_count,
     completed: role === 'admin' || Boolean(p.profile_completed_at),
     isSample: p.is_sample,
     details: null,
-    documents: role === 'admin' ? [] : await loadDocuments(db, userId, baseUrl),
+    documents: role === 'admin' ? [] : await loadDocuments(db, userId, role, baseUrl),
   };
 
   if (role === 'owner') {
@@ -73,17 +80,15 @@ async function getMyProfile(userId, role, { db = pool, baseUrl } = {}) {
       portfolioUrl: d.portfolio_url,
     };
   } else if (role === 'investor') {
-    const { rows: [d] } = await db.query('SELECT * FROM investor_profiles WHERE user_id = $1', [userId]);
+    // pg returns an enum array as text ("{mvp,launched}"), so it is cast to text[]
+    const { rows: [d] } = await db.query(
+      'SELECT *, investment_stages::text[] AS stages FROM investor_profiles WHERE user_id = $1', [userId]);
     profile.details = d && {
-      investorType: d.investor_type,
-      cnicNumber: d.cnic_number,
-      companyName: d.organization_name,
+      organization: d.organization_name,
+      designation: d.designation,
       companyWebsite: d.company_website,
-      companyEmail: d.company_email,
-      investmentExperience: d.investment_experience,
-      professionalAffiliation: d.professional_affiliation,
-      investmentHistory: d.investment_history,
-      portfolioUrl: d.portfolio_url,
+      investmentInterests: d.investment_interests,
+      investmentStages: d.stages,
       minTicket: toNumber(d.min_ticket),
       maxTicket: toNumber(d.max_ticket),
       interests: await loadInterests(db, userId),
@@ -116,6 +121,7 @@ async function saveInterests(client, userId, categoryIds) {
 }
 
 async function assertDocuments(db, userId, role, details) {
+  if (role === 'investor') return assertInvestorEvidence(db, userId);
   const needed = requiredDocuments(role, details);
   if (!needed.length) return;
   const { rows } = await db.query(
@@ -128,6 +134,17 @@ async function assertDocuments(db, userId, role, details) {
   }
 }
 
+async function assertInvestorEvidence(db, userId) {
+  const { rows: [{ count }] } = await db.query(
+    `SELECT count(DISTINCT kind)::int AS count FROM evidence_submissions
+      WHERE subject_user_id = $1 AND kind = ANY($2::text[])`,
+    [userId, INVESTOR_EVIDENCE]);
+  if (count < MIN_INVESTOR_EVIDENCE) {
+    const message = `Add at least ${MIN_INVESTOR_EVIDENCE} pieces of supporting evidence`;
+    throw new HttpError(400, 'VALIDATION_ERROR', message, { documents: message });
+  }
+}
+
 // Saves the whole profile; the first complete save marks the profile as completed and sends it for review.
 async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
   const d = body.details;
@@ -135,7 +152,7 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
     await assertDocuments(client, userId, role, d);
 
     // fields a role does not have are left untouched
-    // ($8 owner: headline, bio; $9 owner/investor: website; $10 investor/buyer: phone)
+    // ($8 owner: headline, bio; $9 owner: website; $10 buyer: phone; investors keep their company website in details)
     await client.query(
       `UPDATE profiles
           SET full_name = $2, city = $3,
@@ -145,13 +162,12 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
               linkedin_url = $6,
               phone = CASE WHEN $10 THEN $11 ELSE phone END,
               profile_completed_at = coalesce(profile_completed_at, now()),
-              -- a first save, or a save after a rejection / request for more information, goes to the admin
-              review_status = CASE WHEN review_status IN ('unreviewed', 'rejected', 'needs_evidence')
+              -- a first save, or a save after a rejection / request for more evidence / expiry, goes to the admin
+              review_status = CASE WHEN review_status IN ('unreviewed', 'rejected', 'needs_evidence', 'expired')
                                    THEN 'pending'::review_status ELSE review_status END
         WHERE user_id = $1`,
       [userId, body.fullName, body.city ?? null, body.headline ?? null, body.bio ?? null, body.linkedinUrl ?? null,
-        body.websiteUrl ?? null, role === 'owner', role === 'owner' || role === 'investor',
-        role === 'investor' || role === 'buyer', body.phone ?? null]);
+        body.websiteUrl ?? null, role === 'owner', role === 'owner', role === 'buyer', body.phone ?? null]);
 
     if (role === 'owner') {
       await client.query(
@@ -166,17 +182,11 @@ async function updateMyProfile(userId, role, body, { ip, baseUrl }) {
     } else if (role === 'investor') {
       await client.query(
         `UPDATE investor_profiles
-            SET investor_type = $2, cnic_number = $3, organization_name = $4, company_website = $5,
-                company_email = $6, investment_experience = $7, min_ticket = $8, max_ticket = $9,
-                professional_affiliation = $10, investment_history = $11, portfolio_url = $12
+            SET organization_name = $2, designation = $3, company_website = $4, investment_interests = $5,
+                investment_stages = $6::project_stage[], min_ticket = $7, max_ticket = $8
           WHERE user_id = $1`,
-        [userId, d.investorType, d.cnicNumber, d.companyName, d.companyWebsite, d.companyEmail,
-          d.investmentExperience, d.minTicket, d.maxTicket, d.professionalAffiliation,
-          d.investmentExperience === 'first_time' ? null : d.investmentHistory, d.portfolioUrl]);
-      // e.g. a firm no longer needs proof of funds; a first-time investor has no past investment to prove
-      const needed = requiredDocuments(role, d);
-      await removeDocumentRows(client, userId,
-        ['company_certificate', 'funds_proof', 'investment_proof'].filter(kind => !needed.includes(kind)));
+        [userId, d.organization, d.designation, d.companyWebsite, d.investmentInterests, d.investmentStages,
+          d.minTicket, d.maxTicket]);
       await saveInterests(client, userId, d.interests);
     } else if (role === 'buyer') {
       await client.query(
@@ -211,27 +221,40 @@ function assertKind(role, kind) {
   }
 }
 
-// Stores or replaces one document. Changing a document of an approved account sends it back to review.
-async function setDocument(userId, role, kind, file, { ip, baseUrl }) {
-  assertKind(role, kind);
-  const filePath = `documents/${userId}/${kind}-${crypto.randomUUID()}.${file.ext}`;
-  await storage.upload(filePath, file.buffer, file.contentType);
-
+// Stores or replaces one document: an uploaded file, or (investor evidence only) a link.
+// Changing a document of a verified account sends it back to review.
+async function saveDocument(userId, role, kind, { filePath = null, url = null, contentType = null }, { ip, baseUrl }) {
   const oldPath = await withTransaction(async client => {
     const { rows: [old] } = await client.query(
       'DELETE FROM evidence_submissions WHERE subject_user_id = $1 AND kind = $2 RETURNING storage_path', [userId, kind]);
     await client.query(
-      `INSERT INTO evidence_submissions (submitted_by, subject_user_id, kind, storage_path, content_type)
-       VALUES ($1, $1, $2, $3, $4)`,
-      [userId, kind, filePath, file.contentType]);
+      `INSERT INTO evidence_submissions (submitted_by, subject_user_id, kind, storage_path, external_url, content_type)
+       VALUES ($1, $1, $2, $3, $4, $5)`,
+      [userId, kind, filePath, url, contentType]);
     await client.query(
       `UPDATE profiles SET review_status = 'pending', review_note = NULL
         WHERE user_id = $1 AND review_status = 'approved'`, [userId]);
-    await audit(client, { actorId: userId, action: 'profile.document_uploaded', entityId: userId, ip, details: { kind } });
+    await audit(client, { actorId: userId, action: 'profile.document_uploaded', entityId: userId, ip,
+      details: { kind, ...(url && { url }) } });
     return old?.storage_path;
   });
   await storage.remove(oldPath);
   return getMyProfile(userId, role, { baseUrl });
+}
+
+async function setDocument(userId, role, kind, file, context) {
+  assertKind(role, kind);
+  const filePath = `documents/${userId}/${kind}-${crypto.randomUUID()}.${file.ext}`;
+  await storage.upload(filePath, file.buffer, file.contentType);
+  return saveDocument(userId, role, kind, { filePath, contentType: file.contentType }, context);
+}
+
+async function setDocumentLink(userId, role, kind, url, context) {
+  assertKind(role, kind);
+  if (!LINK_DOCUMENTS.includes(kind)) {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'Upload a file for this document', { kind: 'Upload a file for this document' });
+  }
+  return saveDocument(userId, role, kind, { url }, context);
 }
 
 async function removeDocument(userId, role, kind, { ip, baseUrl }) {
@@ -269,5 +292,5 @@ async function listCategories() {
 }
 
 module.exports = {
-  getMyProfile, updateMyProfile, setDocument, removeDocument, setAvatar, removeAvatar, listCategories,
+  getMyProfile, updateMyProfile, setDocument, setDocumentLink, removeDocument, setAvatar, removeAvatar, listCategories,
 };

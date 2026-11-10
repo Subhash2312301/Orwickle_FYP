@@ -82,9 +82,12 @@ void main() {
     await _pumpForm(tester);
     final publish = find.widgetWithText(FilledButton, 'Save & publish', skipOffstage: false);
     expect(publish, findsOneWidget);
-    expect(tester.widget<FilledButton>(publish).onPressed, isNull, reason: 'account not approved yet');
-    expect(find.textContaining('once an admin approves your account', skipOffstage: false), findsOneWidget);
+    expect(tester.widget<FilledButton>(publish).onPressed, isNull, reason: 'account not verified yet');
+    expect(find.textContaining('once an admin verifies your account', skipOffstage: false), findsOneWidget);
     expect(find.text('Add photo', skipOffstage: false), findsOneWidget, reason: 'photos can be added to a new listing');
+    expect(find.text('Evidence for verification', skipOffstage: false), findsOneWidget);
+    expect(find.text('Add ownership evidence', skipOffstage: false), findsOneWidget);
+    expect(find.text('Add project evidence', skipOffstage: false), findsOneWidget);
   });
 
   testWidgets('a sale listing asks what the buyer receives instead of equity', (tester) async {

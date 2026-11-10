@@ -35,8 +35,11 @@ const as = token => ({
   put: (url, body) => api.put(url).set('Authorization', `Bearer ${token}`).send(body),
   del: url => api.delete(url).set('Authorization', `Bearer ${token}`),
   upload: (url, buffer, name) => api.put(url).set('Authorization', `Bearer ${token}`).attach('image', buffer, name),
-  addFile: (url, buffer, name) => api.post(url).set('Authorization', `Bearer ${token}`).attach('image', buffer, name),
+  addFile: (url, buffer, name, field = 'image') =>
+    api.post(url).set('Authorization', `Bearer ${token}`).attach(field, buffer, name),
 });
+const addOwnershipLink = (client, id) =>
+  client.post(`/api/listings/${id}/evidence/ownership_proof/link`, { url: 'https://github.com/owner/project' });
 
 const fundingListing = overrides => ({
   listingType: 'funding',
@@ -147,6 +150,36 @@ test('drafts are invisible to everyone except their owner', async () => {
   assert.equal((await owner.get('/api/listings/not-a-uuid')).status, 404);
 });
 
+test('publishing needs ownership evidence; evidence is a file or a link and only the owner sees it', async () => {
+  const noEvidence = await owner.post(`/api/listings/${fundingId}/publish`);
+  assert.equal(noEvidence.status, 409);
+  assert.equal(noEvidence.body.error.code, 'EVIDENCE_REQUIRED');
+
+  const wrongKind = await owner.post(`/api/listings/${fundingId}/evidence/cnic_front/link`, { url: 'https://x.pk' });
+  assert.equal(wrongKind.status, 400);
+  const badLink = await owner.post(`/api/listings/${fundingId}/evidence/ownership_proof/link`, { url: 'github.com/x' });
+  assert.equal(badLink.status, 400);
+  assert.equal((await otherOwner.post(`/api/listings/${fundingId}/evidence/ownership_proof/link`,
+    { url: 'https://github.com/x' })).status, 404);
+
+  const project = await owner.addFile(`/api/listings/${fundingId}/evidence/project_evidence`, PNG, 'demo.png', 'file');
+  assert.equal(project.status, 201);
+  assert.equal(project.body.evidence[0].kind, 'project_evidence');
+  assert.equal(project.body.evidence[0].isLink, false);
+  assert.match(project.body.evidence[0].url, /\/api\/files\/listings\/.+\?expires=/);
+  assert.equal((await owner.post(`/api/listings/${fundingId}/publish`)).body.error.code, 'EVIDENCE_REQUIRED',
+    'project evidence alone is not enough');
+
+  const linked = await addOwnershipLink(owner, fundingId);
+  assert.equal(linked.status, 201);
+  const ownership = linked.body.evidence.find(e => e.kind === 'ownership_proof');
+  assert.equal(ownership.url, 'https://github.com/owner/project');
+  assert.equal(ownership.isLink, true);
+
+  const removed = await owner.del(`/api/listings/${fundingId}/evidence/${project.body.evidence[0].id}`);
+  assert.equal(removed.body.evidence.length, 1);
+});
+
 test('publishing sends the listing for review', async () => {
   const res = await owner.post(`/api/listings/${fundingId}/publish`);
   assert.equal(res.status, 200);
@@ -166,6 +199,7 @@ test('others see only the public preview of an approved listing', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.listing.title, 'StudyBuddy — AI tutor for O Levels');
   assert.equal(res.body.confidential, undefined);
+  assert.equal(res.body.evidence, undefined, 'evidence is for the owner and admins only');
   assert.ok(!JSON.stringify(res.body).includes(SECRET_TEXT), 'confidential text must not leak');
 });
 
@@ -185,6 +219,8 @@ test('unpublish, close and delete follow the allowed status moves', async () => 
   assert.equal((await owner.put(`/api/listings/${fundingId}`, fundingListing())).body.error.code, 'LISTING_CLOSED');
   assert.equal((await owner.del(`/api/listings/${fundingId}`)).status, 409, 'closed listings are kept');
 
+  // a draft with evidence can still be deleted; its evidence goes with it
+  await addOwnershipLink(owner, saleId);
   assert.equal((await owner.del(`/api/listings/${saleId}`)).status, 204);
   assert.equal((await owner.get(`/api/listings/${saleId}`)).status, 404);
 });
@@ -224,7 +260,8 @@ test('a listing takes up to 6 extra photos; changing them on a live listing send
   assert.equal(seventh.status, 409);
   assert.equal(seventh.body.error.code, 'TOO_MANY_PHOTOS');
 
-  await owner.post(`/api/listings/${id}/publish`);
+  await addOwnershipLink(owner, id);
+  assert.equal((await owner.post(`/api/listings/${id}/publish`)).status, 200);
   await pool.query("UPDATE listings SET review_status = 'approved' WHERE id = $1", [id]);
   assert.equal((await investor.get(`/api/listings/${id}`)).body.listing.photos.length, 6, 'others see the photos');
 
