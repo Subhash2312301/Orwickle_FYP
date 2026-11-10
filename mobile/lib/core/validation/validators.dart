@@ -6,13 +6,31 @@ class Validators {
   static final _emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
   static final _otpPattern = RegExp(r'^\d{6}$');
 
-  static String? fullName(String? value) {
-    final v = value?.trim() ?? '';
-    if (v.isEmpty) return 'Full name is required';
-    if (v.length < 2) return 'Full name must be at least 2 characters';
-    if (v.length > 100) return 'Full name must be at most 100 characters';
-    return null;
-  }
+  static String? fullName(String? value) => personName('Full name')(value);
+
+  // What may be typed into name-like fields; the same patterns as backend profile.validation.js.
+  // \p{L} is any letter (accents too); numbers and symbols such as @ # $ ! are refused.
+  static final _namePattern = RegExp(r"^\p{L}[\p{L} .'-]*$", unicode: true);
+  static final _titlePattern = RegExp(r"^\p{L}[\p{L} .,&\-/()']*$", unicode: true);
+  static final _organizationPattern = RegExp(r"^(?=.*\p{L})[\p{L}0-9 .,&\-/()']+$", unicode: true);
+
+  static String? Function(String?) _letters(String label, int max, RegExp pattern, String allowed) => (value) {
+    final missing = requiredText(label, max: max)(value);
+    if (missing != null) return missing;
+    return pattern.hasMatch(value!.trim()) ? null : '$label can only contain $allowed';
+  };
+
+  /// A person's name or a city: letters, spaces and . ' -
+  static String? Function(String?) personName(String label, {int max = 100}) =>
+      _letters(label, max, _namePattern, "letters, spaces and . ' -");
+
+  /// Headline or professional designation: letters, spaces and . , & - / ( ) '
+  static String? Function(String?) titleText(String label, {required int max}) =>
+      _letters(label, max, _titlePattern, "letters, spaces and . , & - / ( ) '");
+
+  /// Organization or company: like a title, but numbers are allowed ("500 Startups").
+  static String? Function(String?) organization(String label, {required int max}) =>
+      _letters(label, max, _organizationPattern, "letters, numbers, spaces and . , & - / ( ) '");
 
   static String? email(String? value) {
     final v = value?.trim() ?? '';

@@ -189,6 +189,28 @@ test('investor: organization, designation, LinkedIn, interests, stages, range an
   const noStage = await putProfile(session.accessToken, investorBody({ investmentStages: [], companyWebsite: 'ksv.pk' }));
   assert.equal(noStage.body.error.details['details.investmentStages'], 'Choose at least one stage');
   assert.equal(noStage.body.error.details['details.companyWebsite'], 'Enter a full company website starting with https://');
+
+  // names and titles take letters, not numbers or symbols; an organization may contain numbers
+  const symbols = await putProfile(session.accessToken, {
+    ...investorBody({ organization: '@@##', designation: 'Manager 123' }),
+    fullName: 'Farhan 99',
+  });
+  const s = symbols.body.error.details;
+  assert.equal(s.fullName, "Full name can only contain letters, spaces and . ' -");
+  assert.equal(s['details.designation'], "Professional designation can only contain letters, spaces and . , & - / ( ) '");
+  assert.equal(s['details.organization'], "Organization or company can only contain letters, numbers, spaces and . , & - / ( ) '");
+  const numbersOk = await putProfile(session.accessToken, investorBody({ organization: '500 Startups', designation: 'Co-Founder & CEO' }));
+  assert.equal(numbersOk.body.error.details['details.organization'], undefined);
+  assert.equal(numbersOk.body.error.details['details.designation'], undefined);
+});
+
+test('an owner headline and a buyer city refuse numbers and symbols', async () => {
+  const owner = await loginAs('owner');
+  const badHeadline = await putProfile(owner.accessToken, { ...ownerBody, headline: 'Developer #1 @ 2026' });
+  assert.equal(badHeadline.body.error.details.headline, "Headline can only contain letters, spaces and . , & - / ( ) '");
+  const buyer = await loginAs('buyer');
+  const badCity = await putProfile(buyer.accessToken, { ...buyerBody(), city: 'Karachi 75500' });
+  assert.equal(badCity.body.error.details.city, "City can only contain letters, spaces and . ' -");
 });
 
 test('an investor needs at least two pieces of supporting evidence, each a file or a link', async () => {

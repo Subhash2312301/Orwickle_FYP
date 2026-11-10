@@ -30,7 +30,9 @@ const registerSchema = z.object({
   fullName: z.string(required('Full name'))
     .trim()
     .min(2, 'Full name must be at least 2 characters')
-    .max(100, 'Full name must be at most 100 characters'),
+    .max(100, 'Full name must be at most 100 characters')
+    // letters only, as in profile.validation.js (no numbers or symbols)
+    .regex(/^\p{L}[\p{L} .'-]*$/u, 'Full name can only contain letters, spaces and . \' -'),
   email,
   password,
   role: z.enum(['owner', 'investor', 'buyer'], { error: 'Choose Project Owner, Investor or Buyer' }),

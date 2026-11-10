@@ -49,15 +49,24 @@ const companyEmail = z.string().trim().toLowerCase().max(254)
   .refine(v => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Enter a valid company email')
   .nullable().optional().transform(v => v || null);
 
-const fullName = text('Full name', 100);
-const city = text('City', 80);
+// What may be typed into name-like fields (the Flutter form uses the same patterns, see validators.dart).
+// \p{L} is any letter, so names with accents also work; numbers and symbols such as @ # $ ! are refused.
+const PATTERNS = {
+  name: [/^\p{L}[\p{L} .'-]*$/u, 'can only contain letters, spaces and . \' -'],
+  title: [/^\p{L}[\p{L} .,&\-/()']*$/u, 'can only contain letters, spaces and . , & - / ( ) \''],
+  organization: [/^(?=.*\p{L})[\p{L}0-9 .,&\-/()']+$/u, 'can only contain letters, numbers, spaces and . , & - / ( ) \''],
+};
+const checked = (schema, label, kind) => schema.refine(v => PATTERNS[kind][0].test(v), `${label} ${PATTERNS[kind][1]}`);
+
+const fullName = checked(text('Full name', 100), 'Full name', 'name');
+const city = checked(text('City', 80), 'City', 'name');
 
 // Owners may be university students or independent (self-taught) developers;
 // students give university, degree and university ID card, independent owners their CNIC.
 // Owners have no city.
 const owner = z.object({
   fullName,
-  headline: text('Headline', 150),
+  headline: checked(text('Headline', 150), 'Headline', 'title'),
   bio: text('Bio', 2000, 10),
   linkedinUrl: requiredUrl('LinkedIn profile'),
   websiteUrl: optionalUrl('website URL'),
@@ -89,8 +98,8 @@ const investor = z.object({
   fullName,
   linkedinUrl: requiredUrl('LinkedIn profile'),
   details: z.object({
-    organization: text('Organization or company', 150),
-    designation: text('Professional designation', 100),
+    organization: checked(text('Organization or company', 150), 'Organization or company', 'organization'),
+    designation: checked(text('Professional designation', 100), 'Professional designation', 'title'),
     companyWebsite: optionalUrl('company website'),
     investmentInterests: text('Investment interests', 1000, 10),
     investmentStages: z.array(z.enum(PROJECT_STAGES, { error: 'Invalid stage' }), required('Investment stages'))

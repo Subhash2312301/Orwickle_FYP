@@ -374,10 +374,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         'fullName',
         'Full name',
         icon: Icons.person_outline,
-        validator: Validators.requiredText('Full name', max: 100),
+        validator: Validators.fullName,
       ),
       if (_role == 'buyer')
-        _text('city', 'City', icon: Icons.location_city_outlined, validator: Validators.requiredText('City', max: 80)),
+        _text('city', 'City', icon: Icons.location_city_outlined, validator: Validators.personName('City', max: 80)),
     ];
   }
 
@@ -395,7 +395,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       'Headline',
       icon: Icons.short_text,
       hint: 'e.g. CS student building EdTech apps',
-      validator: Validators.requiredText('Headline', max: 150),
+      validator: Validators.titleText('Headline', max: 150),
     ),
     _text(
       'bio',
@@ -528,14 +528,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       'Organization / company',
       icon: Icons.business_outlined,
       hint: 'e.g. Karachi Seed Ventures, or "Independent angel investor"',
-      validator: Validators.requiredText('Organization or company', max: 150),
+      validator: Validators.organization('Organization or company', max: 150),
     ),
     _text(
       'designation',
       'Professional designation',
       icon: Icons.work_outline,
       hint: 'e.g. Managing Partner, Angel Investor',
-      validator: Validators.requiredText('Professional designation', max: 100),
+      validator: Validators.titleText('Professional designation', max: 100),
     ),
     _text(
       'linkedinUrl',

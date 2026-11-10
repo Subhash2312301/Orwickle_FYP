@@ -50,4 +50,31 @@ void main() {
     expect(Validators.otp('12a456'), 'Enter the 6-digit code');
     expect(Validators.otp('123456'), isNull);
   });
+
+  test('names, city, headline, designation and organization refuse numbers and symbols', () {
+    const nameRule = "Full name can only contain letters, spaces and . ' -";
+    expect(Validators.fullName('Subhash123'), nameRule);
+    expect(Validators.fullName('@@##'), nameRule);
+    expect(Validators.fullName("Ali O'Brien-Khan"), isNull);
+
+    final city = Validators.personName('City', max: 80);
+    expect(city('Karachi1'), "City can only contain letters, spaces and . ' -");
+    expect(city('Rahim Yar Khan'), isNull);
+
+    final designation = Validators.titleText('Professional designation', max: 100);
+    const titleRule = "Professional designation can only contain letters, spaces and . , & - / ( ) '";
+    for (final bad in ['12345', '@@##', 'CEO!!', 'Manager 2']) {
+      expect(designation(bad), titleRule, reason: bad);
+    }
+    for (final good in ['Managing Partner', 'Co-Founder & CEO', 'VP (Investments)', 'Angel Investor']) {
+      expect(designation(good), isNull, reason: good);
+    }
+    expect(Validators.titleText('Headline', max: 150)('Final-year CS student, building EdTech apps'), isNull);
+
+    final organization = Validators.organization('Organization or company', max: 150);
+    expect(organization('500 Startups'), isNull);
+    expect(organization('Karachi Seed Ventures'), isNull);
+    expect(organization('12345'), "Organization or company can only contain letters, numbers, spaces and . , & - / ( ) '");
+    expect(organization('Ventures@#'), "Organization or company can only contain letters, numbers, spaces and . , & - / ( ) '");
+  });
 }
