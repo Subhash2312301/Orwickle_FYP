@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Orwickle API",
-    "description": "Orwickle backend (Node.js + Express) up to week 8: auth, profiles and verification documents, listings, and the admin API.\n\nRun the numbered folders 00-06 in order with the Collection Runner (they log in with the demo accounts from `npm run seed:demo` and carry the tokens along). Folder 99 holds requests you send by hand.\nSet the collection variable `adminPassword` first.",
+    "description": "Orwickle backend (Node.js + Express) up to week 8: auth, profiles with evidence-based verification, listings with ownership and project evidence, and the admin verification API (investor and project queues, Under Review, request more evidence / changes, verification history).\n\nRun the numbered folders 00-06 in order with the Collection Runner (they log in with the demo accounts from `npm run seed:demo` and carry the tokens along). Folder 99 holds requests you send by hand.\nSet the collection variable `adminPassword` first.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -15,6 +15,10 @@
     },
     {
       "key": "adminPassword",
+      "value": ""
+    },
+    {
+      "key": "evidenceId",
       "value": ""
     }
   ],
@@ -761,7 +765,9 @@
                 "exec": [
                   "pm.test('status is 200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
-                  "pm.test('investor details', () => { pm.expect(body.profile.details).to.have.property('investorType'); pm.expect(body.profile.details).to.have.property('professionalAffiliation'); });"
+                  "pm.test('professional details', () => { const d = body.profile.details; pm.expect(d).to.have.property('organization'); pm.expect(d).to.have.property('designation'); pm.expect(d.investmentStages).to.be.an('array'); });",
+                  "pm.test('no CNIC, investor type or phone', () => { pm.expect(body.profile.details).to.not.have.property('cnicNumber'); pm.expect(body.profile.details).to.not.have.property('investorType'); pm.expect(body.profile.phone).to.eql(null); });",
+                  "pm.test('at least two pieces of evidence (files or links)', () => pm.expect(body.profile.documents.length).to.be.at.least(2));"
                 ]
               }
             }
@@ -789,7 +795,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"details\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -815,7 +821,111 @@
                 "exec": [
                   "pm.test('status is 400', () => pm.response.to.have.status(400));",
                   "pm.test('error code is VALIDATION_ERROR', () => pm.expect(pm.response.json().error.code).to.eql('VALIDATION_ERROR'));",
-                  "pm.test('many field errors', () => pm.expect(Object.keys(pm.response.json().error.details).length).to.be.above(4));"
+                  "const d = pm.response.json().error.details;",
+                  "pm.test('professional fields are required', () => { pm.expect(d['details.organization']).to.eql('Organization or company is required'); pm.expect(d['details.designation']).to.eql('Professional designation is required'); pm.expect(d['details.investmentStages']).to.be.a('string'); });",
+                  "pm.test('no CNIC or phone is asked', () => { pm.expect(d).to.not.have.property('details.cnicNumber'); pm.expect(d).to.not.have.property('phone'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Investors cannot upload a CNIC",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/me/documents/cnic_front/link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "me",
+                "documents",
+                "cnic_front",
+                "link"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{investorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/cnic\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('not needed for investors', () => pm.expect(pm.response.json().error.details.kind).to.eql('This document is not needed for your role'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Investor evidence link must be a full https:// link",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/me/documents/investment_portfolio/link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "me",
+                "documents",
+                "investment_portfolio",
+                "link"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{investorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"angel.co/u/farhan\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('field error on url', () => pm.expect(pm.response.json().error.details.url).to.eql('Enter a full Link starting with https://'));"
                 ]
               }
             }
@@ -1693,6 +1803,201 @@
           ]
         },
         {
+          "name": "Publishing without ownership evidence is refused",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "publish"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('error code is EVIDENCE_REQUIRED', () => pm.expect(pm.response.json().error.code).to.eql('EVIDENCE_REQUIRED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner adds ownership evidence (a link)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/evidence/ownership_proof/link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "evidence",
+                "ownership_proof",
+                "link"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://github.com/sample-ayesha/study-planner\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "const item = body.evidence.find(e => e.kind === 'ownership_proof');",
+                  "pm.test('stored as a link', () => { pm.expect(item.isLink).to.be.true; pm.expect(item.url).to.eql('https://github.com/sample-ayesha/study-planner'); });",
+                  "pm.collectionVariables.set('evidenceId', item.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner adds project evidence (a link)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/evidence/project_evidence/link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "evidence",
+                "project_evidence",
+                "link"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://youtu.be/study-planner-demo\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('two evidence items', () => pm.expect(pm.response.json().evidence.length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown evidence types are refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/evidence/cnic_front/link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "evidence",
+                "cnic_front",
+                "link"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Owner publishes: it waits for admin review",
           "request": {
             "method": "POST",
@@ -1813,7 +2118,98 @@
                   "pm.test('status is 200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.test('queue contains the listing', () => pm.expect(body.listings.map(x => x.listing.id)).to.include(pm.collectionVariables.get('listingId')));",
-                  "pm.test('admin sees the confidential details', () => pm.expect(body.listings.find(x => x.listing.id === pm.collectionVariables.get('listingId')).confidential.fullDescription).to.include('POSTMAN-SECRET'));"
+                  "pm.test('admin sees the confidential details', () => pm.expect(body.listings.find(x => x.listing.id === pm.collectionVariables.get('listingId')).confidential.fullDescription).to.include('POSTMAN-SECRET'));",
+                  "const entry = body.listings.find(x => x.listing.id === pm.collectionVariables.get('listingId'));",
+                  "pm.test('admin sees the owner and the evidence', () => { pm.expect(entry.owner.email).to.include('@'); pm.expect(entry.evidence.map(e => e.kind)).to.include.members(['ownership_proof', 'project_evidence']); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin starts the review: Under Review",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/listings/{{listingId}}/review/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "listings",
+                "{{listingId}}",
+                "review",
+                "start"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('started', () => pm.expect(pm.response.json().started).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "It is in the Under Review queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reviews/listings?status=under_review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reviews",
+                "listings"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "under_review"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const entry = pm.response.json().listings.find(x => x.listing.id === pm.collectionVariables.get('listingId'));",
+                  "pm.test('under review, with the reviewer', () => { pm.expect(entry.listing.reviewStatus).to.eql('under_review'); pm.expect(entry.reviewStartedBy).to.be.a('string'); });"
                 ]
               }
             }
@@ -1875,6 +2271,98 @@
           ]
         },
         {
+          "name": "Admin requests changes: back to draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/listings/{{listingId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "listings",
+                "{{listingId}}",
+                "review"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"request_more\",\n  \"reason\": \"Add a screenshot of the weekly plan as project evidence.\"\n}"
+            },
+            "description": "Emails the owner \"Your listing needs changes\". Without a new publish within 30 days the request expires."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('draft with changes requested', () => { pm.expect(body.listing.status).to.eql('draft'); pm.expect(body.listing.reviewStatus).to.eql('needs_evidence'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner publishes again after the changes",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "publish"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('pending review again', () => pm.expect(pm.response.json().listing.reviewStatus).to.eql('pending'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Admin approves with a checklist",
           "request": {
             "method": "POST",
@@ -1896,7 +2384,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"decision\": \"approve\",\n  \"checklist\": {\n    \"The public preview contains no confidential information\": true,\n    \"Photos are appropriate\": true\n  }\n}",
+              "raw": "{\n  \"decision\": \"approve\",\n  \"checklist\": {\n    \"Ownership evidence shows the owner made or owns the project\": true,\n    \"Every claim requiring review is backed by the evidence\": true,\n    \"The public preview contains no confidential information\": true\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1967,7 +2455,8 @@
                   "const body = pm.response.json();",
                   "pm.test('preview is visible', () => pm.expect(body.listing.title).to.include('Postman test'));",
                   "pm.test('no confidential section in the response', () => pm.expect(body).to.not.have.property('confidential'));",
-                  "pm.test('confidential text never leaks', () => pm.expect(pm.response.text()).to.not.include('POSTMAN-SECRET'));"
+                  "pm.test('confidential text never leaks', () => pm.expect(pm.response.text()).to.not.include('POSTMAN-SECRET'));",
+                  "pm.test('evidence is for the owner and admins only', () => pm.expect(pm.response.json()).to.not.have.property('evidence'));"
                 ]
               }
             }
@@ -2107,7 +2596,7 @@
           ]
         },
         {
-          "name": "Owner deletes the draft",
+          "name": "A reviewed listing cannot be deleted (its history is kept)",
           "request": {
             "method": "DELETE",
             "auth": {
@@ -2138,14 +2627,55 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('error code is LISTING_HAS_HISTORY', () => pm.expect(pm.response.json().error.code).to.eql('LISTING_HAS_HISTORY'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "The deleted listing is gone",
+          "name": "Owner closes it instead",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "close"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('closed', () => pm.expect(pm.response.json().listing.status).to.eql('closed'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The closed listing is hidden from investors",
           "request": {
             "method": "GET",
             "auth": {
@@ -2153,7 +2683,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{ownerToken}}",
+                  "value": "{{investorToken}}",
                   "type": "string"
                 }
               ]
@@ -2222,7 +2752,8 @@
                 "exec": [
                   "pm.test('status is 200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
-                  "pm.test('counts are numbers', () => { pm.expect(body.users.owners).to.be.a('number'); pm.expect(body.listings.live).to.be.a('number'); });"
+                  "pm.test('counts are numbers', () => { pm.expect(body.users.owners).to.be.a('number'); pm.expect(body.listings.live).to.be.a('number'); });",
+                  "pm.test('verification statuses are counted', () => { const u = pm.response.json().users; ['investorsPending', 'underReview', 'needsEvidence', 'rejected', 'expired', 'suspended'].forEach(k => pm.expect(u[k]).to.be.a('number')); });"
                 ]
               }
             }
@@ -2362,6 +2893,202 @@
                   "pm.test('status is 200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.test('lists accounts with their profile', () => pm.expect(body.users[0]).to.have.property('fullName'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Investor verification queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reviews/users?status=approved&role=investor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reviews",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "approved"
+                },
+                {
+                  "key": "role",
+                  "value": "investor"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const users = pm.response.json().users;",
+                  "pm.test('only investors', () => pm.expect(users.every(u => u.role === 'investor')).to.be.true);",
+                  "const farhan = users.find(u => u.email === 'farhan@demo.orwickle.app');",
+                  "pm.test('identity, professional information and evidence', () => { pm.expect(farhan.emailVerified).to.be.true; pm.expect(farhan.details.organization).to.be.a('string'); pm.expect(farhan.documents.length).to.be.at.least(2); pm.expect(farhan.decisions).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner and buyer queue has no investors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reviews/users?status=approved&role=others",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reviews",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "approved"
+                },
+                {
+                  "key": "role",
+                  "value": "others"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('owners and buyers only', () => pm.expect(pm.response.json().users.every(u => u.role !== 'investor')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Users can be filtered by verification status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?review=expired",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "review",
+                  "value": "expired"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('only expired accounts', () => pm.expect(pm.response.json().users.every(u => u.reviewStatus === 'expired')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verification history: who, when, decision, reason, evidence reviewed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reviews/decisions?subject=listings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reviews",
+                "decisions"
+              ],
+              "query": [
+                {
+                  "key": "subject",
+                  "value": "listings"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const mine = pm.response.json().decisions.filter(d => d.subject.id === pm.collectionVariables.get('listingId'));",
+                  "pm.test('the listing flow decisions are recorded', () => pm.expect(mine.map(d => d.decision)).to.include.members(['request_more', 'approve']));",
+                  "pm.test('each has the reviewer, time, reason and evidence reviewed', () => mine.forEach(d => { pm.expect(d.reviewer).to.be.a('string'); pm.expect(d.at).to.be.a('string'); pm.expect(d.reason).to.be.a('string'); pm.expect(d.evidenceReviewed).to.be.an('array'); }));"
                 ]
               }
             }
@@ -2888,7 +3615,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fullName\": \"Farhan Malik\",\n  \"city\": \"Karachi\",\n  \"phone\": \"03001234567\",\n  \"linkedinUrl\": \"https://www.linkedin.com/in/farhan\",\n  \"details\": {\n    \"investorType\": \"angel\",\n    \"cnicNumber\": \"42101-1234567-1\",\n    \"investmentExperience\": \"1_3\",\n    \"professionalAffiliation\": \"Partner at Malik & Co\",\n    \"investmentHistory\": \"Invested in two Karachi EdTech startups in 2024 and 2025.\",\n    \"minTicket\": 500000,\n    \"maxTicket\": 2000000,\n    \"interests\": [\n      \"{{categoryId}}\"\n    ]\n  }\n}",
+              "raw": "{\n  \"fullName\": \"Farhan Malik\",\n  \"linkedinUrl\": \"https://www.linkedin.com/in/farhan\",\n  \"details\": {\n    \"organization\": \"Karachi Angel Network\",\n    \"designation\": \"Angel Investor\",\n    \"companyWebsite\": \"https://karachiangels.pk\",\n    \"investmentInterests\": \"Student-built EdTech and FinTech products with early users.\",\n    \"investmentStages\": [\n      \"prototype\",\n      \"mvp\"\n    ],\n    \"minTicket\": 500000,\n    \"maxTicket\": 2000000,\n    \"interests\": [\n      \"{{categoryId}}\"\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2904,7 +3631,8 @@
                 "profile",
                 "me"
               ]
-            }
+            },
+            "description": "Needs at least two pieces of supporting evidence first (see \"Add investor evidence as a link\"). Saving sends the profile for verification."
           },
           "event": []
         },
@@ -3020,7 +3748,7 @@
           "event": []
         },
         {
-          "name": "Upload a verification document (kind in the URL: cnic_front, cnic_back, university_id_front, university_id_back, company_certificate, funds_proof, investment_proof)",
+          "name": "Upload a verification document (kind in the URL: owners/buyers cnic_front, cnic_back, university_id_front, university_id_back; investors company_registration, network_affiliation, accelerator_affiliation, investment_portfolio, professional_credential)",
           "request": {
             "method": "PUT",
             "auth": {
@@ -3089,6 +3817,115 @@
             }
           },
           "event": []
+        },
+        {
+          "name": "Add investor evidence as a link (kind in the URL)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/me/documents/investment_portfolio/link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "me",
+                "documents",
+                "investment_portfolio",
+                "link"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{investorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://angel.co/u/farhan\"\n}"
+            },
+            "description": "Replaces the evidence of that kind. Changing evidence of a verified investor sends the profile back to Pending."
+          }
+        },
+        {
+          "name": "Add listing evidence as a file (ownership_proof or project_evidence)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/evidence/project_evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "evidence",
+                "project_evidence"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "JPEG, PNG, WebP or PDF (max 5 MB)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove listing evidence",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/listings/{{listingId}}/evidence/{{evidenceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listings",
+                "{{listingId}}",
+                "evidence",
+                "{{evidenceId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
         },
         {
           "name": "Set listing cover image (needs {{listingId}} of a draft)",
@@ -3200,7 +4037,37 @@
           "event": []
         },
         {
-          "name": "Review an account: approve / reject / request_more",
+          "name": "Start an account review (status becomes Under Review)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{investorId}}/review/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{investorId}}",
+                "review",
+                "start"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review an account: approve / reject / request_more (request more evidence)",
           "request": {
             "method": "POST",
             "auth": {
@@ -3221,7 +4088,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"decision\": \"request_more\",\n  \"reason\": \"Please upload a clearer photo of the CNIC back.\",\n  \"checklist\": {\n    \"CNIC photos are clear\": false\n  }\n}",
+              "raw": "{\n  \"decision\": \"request_more\",\n  \"reason\": \"Please add a link to your angel network membership.\",\n  \"checklist\": {\n    \"Every piece of evidence opens and is in this person's or organization's name\": false\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3242,6 +4109,44 @@
             }
           },
           "event": []
+        },
+        {
+          "name": "Review a listing: approve / reject / request_more (request changes)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/listings/{{listingId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "listings",
+                "{{listingId}}",
+                "review"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"request_more\",\n  \"reason\": \"Add a demo video as project evidence.\"\n}"
+            }
+          }
         },
         {
           "name": "Suspend an account (ends all its sessions)",

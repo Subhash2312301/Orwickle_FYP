@@ -1,5 +1,5 @@
-// Desktop screenshots of the admin dashboard via the Chrome DevTools protocol.
-// node tools/screenshots/take_screenshots.js ../docs/screenshots/admin http://localhost:5174
+﻿// Desktop screenshots of the admin dashboard via the Chrome DevTools protocol.
+// node tools/screenshots/take_screenshots.cjs ../docs/screenshots/admin http://localhost:5174
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -62,33 +62,42 @@ const session = JSON.stringify({
   await sleep(500);
   await shot('01_admin_login', { full: false });
 
+  // clicks the button or link that contains exactly this text
+  const click = text => evaluate(`(() => {
+    const el = [...document.querySelectorAll('*')].find(e => e.children.length === 0 && e.textContent.trim() === ${JSON.stringify(text)});
+    let target = el;
+    while (target && !(target.tagName === 'BUTTON' || target.tagName === 'A' || target.getAttribute('role') === 'button')) target = target.parentElement;
+    (target || el)?.click();
+  })()`);
+
   // 2. signed in as Subhash Rai
   await evaluate(`sessionStorage.setItem('orwickle-admin-session', ${JSON.stringify(session)})`);
+  // [file name, route, entry to open in a queue, also capture the review dialog]
   const pages = [
     ['02_admin_overview', '/'],
-    ['03_admin_account_reviews', '/reviews/accounts'],
-    ['04_admin_listing_reviews', '/reviews/listings'],
-    ['05_admin_users', '/users'],
-    ['06_admin_user_detail', '/users/u2'],
-    ['07_admin_audit_log', '/audit'],
-    ['08_admin_change_password', '/password'],
+    ['03_admin_investor_verification', '/reviews/investors', 'Bilal Ahmed', true],
+    ['04_admin_project_verification', '/reviews/listings', 'Smart irrigation kit', true],
+    ['05_admin_owner_buyer_verification', '/reviews/accounts', 'Hamza Ali'],
+    ['06_admin_users', '/users'],
+    ['07_admin_user_detail', '/users/u4'],
+    ['08_admin_verification_history', '/reviews/history'],
+    ['09_admin_audit_log', '/audit'],
+    ['10_admin_change_password', '/password'],
   ];
-  for (const [name, route] of pages) {
+  for (const [name, route, open, dialog] of pages) {
     await send('Page.navigate', { url: base + route });
     await sleep(3500);
     await shot(name);
-    // the review queues again with the first entry opened
-    const open = { '03_admin_account_reviews': 'Hamza Ali', '04_admin_listing_reviews': 'Smart irrigation kit' }[name];
-    if (open) {
-      await evaluate(`(() => {
-        const el = [...document.querySelectorAll('*')].find(e => e.children.length === 0 && e.textContent.trim() === ${JSON.stringify(open)});
-        let target = el;
-        while (target && !(target.tagName === 'BUTTON' || target.tagName === 'A' || target.getAttribute('role') === 'button')) target = target.parentElement;
-        (target || el)?.click();
-      })()`);
-      await sleep(1500);
-      await shot(name + '_open');
-    }
+    if (!open) continue;
+    // the queue again with the first entry opened
+    await click(open);
+    await sleep(1500);
+    await shot(name + '_open');
+    if (!dialog) continue;
+    // "Start review" marks it Under Review and opens the decision dialog
+    await click('Start review');
+    await sleep(1500);
+    await shot(name + '_review', { full: false });
   }
   ws.close(); proc.kill(); process.exit(0);
 })().catch(e => { console.error(e); proc.kill(); process.exit(1); });
