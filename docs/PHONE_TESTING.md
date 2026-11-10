@@ -1,12 +1,19 @@
 # Testing Orwickle on a real Android phone
 
 ## Prepare the laptop (every time)
-1. `ipconfig` → Wi-Fi IPv4 must match the IP the APK was built with (currently `192.168.18.203`).
-   If it changed, rebuild: `flutter build apk --debug --dart-define=API_BASE_URL=http://<ip>:4000/api`.
+1. Laptop and phone on the same Wi-Fi or on the phone's hotspot. No IP address needs typing or rebuilding:
+   the app tries the last address that worked, and if nothing answers it searches the phone's network
+   (x.x.x.1–254, port 4000) for `/api/health` answering `"service":"orwickle"` and saves it. This also
+   runs whenever the app is opened again. If it cannot find the laptop, long-press the logo on the
+   login / welcome screen to type the address by hand.
 2. `cd backend && npm run dev` — keep this terminal open (OTP emails are also printed here).
 3. Once, in PowerShell **as Administrator**:
    `New-NetFirewallRule -DisplayName "Orwickle API 4000" -Direction Inbound -Protocol TCP -LocalPort 4000 -Action Allow -Profile Private`
-4. Phone on the same Wi-Fi; open `http://<ip>:4000/api/health` in the phone's browser → `"status":"ok"`.
+   On a new Wi-Fi, Windows may mark it Public: set it to Private (Settings → Network → Wi-Fi → network
+   profile), otherwise the firewall blocks the phone.
+4. University, office and café Wi-Fi often stops devices from reaching each other (client isolation).
+   There nothing on the network can reach the laptop; use the phone's hotspot instead.
+5. Check from the phone's browser: `http://<laptop ip>:4000/api/health` → `"service":"orwickle"`.
 
 ## Install
 Copy `Orwickle-phone-test.apk` to the phone's Download folder (USB file transfer), open it, tap Install / Update.
